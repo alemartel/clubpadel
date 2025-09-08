@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { api, ProfileUpdateData } from "@/lib/serverComm";
+import { api, ProfileUpdateData, getPlayerLevelStatus, updatePlayerLevel } from "@/lib/serverComm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LevelSelector } from "@/components/LevelSelector";
 import { ArrowLeft, Save, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function Profile() {
-  const { user: firebaseUser } = useAuth();
+  const { user: firebaseUser, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,17 +31,45 @@ export function Profile() {
     email: firebaseUser?.email || "",
   });
 
+  // Level validation state
+  const [levelStatus, setLevelStatus] = useState({
+    claimed_level: undefined as string | undefined,
+    level_validation_status: "none" as "none" | "pending" | "approved" | "rejected",
+    level_validated_at: undefined as string | undefined,
+    level_validation_notes: undefined as string | undefined,
+  });
+
   // Fetch user data from server on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await api.getCurrentUser();
+        const promises = [api.getCurrentUser()];
+        
+        // Only fetch level status for players (not admins)
+        if (!isAdmin) {
+          promises.push(getPlayerLevelStatus());
+        }
+        
+        const responses = await Promise.all(promises);
+        const userResponse = responses[0];
+        
         setFormData({
-          first_name: response.user.first_name || "",
-          last_name: response.user.last_name || "",
-          phone_number: response.user.phone_number || "",
-          email: response.user.email || "",
+          first_name: userResponse.user.first_name || "",
+          last_name: userResponse.user.last_name || "",
+          phone_number: userResponse.user.phone_number || "",
+          email: userResponse.user.email || "",
         });
+
+        // Only set level status for players
+        if (!isAdmin && responses[1]) {
+          const levelResponse = responses[1];
+          setLevelStatus({
+            claimed_level: levelResponse.claimed_level,
+            level_validation_status: levelResponse.level_validation_status,
+            level_validated_at: levelResponse.level_validated_at,
+            level_validation_notes: levelResponse.level_validation_notes,
+          });
+        }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
         setError("Failed to load profile data");
@@ -54,7 +83,7 @@ export function Profile() {
     } else {
       setInitialLoading(false);
     }
-  }, [firebaseUser]);
+  }, [firebaseUser, isAdmin]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -79,6 +108,30 @@ export function Profile() {
       setSuccess("Profile updated successfully!");
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLevelChange = async (level: string) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await updatePlayerLevel(level);
+      setSuccess("Level validation request submitted successfully!");
+      
+      // Refresh level status
+      const levelResponse = await getPlayerLevelStatus();
+      setLevelStatus({
+        claimed_level: levelResponse.claimed_level,
+        level_validation_status: levelResponse.level_validation_status,
+        level_validated_at: levelResponse.level_validated_at,
+        level_validation_notes: levelResponse.level_validation_notes,
+      });
+    } catch (err: any) {
+      setError(err.message || "Failed to update level");
     } finally {
       setLoading(false);
     }
@@ -227,6 +280,18 @@ export function Profile() {
                   placeholder="Enter your phone number"
                 />
               </div>
+
+              {/* Only show level selector for players, not admins */}
+              {!isAdmin && (
+                <LevelSelector
+                  value={levelStatus.claimed_level}
+                  onChange={handleLevelChange}
+                  disabled={loading}
+                  validationStatus={levelStatus.level_validation_status}
+                  notes={levelStatus.level_validation_notes}
+                  validatedAt={levelStatus.level_validated_at}
+                />
+              )}
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3">

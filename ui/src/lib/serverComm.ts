@@ -70,6 +70,29 @@ export interface ProfileUpdateData {
   phone_number?: string;
 }
 
+// Import types from server schema (these should match the server types)
+export type LevelValidationStatus = "none" | "pending" | "approved" | "rejected";
+
+export interface LevelValidationRequest {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  claimed_level?: string;
+  level_validation_status: LevelValidationStatus;
+  level_validated_at?: string;
+  level_validation_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LevelStatus {
+  claimed_level?: string;
+  level_validation_status: LevelValidationStatus;
+  level_validated_at?: string;
+  level_validation_notes?: string;
+}
+
 export async function updateUserProfile(data: ProfileUpdateData) {
   const response = await fetchWithAuth("/api/v1/protected/profile", {
     method: "PUT",
@@ -77,6 +100,52 @@ export async function updateUserProfile(data: ProfileUpdateData) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+// Level validation API functions
+export async function updatePlayerLevel(level: string) {
+  const response = await fetchWithAuth("/api/v1/protected/profile/level", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ level }),
+  });
+  return response.json();
+}
+
+export async function getPlayerLevelStatus(): Promise<LevelStatus> {
+  const response = await fetchWithAuth("/api/v1/protected/profile/level-status");
+  const data = await response.json();
+  return data.levelStatus;
+}
+
+// Admin level validation functions
+export async function getLevelValidationRequests(): Promise<{ requests: LevelValidationRequest[] }> {
+  const response = await fetchWithAuth("/api/v1/admin/level-validations");
+  return response.json();
+}
+
+export async function approveLevelValidation(userId: string, notes?: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/level-validations/${userId}/approve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ notes }),
+  });
+  return response.json();
+}
+
+export async function rejectLevelValidation(userId: string, notes: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/level-validations/${userId}/reject`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ notes }),
   });
   return response.json();
 }

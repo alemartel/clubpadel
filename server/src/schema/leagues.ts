@@ -3,15 +3,9 @@ import {
   pgTable,
   text,
   timestamp,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { appSchema } from "./users";
-
-// Define gender enum
-export const genderEnum = pgEnum("gender", ["male", "female", "mixed"]);
-
-// Define level enum
-export const levelEnum = pgEnum("level", ["1", "2", "3", "4"]);
+import { genderEnum, levelEnum } from "./enums";
 
 export const leagues = appSchema.table("leagues", {
   id: text("id").primaryKey(),
@@ -32,6 +26,9 @@ export const groups = appSchema.table("groups", {
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Re-export enums for convenience
+export { genderEnum, levelEnum };
 
 // Export types
 export type League = typeof leagues.$inferSelect;

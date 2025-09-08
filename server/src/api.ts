@@ -8,7 +8,7 @@ import { adminMiddleware } from "./middleware/admin";
 import { getDatabase, testDatabaseConnection } from "./lib/db";
 import { setEnvContext, clearEnvContext, getDatabaseUrl } from "./lib/env";
 import * as schema from "./schema/users";
-import { users } from "./schema/users";
+import { users, levelEnum } from "./schema/users";
 import {
   leagues,
   groups,
@@ -207,6 +207,92 @@ protectedRoutes.put("/profile", async (c) => {
   } catch (error) {
     console.error("Profile update error:", error);
     return c.json({ error: "Failed to update profile" }, 500);
+  }
+});
+
+// Player level update endpoint
+protectedRoutes.put("/profile/level", async (c) => {
+  try {
+    const user = c.get("user");
+    const body = await c.req.json();
+
+    const { level } = body;
+
+    // Validate level
+    const validLevels = levelEnum.enumValues;
+    if (!level || !validLevels.includes(level)) {
+      return c.json({ error: `Invalid level. Must be one of: ${validLevels.join(", ")}` }, 400);
+    }
+
+    // Check if user already has a pending validation
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const currentUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    if (currentUser.length === 0) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    if (currentUser[0].level_validation_status === "pending") {
+      return c.json({ error: "You already have a pending level validation request" }, 400);
+    }
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        claimed_level: level,
+        level_validation_status: "pending",
+        level_validation_notes: null,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+
+    return c.json({
+      user: updatedUser,
+      message: "Level validation request submitted successfully",
+    });
+  } catch (error) {
+    console.error("Level update error:", error);
+    return c.json({ error: "Failed to update level" }, 500);
+  }
+});
+
+// Get player level status
+protectedRoutes.get("/profile/level-status", async (c) => {
+  try {
+    const user = c.get("user");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const currentUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    if (currentUser.length === 0) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const userData = currentUser[0];
+    return c.json({
+      levelStatus: {
+        claimed_level: userData.claimed_level,
+        level_validation_status: userData.level_validation_status,
+        level_validated_at: userData.level_validated_at,
+        level_validation_notes: userData.level_validation_notes,
+      },
+      message: "Level status retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Level status error:", error);
+    return c.json({ error: "Failed to get level status" }, 500);
   }
 });
 
@@ -575,6 +661,117 @@ adminRoutes.delete("/groups/:id", async (c) => {
   } catch (error) {
     console.error("Group deletion error:", error);
     return c.json({ error: "Failed to delete group" }, 500);
+  }
+});
+
+// Level Validation Endpoints (Admin Only)
+adminRoutes.get("/level-validations", async (c) => {
+  try {
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const pendingRequests = await db
+      .select()
+      .from(users)
+      .where(eq(users.level_validation_status, "pending"));
+
+    return c.json({
+      requests: pendingRequests,
+      message: "Pending level validation requests retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Level validation requests error:", error);
+    return c.json({ error: "Failed to retrieve level validation requests" }, 500);
+  }
+});
+
+adminRoutes.post("/level-validations/:userId/approve", async (c) => {
+  try {
+    const adminUser = c.get("adminUser");
+    const userId = c.req.param("userId");
+    const body = await c.req.json();
+    const { notes } = body;
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if user exists and has pending validation
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.level_validation_status, "pending")));
+
+    if (!user) {
+      return c.json({ error: "User not found or no pending validation" }, 404);
+    }
+
+    // Update user with approved level
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        level_validation_status: "approved",
+        level_validated_at: new Date(),
+        level_validated_by: adminUser.id,
+        level_validation_notes: notes || null,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return c.json({
+      user: updatedUser,
+      message: "Level validation approved successfully",
+    });
+  } catch (error) {
+    console.error("Level validation approval error:", error);
+    return c.json({ error: "Failed to approve level validation" }, 500);
+  }
+});
+
+adminRoutes.post("/level-validations/:userId/reject", async (c) => {
+  try {
+    const adminUser = c.get("adminUser");
+    const userId = c.req.param("userId");
+    const body = await c.req.json();
+    const { notes } = body;
+
+    if (!notes) {
+      return c.json({ error: "Notes are required when rejecting a level validation" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if user exists and has pending validation
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.level_validation_status, "pending")));
+
+    if (!user) {
+      return c.json({ error: "User not found or no pending validation" }, 404);
+    }
+
+    // Update user with rejected level
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        level_validation_status: "rejected",
+        level_validated_at: new Date(),
+        level_validated_by: adminUser.id,
+        level_validation_notes: notes,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return c.json({
+      user: updatedUser,
+      message: "Level validation rejected successfully",
+    });
+  } catch (error) {
+    console.error("Level validation rejection error:", error);
+    return c.json({ error: "Failed to reject level validation" }, 500);
   }
 });
 

@@ -1,4 +1,4 @@
-import { Home, Settings, FileText, Layers, Calendar } from "lucide-react";
+import { Home, Settings, FileText, Layers, Calendar, Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -84,6 +84,18 @@ export function AppSidebar() {
                     <Link to="/admin/leagues">
                       <Calendar className="w-4 h-4" />
                       <span>League Management</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="Level Validation"
+                    isActive={isActive("/admin/level-validation")}
+                    asChild
+                  >
+                    <Link to="/admin/level-validation">
+                      <Shield className="w-4 h-4" />
+                      <span>Level Validation</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -9,6 +9,7 @@ import { Page1 } from "@/pages/Page1";
 import { Page2 } from "@/pages/Page2";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
+import { AdminLevelValidation } from "@/pages/AdminLevelValidation";
 import {
   BrowserRouter as Router,
   Routes,
@@ -71,6 +72,14 @@ function AppContent() {
                     element={
                       <AdminRoute>
                         <AdminLeagues />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/level-validation"
+                    element={
+                      <AdminRoute>
+                        <AdminLevelValidation />
                       </AdminRoute>
                     }
                   />
