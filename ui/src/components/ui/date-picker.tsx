@@ -29,10 +29,11 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          type="button"
           className={cn(
             "w-full justify-start text-left font-normal",
             !value && "text-muted-foreground",

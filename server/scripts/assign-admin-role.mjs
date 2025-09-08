@@ -17,7 +17,7 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const ADMIN_EMAIL = "lauradeltoro.arq@gmail.com";
+const ADMIN_EMAIL = "martelmarrero@gmail.com";
 
 console.log("🔐 Assigning admin role to specified user...");
 

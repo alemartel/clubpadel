@@ -504,10 +504,10 @@ export function AdminLeagues() {
                     : undefined
                 }
                 onChange={(date) =>
-                  setLeagueForm({
-                    ...leagueForm,
+                  setLeagueForm((prev) => ({
+                    ...prev,
                     start_date: date?.toISOString() || "",
-                  })
+                  }))
                 }
                 placeholder="Select start date"
                 className={
@@ -531,10 +531,10 @@ export function AdminLeagues() {
                     : undefined
                 }
                 onChange={(date) =>
-                  setLeagueForm({
-                    ...leagueForm,
+                  setLeagueForm((prev) => ({
+                    ...prev,
                     end_date: date?.toISOString() || "",
-                  })
+                  }))
                 }
                 placeholder="Select end date"
                 className={

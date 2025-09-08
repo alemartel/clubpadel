@@ -189,7 +189,15 @@ function CalendarDayButton({
     <Button
       ref={ref}
       variant="ghost"
+      type="button"
       size="icon"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
       data-day={day.date.toLocaleDateString()}
       data-selected-single={
         modifiers.selected &&
