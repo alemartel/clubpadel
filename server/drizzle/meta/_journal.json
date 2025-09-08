@@ -1,0 +1,27 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1757179639407,
+      "tag": "0000_majestic_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1757181083277,
+      "tag": "0001_majestic_hitman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1757182042494,
+      "tag": "0002_overjoyed_mathemanic",
+      "breakpoints": true
+    }
+  ]
+}
