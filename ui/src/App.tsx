@@ -187,7 +187,7 @@ function App() {
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange
-        storageKey="volo-app-theme"
+        storageKey="clubpadel-theme"
       >
         <Router>
           <AppContent />

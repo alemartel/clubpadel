@@ -1,6 +1,6 @@
 {
-  "name": "VoloApp",
-  "short_name": "VoloApp",
+  "name": "ClubPadel",
+  "short_name": "ClubPadel",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
