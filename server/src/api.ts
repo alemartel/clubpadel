@@ -870,6 +870,46 @@ api.get("/leagues/:id/groups", async (c) => {
   }
 });
 
+// Admin Team Management Endpoints
+adminRoutes.get("/groups/:groupId/teams", async (c) => {
+  try {
+    const groupId = c.req.param("groupId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get all teams in this group with creator information
+    const groupTeams = await db
+      .select({
+        team: teams,
+        league: leagues,
+        group: groups,
+        creator: {
+          id: users.id,
+          email: users.email,
+          first_name: users.first_name,
+          last_name: users.last_name,
+          display_name: users.display_name,
+        },
+        member_count: sql<number>`count(${team_members.id})`,
+      })
+      .from(teams)
+      .innerJoin(leagues, eq(teams.league_id, leagues.id))
+      .innerJoin(groups, eq(teams.group_id, groups.id))
+      .innerJoin(users, eq(teams.created_by, users.id))
+      .leftJoin(team_members, eq(teams.id, team_members.team_id))
+      .where(eq(teams.group_id, groupId))
+      .groupBy(teams.id, leagues.id, groups.id, users.id, users.email, users.first_name, users.last_name, users.display_name);
+
+    return c.json({
+      teams: groupTeams,
+      message: "Teams retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Admin teams retrieval error:", error);
+    return c.json({ error: "Failed to retrieve teams" }, 500);
+  }
+});
+
 // Team Management Endpoints
 protectedRoutes.post("/teams", async (c) => {
   try {
@@ -1019,13 +1059,14 @@ protectedRoutes.get("/teams/:id", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    // Check if user is a member of this team
+    // Check if user is a member of this team or is an admin
     const [membership] = await db
       .select()
       .from(team_members)
       .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
 
-    if (!membership) {
+    // Allow access if user is a team member OR is an admin
+    if (!membership && user.role !== "admin") {
       return c.json({ error: "You are not a member of this team" }, 403);
     }
 

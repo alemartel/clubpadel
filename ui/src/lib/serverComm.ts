@@ -374,6 +374,11 @@ export async function getFreePlayers(level: string, gender?: string, excludeTeam
   return response.json();
 }
 
+export async function getAdminTeamsByGroup(groupId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/teams`);
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -397,4 +402,5 @@ export const api = {
   addTeamMember,
   removeTeamMember,
   getFreePlayers,
+  getAdminTeamsByGroup,
 };

@@ -37,11 +37,21 @@ interface TeamWithDetails {
 export function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { serverUser } = useAuth();
+  const { serverUser, isAdmin } = useAuth();
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPlayerMarketModal, setShowPlayerMarketModal] = useState(false);
+
+  // Function to get the correct back navigation URL
+  const getBackUrl = () => {
+    if (isAdmin && team) {
+      // If admin and we have team data, go back to admin teams page
+      return `/admin/leagues/${team.league.id}/groups/${team.group.id}/teams`;
+    }
+    // Otherwise, go to user's teams page
+    return "/teams";
+  };
 
   useEffect(() => {
     if (id) {
@@ -157,7 +167,7 @@ export function TeamDetail() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-destructive mb-4">{error || "Team not found"}</p>
-            <Button onClick={() => navigate("/teams")}>
+            <Button onClick={() => navigate(getBackUrl())}>
               Back to Teams
             </Button>
           </div>
@@ -169,7 +179,7 @@ export function TeamDetail() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/teams")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Teams
         </Button>

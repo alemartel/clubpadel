@@ -29,7 +29,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2 } from "lucide-react";
 
-interface TeamWithDetails extends Team {
+interface TeamWithDetails {
+  team: Team;
   league: {
     id: string;
     name: string;
@@ -41,6 +42,13 @@ interface TeamWithDetails extends Team {
     name: string;
     level: string;
     gender: string;
+  };
+  creator: {
+    id: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
   };
   member_count: number;
 }
@@ -81,14 +89,10 @@ export function AdminTeams() {
     setTeamsLoading(true);
     setTeamsError("");
     try {
-      // Get all teams and filter by group
-      const response = await api.getMyTeams();
+      // Get all teams in this group using admin endpoint
+      const response = await api.getAdminTeamsByGroup(groupId);
       if (response.teams) {
-        // Filter teams that belong to this group
-        const groupTeams = response.teams.filter((teamData: any) => 
-          teamData.group.id === groupId
-        );
-        setTeams(groupTeams);
+        setTeams(response.teams);
       }
     } catch (error) {
       console.error("Failed to load teams:", error);
@@ -122,7 +126,7 @@ export function AdminTeams() {
     if (!deleteConfirmTeam) return;
 
     try {
-      await api.deleteTeam(deleteConfirmTeam.id);
+      await api.deleteTeam(deleteConfirmTeam.team.id);
       setDeleteConfirmTeam(null);
       loadTeams();
     } catch (error) {
@@ -180,6 +184,69 @@ export function AdminTeams() {
         </div>
       </div>
 
+      {/* Group Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Calendar className="w-5 h-5 mr-2" />
+            Group Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <h4 className="font-medium mb-2">Group Details</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{groupName}</span>
+                  {teams.length > 0 && (
+                    <>
+                      <Badge variant={getLevelBadgeVariant(teams[0]?.group.level)}>
+                        Level {teams[0]?.group.level}
+                      </Badge>
+                      <Badge variant={getGenderBadgeVariant(teams[0]?.group.gender)}>
+                        {teams[0]?.group.gender}
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-2">League Details</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>{leagueName}</span>
+                </div>
+                {teams.length > 0 && (
+                  <div className="text-muted-foreground">
+                    {formatDate(teams[0]?.league.start_date)} - {formatDate(teams[0]?.league.end_date)}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-2">Statistics</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  <span>{teams.length} team{teams.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>
+                    {teams.reduce((total, team) => total + team.member_count, 0)} total members
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Teams Section */}
       <Card>
         <CardHeader>
@@ -220,10 +287,12 @@ export function AdminTeams() {
                     <TableCell>
                       <div className="text-sm">
                         <div className="font-medium">
-                          {teamData.team.created_by}
+                          {teamData.creator.display_name || 
+                           `${teamData.creator.first_name || ''} ${teamData.creator.last_name || ''}`.trim() || 
+                           teamData.creator.email}
                         </div>
                         <div className="text-muted-foreground">
-                          Team Creator
+                          {teamData.creator.email}
                         </div>
                       </div>
                     </TableCell>
@@ -262,65 +331,6 @@ export function AdminTeams() {
           )}
         </CardContent>
       </Card>
-
-      {/* Group Information */}
-      {teams.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="w-5 h-5 mr-2" />
-              Group Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <h4 className="font-medium mb-2">Group Details</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{teams[0]?.group.name}</span>
-                    <Badge variant={getLevelBadgeVariant(teams[0]?.group.level)}>
-                      Level {teams[0]?.group.level}
-                    </Badge>
-                    <Badge variant={getGenderBadgeVariant(teams[0]?.group.gender)}>
-                      {teams[0]?.group.gender}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-medium mb-2">League Details</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>{teams[0]?.league.name}</span>
-                  </div>
-                  <div className="text-muted-foreground">
-                    {formatDate(teams[0]?.league.start_date)} - {formatDate(teams[0]?.league.end_date)}
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-medium mb-2">Statistics</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4" />
-                    <span>{teams.length} team{teams.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    <span>
-                      {teams.reduce((total, team) => total + team.member_count, 0)} total members
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Delete Team Confirmation */}
       <Dialog
