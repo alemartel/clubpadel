@@ -3,10 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, Trash2, UserPlus, UserMinus, Calendar, Trophy } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { FreePlayerMarketModal } from "../components/FreePlayerMarketModal";
+import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
 
 interface TeamWithDetails {
   team: Team;
@@ -42,6 +43,9 @@ export function TeamDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPlayerMarketModal, setShowPlayerMarketModal] = useState(false);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [teamAvailability, setTeamAvailability] = useState<any[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
@@ -58,6 +62,12 @@ export function TeamDetail() {
       loadTeam();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (team) {
+      loadTeamAvailability();
+    }
+  }, [team]);
 
   const loadTeam = async () => {
     if (!id) return;
@@ -78,6 +88,21 @@ export function TeamDetail() {
     }
   };
 
+  const loadTeamAvailability = async () => {
+    if (!team) return;
+    
+    setAvailabilityLoading(true);
+    try {
+      const response = await api.getTeamAvailability(team.team.id);
+      setTeamAvailability(response.availability || []);
+    } catch (err: any) {
+      console.error('Failed to load team availability:', err);
+      // Don't set error state for availability since it's not critical
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
   const handleRemoveMember = async (userId: string) => {
     if (!id) return;
     
@@ -95,28 +120,26 @@ export function TeamDetail() {
     }
   };
 
-  const handleDeleteTeam = async () => {
-    if (!id || !team) return;
-    
-    if (!confirm(`Are you sure you want to delete the team "${team.team.name}"? This action cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      const response = await api.deleteTeam(id);
-      if (response.error) {
-        setError(response.error);
-      } else {
-        navigate("/teams");
-      }
-    } catch (err) {
-      setError("Failed to delete team");
-      console.error("Error deleting team:", err);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatTime = (time: string | null) => {
+    if (!time) return '';
+    return time.substring(0, 5); // Convert HH:MM:SS to HH:MM
+  };
+
+  const getDayName = (dayKey: string) => {
+    const days: { [key: string]: string } = {
+      'monday': 'Monday',
+      'tuesday': 'Tuesday', 
+      'wednesday': 'Wednesday',
+      'thursday': 'Thursday',
+      'friday': 'Friday',
+      'saturday': 'Saturday',
+      'sunday': 'Sunday'
+    };
+    return days[dayKey] || dayKey;
   };
 
   const getLevelBadgeVariant = (level: string) => {
@@ -189,18 +212,6 @@ export function TeamDetail() {
             {team.league.name} • {team.group.name}
           </p>
         </div>
-        {isTeamCreator && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Team
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteTeam}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Team
-            </Button>
-          </div>
-        )}
       </div>
 
       {error && (
@@ -261,6 +272,55 @@ export function TeamDetail() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Team Availability */}
+              <div className="mt-6">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Team Availability
+                </h4>
+                {availabilityLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    Loading availability...
+                  </div>
+                ) : teamAvailability.length > 0 ? (
+                  <div className="space-y-2">
+                    {teamAvailability
+                      .filter(day => day.is_available)
+                      .sort((a, b) => {
+                        const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week);
+                      })
+                      .map((day) => (
+                        <div key={day.day_of_week} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{getDayName(day.day_of_week)}</span>
+                          <span className="text-muted-foreground">
+                            {formatTime(day.start_time)} - {formatTime(day.end_time)}
+                          </span>
+                        </div>
+                      ))}
+                    {teamAvailability.filter(day => day.is_available).length === 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        No availability set
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No availability set
+                  </div>
+                )}
+                
+                {isTeamCreator && (
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Availability
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -336,6 +396,18 @@ export function TeamDetail() {
           level={team.group.level}
           gender={team.group.gender}
           onMemberAdded={loadTeam}
+        />
+      )}
+
+      {/* Team Availability Modal */}
+      {isTeamCreator && (
+        <TeamAvailabilityModal
+          open={showAvailabilityModal}
+          onOpenChange={setShowAvailabilityModal}
+          teamId={team.team.id}
+          onSuccess={() => {
+            loadTeamAvailability();
+          }}
         />
       )}
     </div>

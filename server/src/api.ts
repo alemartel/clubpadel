@@ -18,8 +18,10 @@ import {
 import {
   teams,
   team_members,
+  team_availability,
   type NewTeam,
   type NewTeamMember,
+  type NewTeamAvailability,
 } from "./schema/teams";
 import { eq, and, ne, sql, notInArray, desc } from "drizzle-orm";
 
@@ -1352,6 +1354,121 @@ protectedRoutes.delete("/teams/:id/members/:userId", async (c) => {
     });
   } catch (error) {
     console.error("Remove team member error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Team Availability Endpoints
+protectedRoutes.get("/teams/:id/availability", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Check if user is a member of this team or is an admin
+    const [membership] = await db
+      .select()
+      .from(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
+
+    if (!membership && user.role !== "admin") {
+      return c.json({ error: "You are not a member of this team" }, 403);
+    }
+
+    // Get team availability
+    const availability = await db
+      .select()
+      .from(team_availability)
+      .where(eq(team_availability.team_id, teamId))
+      .orderBy(team_availability.day_of_week);
+
+    return c.json({
+      availability,
+      message: "Team availability retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Get team availability error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+protectedRoutes.put("/teams/:id/availability", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const { availability } = await c.req.json();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Check if user is the team creator
+    if (team.created_by !== user.id) {
+      return c.json({ error: "Only the team creator can update availability" }, 403);
+    }
+
+    // Validate availability data
+    if (!Array.isArray(availability)) {
+      return c.json({ error: "Availability must be an array" }, 400);
+    }
+
+    const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    for (const dayAvailability of availability) {
+      if (!validDays.includes(dayAvailability.day_of_week)) {
+        return c.json({ error: `Invalid day: ${dayAvailability.day_of_week}` }, 400);
+      }
+      
+      if (dayAvailability.is_available && (!dayAvailability.start_time || !dayAvailability.end_time)) {
+        return c.json({ error: "Start time and end time are required when available" }, 400);
+      }
+    }
+
+    // Delete existing availability for this team
+    await db
+      .delete(team_availability)
+      .where(eq(team_availability.team_id, teamId));
+
+    // Insert new availability
+    const newAvailability: NewTeamAvailability[] = availability.map((day: any) => ({
+      id: randomUUID(),
+      team_id: teamId,
+      day_of_week: day.day_of_week,
+      is_available: day.is_available || false,
+      start_time: day.start_time || null,
+      end_time: day.end_time || null,
+    }));
+
+    if (newAvailability.length > 0) {
+      await db.insert(team_availability).values(newAvailability);
+    }
+
+    return c.json({
+      message: "Team availability updated successfully",
+    });
+  } catch (error) {
+    console.error("Update team availability error:", error);
     const { message, status } = handleDatabaseError(error);
     return c.json({ error: message }, status as any);
   }

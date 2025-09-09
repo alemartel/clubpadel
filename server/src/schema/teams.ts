@@ -4,6 +4,8 @@ import {
   text,
   timestamp,
   unique,
+  boolean,
+  time,
 } from "drizzle-orm/pg-core";
 import { appSchema, users } from "./users";
 import { leagues, groups } from "./leagues";
@@ -32,8 +34,24 @@ export const team_members = appSchema.table("team_members", {
   teamUserUnique: unique("team_members_team_user_unique").on(table.team_id, table.user_id),
 }));
 
+export const team_availability = appSchema.table("team_availability", {
+  id: text("id").primaryKey(),
+  team_id: text("team_id").notNull(), // Foreign key to teams.id
+  day_of_week: text("day_of_week").notNull(), // 'monday', 'tuesday', etc.
+  is_available: boolean("is_available").default(false).notNull(),
+  start_time: time("start_time"), // e.g., '09:00:00'
+  end_time: time("end_time"), // e.g., '17:00:00'
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate availability entries for same team/day
+  teamDayUnique: unique("team_availability_team_day_unique").on(table.team_id, table.day_of_week),
+}));
+
 // Export types
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof team_members.$inferSelect;
 export type NewTeamMember = typeof team_members.$inferInsert;
+export type TeamAvailability = typeof team_availability.$inferSelect;
+export type NewTeamAvailability = typeof team_availability.$inferInsert;

@@ -384,6 +384,23 @@ export async function getAllPlayers() {
   return response.json();
 }
 
+// Team Availability API functions
+export async function getTeamAvailability(teamId: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${teamId}/availability`);
+  return response.json();
+}
+
+export async function updateTeamAvailability(teamId: string, availability: any[]) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${teamId}/availability`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ availability }),
+  });
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -409,4 +426,6 @@ export const api = {
   getFreePlayers,
   getAdminTeamsByGroup,
   getAllPlayers,
+  getTeamAvailability,
+  updateTeamAvailability,
 };
