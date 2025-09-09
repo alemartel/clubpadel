@@ -73,21 +73,29 @@ function AuthRedirectHandler() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    // Only redirect once when user first signs in, not on every navigation
-    if (!loading && user && !hasRedirected && location.pathname !== "/") {
-      // Redirect to home page only on initial sign-in
-      navigate("/", { replace: true });
-      setHasRedirected(true);
+    // Only redirect if:
+    // 1. User is authenticated
+    // 2. Not loading
+    // 3. Not on home page
+    // 4. This is a fresh login (not a page refresh)
+    if (!loading && user && location.pathname !== "/") {
+      // Check if this is a fresh login by looking at sessionStorage
+      const hasRedirectedThisSession = sessionStorage.getItem('hasRedirectedThisSession');
+      
+      if (!hasRedirectedThisSession) {
+        // This is a fresh login, redirect to home
+        navigate("/", { replace: true });
+        sessionStorage.setItem('hasRedirectedThisSession', 'true');
+      }
     }
-  }, [user, loading, location.pathname, navigate, hasRedirected]);
+  }, [user, loading, location.pathname, navigate]);
 
   // Reset redirect flag when user signs out
   useEffect(() => {
     if (!user) {
-      setHasRedirected(false);
+      sessionStorage.removeItem('hasRedirectedThisSession');
     }
   }, [user]);
 
