@@ -41,16 +41,8 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Teams Section - Only visible to non-admin players */}
-        {!isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Teams</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+              {/* My Teams - Only visible to non-admin players */}
+              {!isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     tooltip="My Teams"
@@ -63,45 +55,39 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Admin Section - Only visible to admins */}
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip="League Management"
-                    isActive={isActive("/admin/leagues")}
-                    asChild
-                  >
-                    <Link to="/admin/leagues">
-                      <Calendar className="w-4 h-4" />
-                      <span>League Management</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip="Player Management"
-                    isActive={isActive("/admin/level-validation")}
-                    asChild
-                  >
-                    <Link to="/admin/level-validation">
-                      <Shield className="w-4 h-4" />
-                      <span>Player Management</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+              )}
+              {/* Admin items - Only visible to admins */}
+              {isAdmin && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="League Management"
+                      isActive={isActive("/admin/leagues")}
+                      asChild
+                    >
+                      <Link to="/admin/leagues">
+                        <Calendar className="w-4 h-4" />
+                        <span>League Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Player Management"
+                      isActive={isActive("/admin/level-validation")}
+                      asChild
+                    >
+                      <Link to="/admin/level-validation">
+                        <Shield className="w-4 h-4" />
+                        <span>Player Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
