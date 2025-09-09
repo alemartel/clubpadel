@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import {
-  getLevelValidationRequests,
+  getAllPlayers,
   approveLevelValidation,
   rejectLevelValidation,
-  LevelValidationRequest,
 } from "@/lib/serverComm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,23 +31,50 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, XCircle, Search, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Search, Users, Filter, CheckSquare, Square, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+interface Player {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  phone_number?: string;
+  role: string;
+  claimed_level: string;
+  level_validation_status: "pending" | "approved" | "rejected" | "none" | null;
+  level_validation_notes?: string;
+  level_validated_at?: string;
+  level_validated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export function AdminLevelValidation() {
   const { isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
-  // State for validation requests
-  const [requests, setRequests] = useState<LevelValidationRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<LevelValidationRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
+  // State for all players
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
 
   // Modal states
-  const [selectedRequest, setSelectedRequest] = useState<LevelValidationRequest | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -61,52 +87,63 @@ export function AdminLevelValidation() {
     }
   }, [isAdmin, loading, navigate]);
 
-  // Load validation requests on mount
+  // Load all players on mount
   useEffect(() => {
     if (isAdmin) {
-      loadValidationRequests();
+      loadAllPlayers();
     }
   }, [isAdmin]);
 
-  // Filter requests based on search term
+  // Filter players based on search term and status
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredRequests(requests);
-    } else {
-      const filtered = requests.filter(
-        (request) =>
-          request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (request.first_name && request.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (request.last_name && request.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredRequests(filtered);
-    }
-  }, [requests, searchTerm]);
+    let filtered = players;
 
-  const loadValidationRequests = async () => {
-    setLoadingRequests(true);
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (player) =>
+          player.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (player.first_name && player.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (player.last_name && player.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (player.display_name && player.display_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((player) => player.level_validation_status === statusFilter);
+    }
+
+    setFilteredPlayers(filtered);
+  }, [players, searchTerm, statusFilter]);
+
+  const loadAllPlayers = async () => {
+    setLoadingPlayers(true);
     setError("");
 
     try {
-      const response = await getLevelValidationRequests();
-      setRequests(response.requests);
+      const response = await getAllPlayers();
+      setPlayers(response.players);
     } catch (err: any) {
-      setError(err.message || "Failed to load validation requests");
+      setError(err.message || "Failed to load players");
     } finally {
-      setLoadingRequests(false);
+      setLoadingPlayers(false);
     }
   };
 
-  const handleApprove = async () => {
-    if (!selectedRequest) return;
+  const handleApprove = async (playerId?: string) => {
+    const targetPlayer = playerId ? players.find(p => p.id === playerId) : selectedPlayer;
+    if (!targetPlayer) return;
 
     setActionLoading(true);
     try {
-      await approveLevelValidation(selectedRequest.id, notes || undefined);
+      // For now, we'll use the existing approveLevelValidation function
+      // In a real implementation, you might want a different endpoint for direct approval
+      await approveLevelValidation(targetPlayer.id, notes || undefined);
       setShowApproveModal(false);
-      setSelectedRequest(null);
+      setSelectedPlayer(null);
       setNotes("");
-      await loadValidationRequests();
+      await loadAllPlayers();
     } catch (err: any) {
       setError(err.message || "Failed to approve validation");
     } finally {
@@ -114,16 +151,17 @@ export function AdminLevelValidation() {
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedRequest || !notes.trim()) return;
+  const handleReject = async (playerId?: string) => {
+    const targetPlayer = playerId ? players.find(p => p.id === playerId) : selectedPlayer;
+    if (!targetPlayer || !notes.trim()) return;
 
     setActionLoading(true);
     try {
-      await rejectLevelValidation(selectedRequest.id, notes);
+      await rejectLevelValidation(targetPlayer.id, notes);
       setShowRejectModal(false);
-      setSelectedRequest(null);
+      setSelectedPlayer(null);
       setNotes("");
-      await loadValidationRequests();
+      await loadAllPlayers();
     } catch (err: any) {
       setError(err.message || "Failed to reject validation");
     } finally {
@@ -131,16 +169,63 @@ export function AdminLevelValidation() {
     }
   };
 
-  const openApproveModal = (request: LevelValidationRequest) => {
-    setSelectedRequest(request);
+  const openApproveModal = (player: Player) => {
+    setSelectedPlayer(player);
     setNotes("");
     setShowApproveModal(true);
   };
 
-  const openRejectModal = (request: LevelValidationRequest) => {
-    setSelectedRequest(request);
+  const openRejectModal = (player: Player) => {
+    setSelectedPlayer(player);
     setNotes("");
     setShowRejectModal(true);
+  };
+
+  const handleSelectPlayer = (playerId: string) => {
+    const newSelected = new Set(selectedPlayers);
+    if (newSelected.has(playerId)) {
+      newSelected.delete(playerId);
+    } else {
+      newSelected.add(playerId);
+    }
+    setSelectedPlayers(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPlayers.size === filteredPlayers.length) {
+      setSelectedPlayers(new Set());
+    } else {
+      setSelectedPlayers(new Set(filteredPlayers.map(p => p.id)));
+    }
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="secondary">Pending</Badge>;
+      case "approved":
+        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
+      case "rejected":
+        return <Badge variant="destructive">Rejected</Badge>;
+      case "none":
+        return <Badge variant="outline">No Request</Badge>;
+      default:
+        return <Badge variant="outline">No Request</Badge>;
+    }
+  };
+
+  const getLevelBadge = (level: string) => {
+    return (
+      <Badge variant="outline" className="bg-blue-50 text-blue-700">
+        Level {level}
+      </Badge>
+    );
+  };
+
+  const getPlayerName = (player: Player) => {
+    if (player.display_name) return player.display_name;
+    if (player.first_name && player.last_name) return `${player.first_name} ${player.last_name}`;
+    return "Unknown Player";
   };
 
   if (loading) {
@@ -155,22 +240,76 @@ export function AdminLevelValidation() {
     return null; // Will redirect
   }
 
+  const pendingCount = players.filter(p => p.level_validation_status === "pending").length;
+  const approvedCount = players.filter(p => p.level_validation_status === "approved").length;
+  const rejectedCount = players.filter(p => p.level_validation_status === "rejected").length;
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Level Validation</h1>
-          <p className="text-muted-foreground">Review and approve player level requests</p>
+          <h1 className="text-3xl font-bold">Player Management</h1>
+          <p className="text-muted-foreground">Manage all players and their level validation status</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {filteredRequests.length} pending request{filteredRequests.length !== 1 ? 's' : ''}
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {filteredPlayers.length} of {players.length} players
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Search */}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Players</p>
+                <p className="text-2xl font-bold">{players.length}</p>
+              </div>
+              <Users className="w-8 h-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+              </div>
+              <Clock className="w-8 h-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
+              </div>
+              <XCircle className="w-8 h-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -181,6 +320,22 @@ export function AdminLevelValidation() {
             className="pl-10"
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Players</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="null">No Request</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" onClick={loadAllPlayers} disabled={loadingPlayers}>
+          <Filter className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -190,30 +345,48 @@ export function AdminLevelValidation() {
         </div>
       )}
 
-      {/* Requests Table */}
+      {/* Players Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Pending Level Validation Requests</CardTitle>
-          <CardDescription>
-            Review player level change requests and approve or reject them
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Players</CardTitle>
+              <CardDescription>
+                Manage player level validation requests and view player information
+              </CardDescription>
+            </div>
+            {selectedPlayers.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedPlayers.size} selected
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedPlayers(new Set())}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          {loadingRequests ? (
+          {loadingPlayers ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="ml-3 text-muted-foreground">Loading requests...</span>
+              <span className="ml-3 text-muted-foreground">Loading players...</span>
             </div>
-          ) : filteredRequests.length === 0 ? (
+          ) : filteredPlayers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm ? "No matching requests found" : "No pending requests"}
+                {searchTerm || statusFilter !== "all" ? "No matching players found" : "No players found"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {searchTerm 
-                  ? "Try adjusting your search terms"
-                  : "All level validation requests have been processed"
+                {searchTerm || statusFilter !== "all"
+                  ? "Try adjusting your search terms or filters"
+                  : "No players have been registered yet"
                 }
               </p>
             </div>
@@ -221,54 +394,101 @@ export function AdminLevelValidation() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      className="h-6 w-6 p-0"
+                    >
+                      {selectedPlayers.size === filteredPlayers.length ? (
+                        <CheckSquare className="w-4 h-4" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                   <TableHead>Player</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Claimed Level</TableHead>
-                  <TableHead>Requested</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRequests.map((request) => (
-                  <TableRow key={request.id}>
+                {filteredPlayers.map((player) => (
+                  <TableRow key={player.id}>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSelectPlayer(player.id)}
+                        className="h-6 w-6 p-0"
+                      >
+                        {selectedPlayers.has(player.id) ? (
+                          <CheckSquare className="w-4 h-4" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">
-                          {request.first_name && request.last_name
-                            ? `${request.first_name} ${request.last_name}`
-                            : "Unknown Player"}
-                        </div>
+                        <div className="font-medium">{getPlayerName(player)}</div>
+                        {player.phone_number && (
+                          <div className="text-sm text-muted-foreground">{player.phone_number}</div>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell>{request.email}</TableCell>
+                    <TableCell>{player.email}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Level {request.claimed_level}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {getLevelBadge(player.claimed_level)}
+                        {player.level_validation_status === "approved" && (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        )}
+                      </div>
                     </TableCell>
+                    <TableCell>{getStatusBadge(player.level_validation_status)}</TableCell>
                     <TableCell>
-                      {new Date(request.updated_at).toLocaleDateString()}
+                      {new Date(player.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openApproveModal(request)}
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openRejectModal(request)}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
+                        {player.level_validation_status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openApproveModal(player)}
+                              className="text-green-600 border-green-200 hover:bg-green-50"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openRejectModal(player)}
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {player.level_validation_status === "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openApproveModal(player)}
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -285,15 +505,15 @@ export function AdminLevelValidation() {
           <DialogHeader>
             <DialogTitle>Approve Level Validation</DialogTitle>
             <DialogDescription>
-              Approve the level change request for {selectedRequest?.first_name} {selectedRequest?.last_name}
+              Approve the level validation for {selectedPlayer && getPlayerName(selectedPlayer)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Request Details</h4>
-              <p><strong>Player:</strong> {selectedRequest?.first_name} {selectedRequest?.last_name}</p>
-              <p><strong>Email:</strong> {selectedRequest?.email}</p>
-              <p><strong>Claimed Level:</strong> Level {selectedRequest?.claimed_level}</p>
+              <h4 className="font-medium mb-2">Player Details</h4>
+              <p><strong>Player:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
+              <p><strong>Email:</strong> {selectedPlayer?.email}</p>
+              <p><strong>Claimed Level:</strong> Level {selectedPlayer?.claimed_level}</p>
             </div>
             <div>
               <Label htmlFor="approve-notes">Optional Notes</Label>
@@ -315,7 +535,7 @@ export function AdminLevelValidation() {
               Cancel
             </Button>
             <Button
-              onClick={handleApprove}
+              onClick={() => handleApprove()}
               disabled={actionLoading}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -331,15 +551,15 @@ export function AdminLevelValidation() {
           <DialogHeader>
             <DialogTitle>Reject Level Validation</DialogTitle>
             <DialogDescription>
-              Reject the level change request for {selectedRequest?.first_name} {selectedRequest?.last_name}
+              Reject the level validation for {selectedPlayer && getPlayerName(selectedPlayer)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Request Details</h4>
-              <p><strong>Player:</strong> {selectedRequest?.first_name} {selectedRequest?.last_name}</p>
-              <p><strong>Email:</strong> {selectedRequest?.email}</p>
-              <p><strong>Claimed Level:</strong> Level {selectedRequest?.claimed_level}</p>
+              <h4 className="font-medium mb-2">Player Details</h4>
+              <p><strong>Player:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
+              <p><strong>Email:</strong> {selectedPlayer?.email}</p>
+              <p><strong>Claimed Level:</strong> Level {selectedPlayer?.claimed_level}</p>
             </div>
             <div>
               <Label htmlFor="reject-notes">Rejection Reason *</Label>
@@ -365,7 +585,7 @@ export function AdminLevelValidation() {
               Cancel
             </Button>
             <Button
-              onClick={handleReject}
+              onClick={() => handleReject()}
               disabled={actionLoading || !notes.trim()}
               className="bg-red-600 hover:bg-red-700"
             >

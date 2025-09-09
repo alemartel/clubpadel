@@ -21,7 +21,7 @@ import {
   type NewTeam,
   type NewTeamMember,
 } from "./schema/teams";
-import { eq, and, ne, sql, notInArray } from "drizzle-orm";
+import { eq, and, ne, sql, notInArray, desc } from "drizzle-orm";
 
 type Env = {
   RUNTIME?: string;
@@ -867,6 +867,45 @@ api.get("/leagues/:id/groups", async (c) => {
   } catch (error) {
     console.error("Public groups retrieval error:", error);
     return c.json({ error: "Failed to retrieve groups" }, 500);
+  }
+});
+
+// Admin Player Management Endpoints
+adminRoutes.get("/players", async (c) => {
+  try {
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get all players with their validation status
+    const allPlayers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        first_name: users.first_name,
+        last_name: users.last_name,
+        display_name: users.display_name,
+        phone_number: users.phone_number,
+        role: users.role,
+        claimed_level: users.claimed_level,
+        level_validation_status: users.level_validation_status,
+        level_validation_notes: users.level_validation_notes,
+        level_validated_at: users.level_validated_at,
+        level_validated_by: users.level_validated_by,
+        created_at: users.created_at,
+        updated_at: users.updated_at,
+      })
+      .from(users)
+      .where(eq(users.role, "player"))
+      .orderBy(desc(users.updated_at));
+
+    return c.json({
+      players: allPlayers,
+      message: "Players retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Admin players retrieval error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
   }
 });
 

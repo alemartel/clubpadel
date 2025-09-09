@@ -112,13 +112,13 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    tooltip="Level Validation"
+                    tooltip="Player Management"
                     isActive={isActive("/admin/level-validation")}
                     asChild
                   >
                     <Link to="/admin/level-validation">
                       <Shield className="w-4 h-4" />
-                      <span>Level Validation</span>
+                      <span>Player Management</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

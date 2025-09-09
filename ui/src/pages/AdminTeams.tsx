@@ -55,7 +55,7 @@ interface TeamWithDetails {
 
 export function AdminTeams() {
   const { isAdmin, loading } = useAuth();
-  const { groupId } = useParams<{ groupId: string }>();
+  const { leagueId, groupId } = useParams<{ leagueId: string; groupId: string }>();
   const navigate = useNavigate();
 
   // State for teams
@@ -172,9 +172,9 @@ export function AdminTeams() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/leagues/${leagueId}/groups`)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Leagues
+          Back to Groups
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Teams - {groupName}</h1>
