@@ -112,13 +112,27 @@ function AppContent() {
   return (
     <SidebarProvider>
       <div className="flex flex-col w-full min-h-screen bg-background">
-        <Navbar />
         {!user ? (
-          <main className="flex flex-col items-center justify-center flex-1 p-4">
-            <LoginForm />
-          </main>
+          <div className="relative min-h-screen">
+            <div 
+              className="absolute inset-0 bg-cover bg-no-repeat"
+              style={{ 
+                backgroundImage: 'url(/login-background.jpg)',
+                backgroundPosition: 'top -250px left 0px'
+              }}
+            />
+            <div className="absolute inset-0 bg-black/20" />
+            <div className="relative z-10">
+              <Navbar />
+              <main className="flex flex-col items-center justify-center flex-1 p-4 min-h-[calc(100vh-3rem)]">
+                <LoginForm />
+              </main>
+            </div>
+          </div>
         ) : (
-          <div className="flex flex-1">
+          <>
+            <Navbar />
+            <div className="flex flex-1">
             <AuthRedirectHandler />
             <AppSidebar />
             <SidebarInset className="flex-1">
@@ -172,7 +186,8 @@ function AppContent() {
                 </Routes>
               </main>
             </SidebarInset>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </SidebarProvider>
