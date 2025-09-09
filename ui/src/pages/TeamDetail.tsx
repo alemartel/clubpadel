@@ -170,6 +170,7 @@ export function TeamDetail() {
   };
 
   const isTeamCreator = team && serverUser && team.team.created_by === serverUser.id;
+  const isTeamMember = team && serverUser && team.members.some(member => member.user.id === serverUser.id);
 
   if (loading) {
     return (
@@ -313,7 +314,7 @@ export function TeamDetail() {
                   </div>
                 )}
                 
-                {isTeamCreator && (
+                {isTeamMember && (
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
                       <Edit className="w-4 h-4 mr-2" />
@@ -400,7 +401,7 @@ export function TeamDetail() {
       )}
 
       {/* Team Availability Modal */}
-      {isTeamCreator && (
+      {isTeamMember && (
         <TeamAvailabilityModal
           open={showAvailabilityModal}
           onOpenChange={setShowAvailabilityModal}

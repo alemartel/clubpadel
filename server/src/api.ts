@@ -1431,9 +1431,14 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    // Check if user is the team creator
-    if (team.created_by !== user.id) {
-      return c.json({ error: "Only the team creator can update availability" }, 403);
+    // Check if user is a team member
+    const [membership] = await db
+      .select()
+      .from(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
+
+    if (!membership) {
+      return c.json({ error: "Only team members can update availability" }, 403);
     }
 
     // Validate availability data
