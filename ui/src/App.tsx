@@ -9,13 +9,21 @@ import { Page1 } from "@/pages/Page1";
 import { Page2 } from "@/pages/Page2";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
+import { AdminGroups } from "@/pages/AdminGroups";
+import { AdminTeams } from "@/pages/AdminTeams";
 import { AdminLevelValidation } from "@/pages/AdminLevelValidation";
+import { MyTeams } from "./pages/MyTeams";
+import { CreateTeam } from "./pages/CreateTeam";
+import { TeamDetail } from "./pages/TeamDetail";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 // Admin route protection component
@@ -39,6 +47,53 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Team creation route protection component
+function TeamCreationRoute({ children }: { children: React.ReactNode }) {
+  const { canCreateTeams, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Checking team creation access...</div>
+      </div>
+    );
+  }
+
+  if (!canCreateTeams) {
+    return (
+      <Navigate to="/" replace state={{ error: "You need a validated level to create teams" }} />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+// Component to handle redirecting new users to home page
+function AuthRedirectHandler() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [hasRedirected, setHasRedirected] = useState(false);
+
+  useEffect(() => {
+    // Only redirect once when user first signs in, not on every navigation
+    if (!loading && user && !hasRedirected && location.pathname !== "/") {
+      // Redirect to home page only on initial sign-in
+      navigate("/", { replace: true });
+      setHasRedirected(true);
+    }
+  }, [user, loading, location.pathname, navigate, hasRedirected]);
+
+  // Reset redirect flag when user signs out
+  useEffect(() => {
+    if (!user) {
+      setHasRedirected(false);
+    }
+  }, [user]);
+
+  return null; // This component doesn't render anything
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
 
@@ -58,6 +113,7 @@ function AppContent() {
           </main>
         ) : (
           <div className="flex flex-1">
+            <AuthRedirectHandler />
             <AppSidebar />
             <SidebarInset className="flex-1">
               <main className="flex-1">
@@ -76,6 +132,22 @@ function AppContent() {
                     }
                   />
                   <Route
+                    path="/admin/leagues/:leagueId/groups"
+                    element={
+                      <AdminRoute>
+                        <AdminGroups />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/leagues/:leagueId/groups/:groupId/teams"
+                    element={
+                      <AdminRoute>
+                        <AdminTeams />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/level-validation"
                     element={
                       <AdminRoute>
@@ -83,6 +155,16 @@ function AppContent() {
                       </AdminRoute>
                     }
                   />
+                  <Route path="/teams" element={<MyTeams />} />
+                  <Route
+                    path="/teams/create"
+                    element={
+                      <TeamCreationRoute>
+                        <CreateTeam />
+                      </TeamCreationRoute>
+                    }
+                  />
+                  <Route path="/teams/:id" element={<TeamDetail />} />
                 </Routes>
               </main>
             </SidebarInset>

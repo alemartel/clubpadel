@@ -174,7 +174,7 @@ export interface UpdateLeague {
 }
 
 export async function getLeagues() {
-  const response = await fetchWithAuth("/api/v1/admin/leagues");
+  const response = await fetchWithAuth("/api/v1/leagues");
   return response.json();
 }
 
@@ -235,9 +235,42 @@ export interface UpdateGroup {
   gender?: "male" | "female" | "mixed";
 }
 
+// Team interfaces
+export interface Team {
+  id: string;
+  name: string;
+  league_id: string;
+  group_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NewTeam {
+  name: string;
+  league_id: string;
+  group_id: string;
+}
+
+export interface UpdateTeam {
+  name?: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface NewTeamMember {
+  user_id: string;
+}
+
 export async function getGroups(leagueId: string) {
   const response = await fetchWithAuth(
-    `/api/v1/admin/leagues/${leagueId}/groups`
+    `/api/v1/leagues/${leagueId}/groups`
   );
   return response.json();
 }
@@ -274,6 +307,73 @@ export async function deleteGroup(id: string) {
   return response.json();
 }
 
+// Team management functions
+export async function createTeam(data: NewTeam) {
+  const response = await fetchWithAuth("/api/v1/protected/teams", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function getMyTeams() {
+  const response = await fetchWithAuth("/api/v1/protected/teams");
+  return response.json();
+}
+
+export async function getTeam(id: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${id}`);
+  return response.json();
+}
+
+export async function updateTeam(id: string, data: UpdateTeam) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function deleteTeam(id: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${id}`, {
+    method: "DELETE",
+  });
+  return response.json();
+}
+
+export async function addTeamMember(teamId: string, data: NewTeamMember) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${teamId}/members`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function removeTeamMember(teamId: string, userId: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/${teamId}/members/${userId}`, {
+    method: "DELETE",
+  });
+  return response.json();
+}
+
+export async function getFreePlayers(level: string, gender?: string, excludeTeamId?: string) {
+  const params = new URLSearchParams({ level });
+  if (gender) params.append("gender", gender);
+  if (excludeTeamId) params.append("exclude_team_id", excludeTeamId);
+  
+  const response = await fetchWithAuth(`/api/v1/protected/players/free-market?${params}`);
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -288,4 +388,13 @@ export const api = {
   createGroup,
   updateGroup,
   deleteGroup,
+  // Team management
+  createTeam,
+  getMyTeams,
+  getTeam,
+  updateTeam,
+  deleteTeam,
+  addTeamMember,
+  removeTeamMember,
+  getFreePlayers,
 };

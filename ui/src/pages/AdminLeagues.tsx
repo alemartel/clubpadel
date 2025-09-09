@@ -3,15 +3,11 @@ import { useAuth } from "@/lib/auth-context";
 import {
   api,
   League,
-  Group,
   NewLeague,
-  NewGroup,
   UpdateLeague,
-  UpdateGroup,
 } from "@/lib/serverComm";
 import {
   validateLeague,
-  validateGroup,
   getFieldError,
   hasFieldError,
 } from "@/lib/validation";
@@ -41,13 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Plus, Edit, Trash2, Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -58,24 +47,13 @@ export function AdminLeagues() {
 
   // State for leagues
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [leaguesLoading, setLeaguesLoading] = useState(false);
   const [leaguesError, setLeaguesError] = useState("");
 
-  // State for groups
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsError, setGroupsError] = useState("");
-
   // Form states
   const [showCreateLeague, setShowCreateLeague] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [editingLeague, setEditingLeague] = useState<League | null>(null);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [deleteConfirmLeague, setDeleteConfirmLeague] = useState<League | null>(
-    null
-  );
-  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<Group | null>(
     null
   );
 
@@ -85,15 +63,9 @@ export function AdminLeagues() {
     start_date: "",
     end_date: "",
   });
-  const [groupForm, setGroupForm] = useState<NewGroup>({
-    name: "",
-    level: "1",
-    gender: "mixed",
-  });
 
   // Validation errors
   const [leagueErrors, setLeagueErrors] = useState<any[]>([]);
-  const [groupErrors, setGroupErrors] = useState<any[]>([]);
 
   // Redirect if not admin
   useEffect(() => {
@@ -109,41 +81,17 @@ export function AdminLeagues() {
     }
   }, [isAdmin]);
 
-  // Load groups when league is selected
-  useEffect(() => {
-    if (selectedLeague) {
-      loadGroups(selectedLeague.id);
-    }
-  }, [selectedLeague]);
-
   const loadLeagues = async () => {
     setLeaguesLoading(true);
     setLeaguesError("");
     try {
       const response = await api.getLeagues();
       setLeagues(response.leagues);
-      if (response.leagues.length > 0 && !selectedLeague) {
-        setSelectedLeague(response.leagues[0]);
-      }
     } catch (error) {
       console.error("Failed to load leagues:", error);
       setLeaguesError("Failed to load leagues");
     } finally {
       setLeaguesLoading(false);
-    }
-  };
-
-  const loadGroups = async (leagueId: string) => {
-    setGroupsLoading(true);
-    setGroupsError("");
-    try {
-      const response = await api.getGroups(leagueId);
-      setGroups(response.groups);
-    } catch (error) {
-      console.error("Failed to load groups:", error);
-      setGroupsError("Failed to load groups");
-    } finally {
-      setGroupsLoading(false);
     }
   };
 
@@ -205,78 +153,9 @@ export function AdminLeagues() {
     try {
       await api.deleteLeague(deleteConfirmLeague.id);
       setDeleteConfirmLeague(null);
-      if (selectedLeague?.id === deleteConfirmLeague.id) {
-        setSelectedLeague(null);
-        setGroups([]);
-      }
       loadLeagues();
     } catch (error) {
       console.error("Failed to delete league:", error);
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!selectedLeague) return;
-
-    const validation = validateGroup(groupForm);
-    if (!validation.isValid) {
-      setGroupErrors(validation.errors);
-      return;
-    }
-
-    try {
-      await api.createGroup(selectedLeague.id, groupForm);
-      setShowCreateGroup(false);
-      setGroupForm({ name: "", level: "1", gender: "mixed" });
-      setGroupErrors([]);
-      loadGroups(selectedLeague.id);
-    } catch (error) {
-      console.error("Failed to create group:", error);
-      setGroupErrors([{ field: "general", message: "Failed to create group" }]);
-    }
-  };
-
-  const handleUpdateGroup = async () => {
-    if (!editingGroup) return;
-
-    const updateData: UpdateGroup = {};
-    if (groupForm.name !== editingGroup.name) updateData.name = groupForm.name;
-    if (groupForm.level !== editingGroup.level)
-      updateData.level = groupForm.level;
-    if (groupForm.gender !== editingGroup.gender)
-      updateData.gender = groupForm.gender;
-
-    const validation = validateGroup(groupForm);
-    if (!validation.isValid) {
-      setGroupErrors(validation.errors);
-      return;
-    }
-
-    try {
-      await api.updateGroup(editingGroup.id, updateData);
-      setEditingGroup(null);
-      setGroupForm({ name: "", level: "1", gender: "mixed" });
-      setGroupErrors([]);
-      if (selectedLeague) {
-        loadGroups(selectedLeague.id);
-      }
-    } catch (error) {
-      console.error("Failed to update group:", error);
-      setGroupErrors([{ field: "general", message: "Failed to update group" }]);
-    }
-  };
-
-  const handleDeleteGroup = async () => {
-    if (!deleteConfirmGroup) return;
-
-    try {
-      await api.deleteGroup(deleteConfirmGroup.id);
-      setDeleteConfirmGroup(null);
-      if (selectedLeague) {
-        loadGroups(selectedLeague.id);
-      }
-    } catch (error) {
-      console.error("Failed to delete group:", error);
     }
   };
 
@@ -288,16 +167,6 @@ export function AdminLeagues() {
       end_date: league.end_date,
     });
     setLeagueErrors([]);
-  };
-
-  const startEditGroup = (group: Group) => {
-    setEditingGroup(group);
-    setGroupForm({
-      name: group.name,
-      level: group.level,
-      gender: group.gender,
-    });
-    setGroupErrors([]);
   };
 
   if (loading) {
@@ -351,13 +220,7 @@ export function AdminLeagues() {
               </TableHeader>
               <TableBody>
                 {leagues.map((league) => (
-                  <TableRow
-                    key={league.id}
-                    className={
-                      selectedLeague?.id === league.id ? "bg-muted" : ""
-                    }
-                    onClick={() => setSelectedLeague(league)}
-                  >
+                  <TableRow key={league.id}>
                     <TableCell className="font-medium">{league.name}</TableCell>
                     <TableCell>
                       {new Date(league.start_date).toLocaleDateString()}
@@ -370,20 +233,22 @@ export function AdminLeagues() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEditLeague(league);
-                          }}
+                          onClick={() => navigate(`/admin/leagues/${league.id}/groups`)}
+                        >
+                          <Users className="w-4 h-4 mr-1" />
+                          Groups
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditLeague(league)}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirmLeague(league);
-                          }}
+                          onClick={() => setDeleteConfirmLeague(league)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -397,75 +262,6 @@ export function AdminLeagues() {
         </CardContent>
       </Card>
 
-      {/* Groups Section */}
-      {selectedLeague && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Groups - {selectedLeague.name}
-              </div>
-              <Button onClick={() => setShowCreateGroup(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Group
-              </Button>
-            </CardTitle>
-            <CardDescription>
-              Manage groups for the selected league
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {groupsLoading ? (
-              <div className="text-center py-4">Loading groups...</div>
-            ) : groupsError ? (
-              <div className="text-center text-red-500 py-4">{groupsError}</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groups.map((group) => (
-                    <TableRow key={group.id}>
-                      <TableCell className="font-medium">
-                        {group.name}
-                      </TableCell>
-                      <TableCell>Level {group.level}</TableCell>
-                      <TableCell className="capitalize">
-                        {group.gender}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEditGroup(group)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeleteConfirmGroup(group)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Create League Dialog */}
       <Dialog open={showCreateLeague} onOpenChange={setShowCreateLeague}>
@@ -655,201 +451,6 @@ export function AdminLeagues() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Group Dialog */}
-      <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Group</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new group in {selectedLeague?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                value={groupForm.name}
-                onChange={(e) =>
-                  setGroupForm({ ...groupForm, name: e.target.value })
-                }
-                className={
-                  hasFieldError(groupErrors, "name") ? "border-red-500" : ""
-                }
-              />
-              {getFieldError(groupErrors, "name") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "name")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="group-level">Level</Label>
-              <Select
-                value={groupForm.level}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    level: value as "1" | "2" | "3" | "4",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "level") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
-                  <SelectItem value="4">Level 4</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "level") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "level")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="group-gender">Gender</Label>
-              <Select
-                value={groupForm.gender}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    gender: value as "male" | "female" | "mixed",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "gender") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "gender") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "gender")}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateGroup(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateGroup}>Create Group</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Group Dialog */}
-      <Dialog open={!!editingGroup} onOpenChange={() => setEditingGroup(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Group</DialogTitle>
-            <DialogDescription>Update the group details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-group-name">Group Name</Label>
-              <Input
-                id="edit-group-name"
-                value={groupForm.name}
-                onChange={(e) =>
-                  setGroupForm({ ...groupForm, name: e.target.value })
-                }
-                className={
-                  hasFieldError(groupErrors, "name") ? "border-red-500" : ""
-                }
-              />
-              {getFieldError(groupErrors, "name") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "name")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-group-level">Level</Label>
-              <Select
-                value={groupForm.level}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    level: value as "1" | "2" | "3" | "4",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "level") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
-                  <SelectItem value="4">Level 4</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "level") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "level")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-group-gender">Gender</Label>
-              <Select
-                value={groupForm.gender}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    gender: value as "male" | "female" | "mixed",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "gender") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "gender") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "gender")}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingGroup(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateGroup}>Update Group</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete League Confirmation */}
       <Dialog
@@ -879,32 +480,6 @@ export function AdminLeagues() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Group Confirmation */}
-      <Dialog
-        open={!!deleteConfirmGroup}
-        onOpenChange={() => setDeleteConfirmGroup(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Group</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{deleteConfirmGroup?.name}"? This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmGroup(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteGroup}>
-              Delete Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

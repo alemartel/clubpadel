@@ -1,4 +1,4 @@
-import { Home, Settings, FileText, Layers, Calendar, Shield } from "lucide-react";
+import { Home, Settings, FileText, Layers, Calendar, Shield, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -68,6 +68,29 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Teams Section - Only visible to non-admin players */}
+        {!isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Teams</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="My Teams"
+                    isActive={isActive("/teams")}
+                    asChild
+                  >
+                    <Link to="/teams">
+                      <Users className="w-4 h-4" />
+                      <span>My Teams</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Admin Section - Only visible to admins */}
         {isAdmin && (

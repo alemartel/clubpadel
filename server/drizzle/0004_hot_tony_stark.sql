@@ -1,0 +1,2 @@
+ALTER TABLE "app"."team_members" ADD CONSTRAINT "team_members_team_user_unique" UNIQUE("team_id","user_id");--> statement-breakpoint
+ALTER TABLE "app"."teams" ADD CONSTRAINT "teams_league_name_unique" UNIQUE("league_id","name");

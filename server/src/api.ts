@@ -15,7 +15,13 @@ import {
   type NewLeague,
   type NewGroup,
 } from "./schema/leagues";
-import { eq, and } from "drizzle-orm";
+import {
+  teams,
+  team_members,
+  type NewTeam,
+  type NewTeamMember,
+} from "./schema/teams";
+import { eq, and, ne, sql, notInArray } from "drizzle-orm";
 
 type Env = {
   RUNTIME?: string;
@@ -29,6 +35,18 @@ function handleDatabaseError(error: any): { message: string; status: number } {
     if (error.constraint === "groups_league_id_name_unique") {
       return {
         message: "Group name must be unique within the league",
+        status: 409,
+      };
+    }
+    if (error.constraint === "teams_league_name_unique") {
+      return {
+        message: "Team name must be unique within the league",
+        status: 409,
+      };
+    }
+    if (error.constraint === "team_members_team_user_unique") {
+      return {
+        message: "User is already a member of this team",
         status: 409,
       };
     }
@@ -53,7 +71,6 @@ function handleDatabaseError(error: any): { message: string; status: number } {
 // Helper function to sanitize text inputs
 function sanitizeText(input: string): string {
   if (typeof input !== "string") return "";
-
   return input
     .trim()
     .replace(/[<>]/g, "") // Remove potential HTML tags
@@ -850,6 +867,496 @@ api.get("/leagues/:id/groups", async (c) => {
   } catch (error) {
     console.error("Public groups retrieval error:", error);
     return c.json({ error: "Failed to retrieve groups" }, 500);
+  }
+});
+
+// Team Management Endpoints
+protectedRoutes.post("/teams", async (c) => {
+  try {
+    const user = c.get("user");
+    const body = await c.req.json();
+    const { name, league_id, group_id } = body;
+
+    // Sanitize and validate required fields
+    const sanitizedName = sanitizeText(name);
+    if (!sanitizedName || !league_id || !group_id) {
+      return c.json({ error: "Team name, league, and group are required" }, 400);
+    }
+
+    // Check if user has validated level
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const [currentUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    if (!currentUser || currentUser.level_validation_status !== "approved") {
+      return c.json({ error: "You must have a validated level to create teams" }, 403);
+    }
+
+    // Verify league and group exist
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, league_id));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    const [group] = await db
+      .select()
+      .from(groups)
+      .where(and(eq(groups.id, group_id), eq(groups.league_id, league_id)));
+
+    if (!group) {
+      return c.json({ error: "Group not found in this league" }, 404);
+    }
+
+    // Check if user's validated level matches group level
+    if (currentUser.claimed_level !== group.level) {
+      return c.json({ error: "Your validated level must match the group level" }, 400);
+    }
+
+    // Check if team name is unique within league
+    const [existingTeam] = await db
+      .select()
+      .from(teams)
+      .where(and(eq(teams.league_id, league_id), eq(teams.name, sanitizedName)));
+
+    if (existingTeam) {
+      return c.json({ error: "Team name must be unique within the league" }, 409);
+    }
+
+    // Create team
+    const teamId = randomUUID();
+    const [newTeam] = await db
+      .insert(teams)
+      .values({
+        id: teamId,
+        name: sanitizedName,
+        league_id,
+        group_id,
+        created_by: user.id,
+      })
+      .returning();
+
+    // Add creator as team member
+    await db
+      .insert(team_members)
+      .values({
+        id: randomUUID(),
+        team_id: teamId,
+        user_id: user.id,
+        role: "captain",
+      });
+
+    return c.json({
+      team: newTeam,
+      message: "Team created successfully",
+    });
+  } catch (error) {
+    console.error("Team creation error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+protectedRoutes.get("/teams", async (c) => {
+  try {
+    const user = c.get("user");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get teams where user is a member
+    const userTeams = await db
+      .select({
+        team: teams,
+        league: leagues,
+        group: groups,
+        member_count: sql<number>`count(${team_members.id})`,
+      })
+      .from(teams)
+      .innerJoin(team_members, eq(teams.id, team_members.team_id))
+      .innerJoin(leagues, eq(teams.league_id, leagues.id))
+      .innerJoin(groups, eq(teams.group_id, groups.id))
+      .where(eq(team_members.user_id, user.id))
+      .groupBy(teams.id, leagues.id, groups.id);
+
+    return c.json({
+      teams: userTeams,
+      message: "Teams retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Teams retrieval error:", error);
+    return c.json({ error: "Failed to retrieve teams" }, 500);
+  }
+});
+
+protectedRoutes.get("/teams/:id", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get team details with members
+    const [team] = await db
+      .select({
+        team: teams,
+        league: leagues,
+        group: groups,
+      })
+      .from(teams)
+      .innerJoin(leagues, eq(teams.league_id, leagues.id))
+      .innerJoin(groups, eq(teams.group_id, groups.id))
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Check if user is a member of this team
+    const [membership] = await db
+      .select()
+      .from(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
+
+    if (!membership) {
+      return c.json({ error: "You are not a member of this team" }, 403);
+    }
+
+    // Get team members
+    const members = await db
+      .select({
+        member: team_members,
+        user: users,
+      })
+      .from(team_members)
+      .innerJoin(users, eq(team_members.user_id, users.id))
+      .where(eq(team_members.team_id, teamId));
+
+    return c.json({
+      team: { ...team, members },
+      message: "Team details retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Team details error:", error);
+    return c.json({ error: "Failed to retrieve team details" }, 500);
+  }
+});
+
+protectedRoutes.put("/teams/:id", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const body = await c.req.json();
+    const { name } = body;
+
+    const sanitizedName = sanitizeText(name);
+    if (!sanitizedName) {
+      return c.json({ error: "Team name is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists and user is the creator
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    if (team.created_by !== user.id) {
+      return c.json({ error: "Only the team creator can update team details" }, 403);
+    }
+
+    // Check if new name is unique within league
+    const [existingTeam] = await db
+      .select()
+      .from(teams)
+      .where(and(eq(teams.league_id, team.league_id), eq(teams.name, sanitizedName), ne(teams.id, teamId)));
+
+    if (existingTeam) {
+      return c.json({ error: "Team name must be unique within the league" }, 409);
+    }
+
+    // Update team
+    const [updatedTeam] = await db
+      .update(teams)
+      .set({
+        name: sanitizedName,
+        updated_at: new Date(),
+      })
+      .where(eq(teams.id, teamId))
+      .returning();
+
+    return c.json({
+      team: updatedTeam,
+      message: "Team updated successfully",
+    });
+  } catch (error) {
+    console.error("Team update error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+protectedRoutes.delete("/teams/:id", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists and user is the creator
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    if (team.created_by !== user.id) {
+      return c.json({ error: "Only the team creator can delete the team" }, 403);
+    }
+
+    // Delete team (cascade will handle team_members)
+    await db
+      .delete(teams)
+      .where(eq(teams.id, teamId));
+
+    return c.json({
+      message: "Team deleted successfully",
+    });
+  } catch (error) {
+    console.error("Team deletion error:", error);
+    return c.json({ error: "Failed to delete team" }, 500);
+  }
+});
+
+protectedRoutes.post("/teams/:id/members", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const body = await c.req.json();
+    const { user_id } = body;
+
+    if (!user_id) {
+      return c.json({ error: "User ID is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists and user is the creator
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    if (team.created_by !== user.id) {
+      return c.json({ error: "Only the team creator can add members" }, 403);
+    }
+
+    // Get team's group to check level requirements
+    const [group] = await db
+      .select()
+      .from(groups)
+      .where(eq(groups.id, team.group_id));
+
+    // Check if target user exists and has validated level
+    const [targetUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user_id));
+
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    if (targetUser.level_validation_status !== "approved") {
+      return c.json({ error: "User must have a validated level to join teams" }, 400);
+    }
+
+    if (targetUser.claimed_level !== group.level) {
+      return c.json({ error: "User's validated level must match the team's level" }, 400);
+    }
+
+    // Check if user is already on a team in this league
+    const [existingMembership] = await db
+      .select()
+      .from(team_members)
+      .innerJoin(teams, eq(team_members.team_id, teams.id))
+      .where(and(eq(team_members.user_id, user_id), eq(teams.league_id, team.league_id)));
+
+    if (existingMembership) {
+      return c.json({ error: "User is already on a team in this league" }, 409);
+    }
+
+    // Add member to team
+    const [newMember] = await db
+      .insert(team_members)
+      .values({
+        id: randomUUID(),
+        team_id: teamId,
+        user_id,
+        role: "member",
+      })
+      .returning();
+
+    return c.json({
+      member: newMember,
+      message: "Member added to team successfully",
+    });
+  } catch (error) {
+    console.error("Add team member error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+protectedRoutes.delete("/teams/:id/members/:userId", async (c) => {
+  try {
+    const user = c.get("user");
+    const teamId = c.req.param("id");
+    const userId = c.req.param("userId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if team exists
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Check if user is team creator or the member being removed
+    if (team.created_by !== user.id && userId !== user.id) {
+      return c.json({ error: "You can only remove yourself or be the team creator" }, 403);
+    }
+
+    // Check if membership exists
+    const [membership] = await db
+      .select()
+      .from(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)));
+
+    if (!membership) {
+      return c.json({ error: "User is not a member of this team" }, 404);
+    }
+
+    // Remove member from team
+    await db
+      .delete(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)));
+
+    return c.json({
+      message: "Member removed from team successfully",
+    });
+  } catch (error) {
+    console.error("Remove team member error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+protectedRoutes.get("/players/free-market", async (c) => {
+  try {
+    const user = c.get("user");
+    const { level, gender, exclude_team_id } = c.req.query();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    if (!level) {
+      return c.json({ error: "Level parameter is required" }, 400);
+    }
+
+    // Build query for available players
+    let query = db
+      .select({
+        user: users,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.level_validation_status, "approved"),
+          eq(users.claimed_level, level as "1" | "2" | "3" | "4"),
+          ne(users.id, user.id) // Exclude current user
+        )
+      );
+
+    // Add gender filter if provided
+    if (gender) {
+      // Note: This assumes we'll add gender to users table in the future
+      // For now, we'll just filter by level
+    }
+
+    // Exclude players already on teams in the same league if exclude_team_id is provided
+    if (exclude_team_id) {
+      const [excludeTeam] = await db
+        .select()
+        .from(teams)
+        .where(eq(teams.id, exclude_team_id));
+
+      if (excludeTeam) {
+        // Get all team members in the same league
+        const leagueTeamMembers = await db
+          .select({ user_id: team_members.user_id })
+          .from(team_members)
+          .innerJoin(teams, eq(team_members.team_id, teams.id))
+          .where(eq(teams.league_id, excludeTeam.league_id));
+
+        const excludedUserIds = leagueTeamMembers.map(m => m.user_id);
+        
+        if (excludedUserIds.length > 0) {
+          const availablePlayers = await db
+            .select({
+              user: users,
+            })
+            .from(users)
+            .where(
+              and(
+                eq(users.level_validation_status, "approved"),
+                eq(users.claimed_level, level as "1" | "2" | "3" | "4"),
+                ne(users.id, user.id),
+                notInArray(users.id, excludedUserIds)
+              )
+            );
+          
+          return c.json({
+            players: availablePlayers,
+            message: "Available players retrieved successfully",
+          });
+        }
+      }
+    }
+
+    const availablePlayers = await query;
+
+    return c.json({
+      players: availablePlayers,
+      message: "Available players retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Free market players error:", error);
+    return c.json({ error: "Failed to retrieve available players" }, 500);
   }
 });
 
