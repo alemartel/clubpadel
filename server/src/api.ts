@@ -1058,14 +1058,22 @@ protectedRoutes.get("/teams", async (c) => {
         team: teams,
         league: leagues,
         group: groups,
-        member_count: sql<number>`count(${team_members.id})`,
+        member_count: sql<number>`(
+          SELECT COUNT(*) 
+          FROM ${team_members} tm 
+          WHERE tm.team_id = ${teams.id}
+        )`,
       })
       .from(teams)
-      .innerJoin(team_members, eq(teams.id, team_members.team_id))
       .innerJoin(leagues, eq(teams.league_id, leagues.id))
       .innerJoin(groups, eq(teams.group_id, groups.id))
-      .where(eq(team_members.user_id, user.id))
-      .groupBy(teams.id, leagues.id, groups.id);
+      .where(
+        sql`${teams.id} IN (
+          SELECT tm.team_id 
+          FROM ${team_members} tm 
+          WHERE tm.user_id = ${user.id}
+        )`
+      );
 
     return c.json({
       teams: userTeams,

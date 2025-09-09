@@ -16,6 +16,15 @@ export function Navbar() {
     navigate("/profile");
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b shrink-0 bg-background/80 backdrop-blur-sm">
       <div className="flex items-center">
@@ -39,7 +48,7 @@ export function Navbar() {
           />
         )}
         {user && (
-          <Button variant="outline" size="sm" onClick={() => signOut(auth)}>
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
             Sign Out
           </Button>
         )}
