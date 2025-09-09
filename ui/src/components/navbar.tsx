@@ -17,7 +17,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b shrink-0 bg-background">
+    <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b shrink-0 bg-background/80 backdrop-blur-sm">
       <div className="flex items-center">
         <SidebarTrigger className="size-8">
           <Menu className="w-5 h-5" />

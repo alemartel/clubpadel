@@ -22,7 +22,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="sticky top-12 h-[calc(100vh-3rem)] z-40"
+      className="sticky top-12 h-[calc(100vh-3rem)] z-40 bg-background/80 backdrop-blur-sm"
     >
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
