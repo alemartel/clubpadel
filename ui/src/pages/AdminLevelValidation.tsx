@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Search, Users, Filter, CheckSquare, Square, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Search, Users, Filter, CheckSquare, Square, Clock, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Player {
@@ -199,20 +199,6 @@ export function AdminLevelValidation() {
     }
   };
 
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
-      case "approved":
-        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
-      case "rejected":
-        return <Badge variant="destructive">Rejected</Badge>;
-      case "none":
-        return <Badge variant="outline">No Request</Badge>;
-      default:
-        return <Badge variant="outline">No Request</Badge>;
-    }
-  };
 
   const getLevelBadge = (level: string) => {
     return (
@@ -411,7 +397,6 @@ export function AdminLevelValidation() {
                   <TableHead>Player</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Level</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -448,9 +433,17 @@ export function AdminLevelValidation() {
                         {player.level_validation_status === "approved" && (
                           <CheckCircle className="w-4 h-4 text-green-600" />
                         )}
+                        {player.level_validation_status === "pending" && (
+                          <Clock className="w-4 h-4 text-yellow-600" />
+                        )}
+                        {player.level_validation_status === "rejected" && (
+                          <XCircle className="w-4 h-4 text-red-600" />
+                        )}
+                        {player.level_validation_status === "none" && (
+                          <AlertCircle className="w-4 h-4 text-gray-400" />
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(player.level_validation_status)}</TableCell>
                     <TableCell>
                       {new Date(player.created_at).toLocaleDateString()}
                     </TableCell>
