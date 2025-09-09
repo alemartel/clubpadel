@@ -1,4 +1,4 @@
-import { Home, Settings, FileText, Layers, Calendar, Shield, Users } from "lucide-react";
+import { Home, Settings, Calendar, Shield, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -38,30 +38,6 @@ export function AppSidebar() {
                   <Link to="/">
                     <Home className="w-4 h-4" />
                     <span>Home</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip="Page 1"
-                  isActive={isActive("/page1")}
-                  asChild
-                >
-                  <Link to="/page1">
-                    <FileText className="w-4 h-4" />
-                    <span>Page 1</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip="Page 2"
-                  isActive={isActive("/page2")}
-                  asChild
-                >
-                  <Link to="/page2">
-                    <Layers className="w-4 h-4" />
-                    <span>Page 2</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
