@@ -22,7 +22,7 @@ export function Navbar() {
         <SidebarTrigger className="size-8">
           <Menu className="w-5 h-5" />
         </SidebarTrigger>
-        <span className="font-semibold ml-3">My App</span>
+        <span className="font-semibold ml-3">Club Padel</span>
       </div>
       <div className="flex items-center gap-3 ml-auto">
         <ModeToggle />
