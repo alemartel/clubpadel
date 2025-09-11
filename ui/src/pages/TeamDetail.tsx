@@ -175,7 +175,7 @@ export function TeamDetail() {
           <div className="text-center">
             <p className="text-destructive mb-4">{error || "Team not found"}</p>
             <Button onClick={() => navigate(getBackUrl())}>
-              Back to Teams
+              Back
             </Button>
           </div>
         </div>
@@ -188,7 +188,7 @@ export function TeamDetail() {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Teams
+          Back
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
@@ -215,7 +215,7 @@ export function TeamDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <h4 className="font-medium mb-2">Team Details</h4>
                   <div className="space-y-2 text-sm">
@@ -239,13 +239,7 @@ export function TeamDetail() {
                     <div className="text-muted-foreground">
                       {formatDate(team.league.start_date)} - {formatDate(team.league.end_date)}
                     </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">Group Details</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-2">
                       <span className="text-sm">{team.group.name}</span>
                       <Badge variant={getLevelBadgeVariant(team.group.level)}>
                         Level {team.group.level}
