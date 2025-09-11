@@ -18,17 +18,10 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -208,56 +201,58 @@ export function AdminLeagues() {
             <div className="text-center py-4">Loading leagues...</div>
           ) : leaguesError ? (
             <div className="text-center text-red-500 py-4">{leaguesError}</div>
+          ) : leagues.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No leagues created yet</p>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leagues.map((league) => (
-                  <TableRow key={league.id}>
-                    <TableCell className="font-medium">{league.name}</TableCell>
-                    <TableCell>
-                      {new Date(league.start_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(league.end_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/admin/leagues/${league.id}/groups`)}
-                        >
-                          <Users className="w-4 h-4 mr-1" />
-                          Groups
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditLeague(league)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteConfirmLeague(league)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {leagues.map((league) => (
+                <Card key={league.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-xl">{league.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {new Date(league.start_date).toLocaleDateString()} - {new Date(league.end_date).toLocaleDateString()}
+                        </span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex gap-2 pt-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/admin/leagues/${league.id}/groups`)}
+                      className="flex-1 min-h-[44px]"
+                    >
+                      <Users className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">Groups</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEditLeague(league)}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmLeague(league)}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

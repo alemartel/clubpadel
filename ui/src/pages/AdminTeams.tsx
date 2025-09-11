@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -134,24 +135,6 @@ export function AdminTeams() {
     }
   };
 
-  const getLevelBadgeVariant = (level: string) => {
-    switch (level) {
-      case "1": return "default";
-      case "2": return "secondary";
-      case "3": return "destructive";
-      case "4": return "outline";
-      default: return "default";
-    }
-  };
-
-  const getGenderBadgeVariant = (gender: string) => {
-    switch (gender) {
-      case "male": return "default";
-      case "female": return "secondary";
-      case "mixed": return "outline";
-      default: return "default";
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();

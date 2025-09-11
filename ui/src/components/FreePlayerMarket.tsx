@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/serverComm";
+import { getLevelBadgeVariant } from "@/lib/badge-utils";
 
 interface Player {
   user: {
@@ -86,15 +87,6 @@ export function FreePlayerMarket({ teamId, level, gender, onMemberAdded }: FreeP
            player.user.email.toLowerCase().includes(searchLower);
   });
 
-  const getLevelBadgeVariant = (level: string) => {
-    switch (level) {
-      case "1": return "default";
-      case "2": return "secondary";
-      case "3": return "destructive";
-      case "4": return "outline";
-      default: return "default";
-    }
-  };
 
   return (
     <Card className="h-fit">

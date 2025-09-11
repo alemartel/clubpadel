@@ -15,21 +15,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy } from "lucide-react";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 export function AdminGroups() {
   const { isAdmin, loading } = useAuth();
@@ -239,58 +234,57 @@ export function AdminGroups() {
               <p className="text-sm">Create your first group to get started</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Teams</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groups.map((group) => (
-                  <TableRow key={group.id}>
-                    <TableCell className="font-medium">
-                      {group.name}
-                    </TableCell>
-                    <TableCell>Level {group.level}</TableCell>
-                    <TableCell className="capitalize">
-                      {group.gender}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/leagues/${leagueId}/groups/${group.id}/teams`)}
-                      >
-                        <Trophy className="w-4 h-4 mr-1" />
-                        Teams
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditGroup(group)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteConfirmGroup(group)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {groups.map((group) => (
+                <Card key={group.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-xl">{group.name}</CardTitle>
+                      <Badge variant={getLevelBadgeVariant(group.level)}>
+                        Level {group.level}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <Badge variant={getGenderBadgeVariant(group.gender)} className="ml-auto">
+                          {group.gender}
+                        </Badge>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex gap-2 pt-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/admin/leagues/${leagueId}/groups/${group.id}/teams`)}
+                      className="flex-1 min-h-[44px]"
+                    >
+                      <Trophy className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">Teams</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEditGroup(group)}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmGroup(group)}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

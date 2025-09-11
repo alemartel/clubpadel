@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type League, type Group, type NewTeam } from "@/lib/serverComm";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 export function CreateTeam() {
   const { serverUser } = useAuth();
@@ -103,24 +104,6 @@ export function CreateTeam() {
     }
   };
 
-  const getLevelBadgeVariant = (level: string) => {
-    switch (level) {
-      case "1": return "default";
-      case "2": return "secondary";
-      case "3": return "destructive";
-      case "4": return "outline";
-      default: return "default";
-    }
-  };
-
-  const getGenderBadgeVariant = (gender: string) => {
-    switch (gender) {
-      case "male": return "default";
-      case "female": return "secondary";
-      case "mixed": return "outline";
-      default: return "default";
-    }
-  };
 
   if (loadingData) {
     return (

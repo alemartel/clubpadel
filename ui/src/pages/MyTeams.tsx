@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Calendar, Trophy } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 interface TeamWithDetails {
   team: Team;
@@ -55,24 +56,6 @@ export function MyTeams() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getLevelBadgeVariant = (level: string) => {
-    switch (level) {
-      case "1": return "default";
-      case "2": return "secondary";
-      case "3": return "destructive";
-      case "4": return "outline";
-      default: return "default";
-    }
-  };
-
-  const getGenderBadgeVariant = (gender: string) => {
-    switch (gender) {
-      case "male": return "default";
-      case "female": return "secondary";
-      case "mixed": return "outline";
-      default: return "default";
-    }
-  };
 
   if (loading) {
     return (

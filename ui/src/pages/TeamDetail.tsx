@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team, type TeamMember } from "@/lib/serverComm";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 import { FreePlayerMarketModal } from "../components/FreePlayerMarketModal";
 import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
 
@@ -142,24 +143,6 @@ export function TeamDetail() {
     return days[dayKey] || dayKey;
   };
 
-  const getLevelBadgeVariant = (level: string) => {
-    switch (level) {
-      case "1": return "default";
-      case "2": return "secondary";
-      case "3": return "destructive";
-      case "4": return "outline";
-      default: return "default";
-    }
-  };
-
-  const getGenderBadgeVariant = (gender: string) => {
-    switch (gender) {
-      case "male": return "default";
-      case "female": return "secondary";
-      case "mixed": return "outline";
-      default: return "default";
-    }
-  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
