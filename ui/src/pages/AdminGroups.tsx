@@ -269,7 +269,8 @@ export function AdminGroups() {
                       onClick={() => navigate(`/admin/leagues/${leagueId}/groups/${group.id}/teams`)}
                       className="flex-1 min-h-[44px]"
                     >
-                      <Trophy className="w-4 h-4 mr-1" />
+                      <Trophy className="w-4 h-4 mr-1 hidden sm:block" />
+                      <span className="sm:hidden">Teams</span>
                       <span className="hidden sm:inline">Teams</span>
                     </Button>
                     <Button

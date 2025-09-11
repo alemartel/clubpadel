@@ -136,7 +136,8 @@ export function MyTeams() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Trophy className="w-4 h-4" />
+                    <Trophy className="w-4 h-4 hidden sm:block" />
+                    <span className="sm:hidden">Teams</span>
                     <span>{teamData.group.name}</span>
                   </div>
                   
