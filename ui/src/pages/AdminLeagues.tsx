@@ -247,6 +247,7 @@ export function AdminLeagues() {
                       size="sm"
                       onClick={() => setDeleteConfirmLeague(league)}
                       className="min-h-[44px] min-w-[44px]"
+                      disabled
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

@@ -286,6 +286,7 @@ export function AdminGroups() {
                       size="sm"
                       onClick={() => setDeleteConfirmGroup(group)}
                       className="min-h-[44px] min-w-[44px]"
+                      disabled
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
