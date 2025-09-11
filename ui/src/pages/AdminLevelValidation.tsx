@@ -12,17 +12,10 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -248,48 +241,48 @@ export function AdminLevelValidation() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Players</p>
-                <p className="text-2xl font-bold">{players.length}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-lg md:text-2xl font-bold">{players.length}</p>
               </div>
-              <Users className="w-8 h-8 text-muted-foreground" />
+              <Users className="w-5 h-5 md:w-8 md:h-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-lg md:text-2xl font-bold text-yellow-600">{pendingCount}</p>
               </div>
-              <Clock className="w-8 h-8 text-yellow-600" />
+              <Clock className="w-5 h-5 md:w-8 md:h-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                <p className="text-2xl font-bold text-green-600">{approvedCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-lg md:text-2xl font-bold text-green-600">{approvedCount}</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <CheckCircle className="w-5 h-5 md:w-8 md:h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-lg md:text-2xl font-bold text-red-600">{rejectedCount}</p>
               </div>
-              <XCircle className="w-8 h-8 text-red-600" />
+              <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -341,20 +334,31 @@ export function AdminLevelValidation() {
                 Manage player level validation requests and view player information
               </CardDescription>
             </div>
-            {selectedPlayers.size > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {selectedPlayers.size} selected
-                </span>
+            <div className="flex items-center gap-2">
+              {selectedPlayers.size > 0 ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedPlayers.size} selected
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedPlayers(new Set())}
+                  >
+                    Clear Selection
+                  </Button>
+                </>
+              ) : (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setSelectedPlayers(new Set())}
+                  onClick={handleSelectAll}
                 >
-                  Clear Selection
+                  <CheckSquare className="w-4 h-4 mr-1" />
+                  Select All
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -377,39 +381,29 @@ export function AdminLevelValidation() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAll}
-                      className="h-6 w-6 p-0"
-                    >
-                      {selectedPlayers.size === filteredPlayers.length ? (
-                        <CheckSquare className="w-4 h-4" />
-                      ) : (
-                        <Square className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead>Player</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPlayers.map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell>
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {filteredPlayers.map((player) => (
+                <Card key={player.id} className="relative">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">
+                          {getPlayerName(player)}
+                        </CardTitle>
+                        <CardDescription className="truncate">
+                          {player.email}
+                        </CardDescription>
+                        {player.phone_number && (
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {player.phone_number}
+                          </div>
+                        )}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleSelectPlayer(player.id)}
-                        className="h-6 w-6 p-0"
+                        className="h-8 w-8 p-0 ml-2 flex-shrink-0"
                       >
                         {selectedPlayers.has(player.id) ? (
                           <CheckSquare className="w-4 h-4" />
@@ -417,77 +411,80 @@ export function AdminLevelValidation() {
                           <Square className="w-4 h-4" />
                         )}
                       </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{getPlayerName(player)}</div>
-                        {player.phone_number && (
-                          <div className="text-sm text-muted-foreground">{player.phone_number}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{player.email}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getLevelBadge(player.claimed_level)}
-                        {player.level_validation_status === "approved" && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        )}
-                        {player.level_validation_status === "pending" && (
-                          <Clock className="w-4 h-4 text-yellow-600" />
-                        )}
-                        {player.level_validation_status === "rejected" && (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        {player.level_validation_status === "none" && (
-                          <AlertCircle className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(player.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {player.level_validation_status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openApproveModal(player)}
-                              className="text-green-600 border-green-200 hover:bg-green-50"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openRejectModal(player)}
-                              className="text-red-600 border-red-200 hover:bg-red-50"
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {player.level_validation_status === "rejected" && (
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {getLevelBadge(player.claimed_level)}
+                      {player.level_validation_status === "approved" && (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      )}
+                      {player.level_validation_status === "pending" && (
+                        <Clock className="w-4 h-4 text-yellow-600" />
+                      )}
+                      {player.level_validation_status === "rejected" && (
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      )}
+                      {player.level_validation_status === "none" && (
+                        <AlertCircle className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <div className="flex flex-wrap gap-2 w-full">
+                      {player.level_validation_status === "pending" && (
+                        <>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openApproveModal(player)}
-                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            className="text-green-600 border-green-200 hover:bg-green-50 flex-1 min-h-[44px]"
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve
+                            <span className="sm:hidden">Approve</span>
+                            <span className="hidden sm:inline">Approve</span>
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openRejectModal(player)}
+                            className="text-red-600 border-red-200 hover:bg-red-50 flex-1 min-h-[44px]"
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <span className="sm:hidden">Reject</span>
+                            <span className="hidden sm:inline">Reject</span>
+                          </Button>
+                        </>
+                      )}
+                      {player.level_validation_status === "rejected" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openApproveModal(player)}
+                          className="text-green-600 border-green-200 hover:bg-green-50 w-full min-h-[44px]"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <span className="sm:hidden">Approve</span>
+                          <span className="hidden sm:inline">Approve</span>
+                        </Button>
+                      )}
+                      {player.level_validation_status === "approved" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openRejectModal(player)}
+                          className="text-red-600 border-red-200 hover:bg-red-50 w-full min-h-[44px]"
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          <span className="sm:hidden">Reject</span>
+                          <span className="hidden sm:inline">Reject</span>
+                        </Button>
+                      )}
+                    </div>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
