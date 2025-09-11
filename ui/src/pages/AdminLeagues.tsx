@@ -230,7 +230,8 @@ export function AdminLeagues() {
                       onClick={() => navigate(`/admin/leagues/${league.id}/groups`)}
                       className="flex-1 min-h-[44px]"
                     >
-                      <Users className="w-4 h-4 mr-1" />
+                      <Users className="w-4 h-4 mr-1 hidden sm:block" />
+                      <span className="sm:hidden">Groups</span>
                       <span className="hidden sm:inline">Groups</span>
                     </Button>
                     <Button

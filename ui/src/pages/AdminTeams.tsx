@@ -8,17 +8,10 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -228,7 +221,7 @@ export function AdminTeams() {
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   <span>
-                    {teams.reduce((total, team) => total + team.member_count, 0)} total members
+                    {teams.reduce((total, team) => total + parseInt(team.member_count.toString()), 0)} total members
                   </span>
                 </div>
               </div>
@@ -258,66 +251,51 @@ export function AdminTeams() {
               <p className="text-sm">Teams will appear here when players create them</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Team Name</TableHead>
-                  <TableHead>Creator</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teams.map((teamData) => (
-                  <TableRow key={teamData.team.id}>
-                    <TableCell className="font-medium">
-                      {teamData.team.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">
-                          {teamData.creator.display_name || 
-                           `${teamData.creator.first_name || ''} ${teamData.creator.last_name || ''}`.trim() || 
-                           teamData.creator.email}
-                        </div>
-                        <div className="text-muted-foreground">
-                          {teamData.creator.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {teams.map((teamData) => (
+                <Card key={teamData.team.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-xl">{teamData.team.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>{teamData.member_count}</span>
+                        <span>Created by {teamData.creator.display_name || 
+                          `${teamData.creator.first_name || ''} ${teamData.creator.last_name || ''}`.trim() || 
+                          teamData.creator.email}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(teamData.team.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/teams/${teamData.team.id}`)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteConfirmTeam(teamData)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span>{teamData.member_count} member{teamData.member_count !== 1 ? 's' : ''}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex gap-2 pt-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/teams/${teamData.team.id}`)}
+                      className="flex-1 min-h-[44px]"
+                    >
+                      <Eye className="w-4 h-4 mr-1 hidden sm:block" />
+                      <span className="sm:hidden">View</span>
+                      <span className="hidden sm:inline">View</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmTeam(teamData)}
+                      className="min-h-[44px] min-w-[44px]"
+                      disabled
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
