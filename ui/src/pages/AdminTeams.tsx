@@ -154,16 +154,23 @@ export function AdminTeams() {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/leagues/${leagueId}/groups`)}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Groups
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Teams - {groupName}</h1>
-          <p className="text-muted-foreground">
-            {leagueName} • Level {teams[0]?.group.level} • {teams[0]?.group.gender}
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/leagues/${leagueId}/groups`)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Back to Groups</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              <span className="hidden sm:inline">Teams - {groupName}</span>
+              <span className="sm:hidden">Teams</span>
+            </h1>
+            <p className="text-muted-foreground">
+              <span className="hidden sm:inline">{leagueName} • Level {teams[0]?.group.level} • {teams[0]?.group.gender}</span>
+              <span className="sm:hidden">{groupName}</span>
+            </p>
+          </div>
         </div>
       </div>
 

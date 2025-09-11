@@ -126,7 +126,7 @@ export function CreateTeam() {
           Back to Teams
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Create Team</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Create Team</h1>
           <p className="text-muted-foreground">
             Create a new team to participate in league play
           </p>

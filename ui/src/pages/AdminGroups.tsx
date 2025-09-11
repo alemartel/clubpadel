@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy, UserCheck } from "lucide-react";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 export function AdminGroups() {
@@ -198,19 +198,31 @@ export function AdminGroups() {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Leagues
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Groups - {leagueName}</h1>
-          <p className="text-muted-foreground">Manage groups for this league</p>
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Back to Leagues</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              <span className="hidden sm:inline">Groups - {leagueName}</span>
+              <span className="sm:hidden">Groups</span>
+            </h1>
+            <p className="text-muted-foreground">
+              <span className="hidden sm:inline">Manage groups for this league</span>
+              <span className="sm:hidden">{leagueName}</span>
+            </p>
+          </div>
         </div>
-        <Button onClick={() => setShowCreateGroup(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Group
-        </Button>
+        <div className="flex justify-end">
+          <Button onClick={() => setShowCreateGroup(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Create Group</span>
+            <span className="sm:hidden">Create</span>
+          </Button>
+        </div>
       </div>
 
       {/* Groups Section */}
@@ -238,21 +250,16 @@ export function AdminGroups() {
               {groups.map((group) => (
                 <Card key={group.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-xl">{group.name}</CardTitle>
+                    <CardTitle className="text-xl">{group.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
                       <Badge variant={getLevelBadgeVariant(group.level)}>
                         Level {group.level}
                       </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4" />
-                        <Badge variant={getGenderBadgeVariant(group.gender)} className="ml-auto">
-                          {group.gender}
-                        </Badge>
-                      </div>
+                      <Badge variant={getGenderBadgeVariant(group.gender)}>
+                        {group.gender}
+                      </Badge>
                     </div>
                   </CardContent>
                   <CardFooter className="flex gap-2 pt-0">

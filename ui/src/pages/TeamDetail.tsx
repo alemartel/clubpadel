@@ -191,7 +191,7 @@ export function TeamDetail() {
           Back to Teams
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">{team.team.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
           <p className="text-muted-foreground">
             {team.league.name} • {team.group.name}
           </p>

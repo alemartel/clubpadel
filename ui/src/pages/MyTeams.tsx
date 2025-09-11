@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Calendar, Trophy } from "lucide-react";
+import { Users, Plus, Calendar, Trophy, UserCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
@@ -87,7 +87,7 @@ export function MyTeams() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">My Teams</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">My Teams</h1>
           <p className="text-muted-foreground">
             Manage your teams and view team details
           </p>
@@ -128,24 +128,23 @@ export function MyTeams() {
           {teams.map((teamData) => (
             <Card key={teamData.team.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{teamData.team.name}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {teamData.league.name}
-                    </CardDescription>
-                  </div>
-                  <Badge variant={getLevelBadgeVariant(teamData.group.level)}>
-                    Level {teamData.group.level}
-                  </Badge>
-                </div>
+                <CardTitle className="text-xl">{teamData.team.name}</CardTitle>
+                <CardDescription className="mt-1">
+                  {teamData.league.name}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Trophy className="w-4 h-4" />
                     <span>{teamData.group.name}</span>
-                    <Badge variant={getGenderBadgeVariant(teamData.group.gender)} className="ml-auto">
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getLevelBadgeVariant(teamData.group.level)}>
+                      Level {teamData.group.level}
+                    </Badge>
+                    <Badge variant={getGenderBadgeVariant(teamData.group.gender)}>
                       {teamData.group.gender}
                     </Badge>
                   </div>

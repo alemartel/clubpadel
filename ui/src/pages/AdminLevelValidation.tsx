@@ -234,7 +234,7 @@ export function AdminLevelValidation() {
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Player Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Player Management</h1>
           <p className="text-muted-foreground">Manage all players and their level validation status</p>
         </div>
         <div className="flex items-center gap-4">
