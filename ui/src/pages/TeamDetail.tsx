@@ -217,12 +217,8 @@ export function TeamDetail() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <h4 className="font-medium mb-2">Team Details</h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="w-4 h-4" />
-                      <span className="font-medium">{team.team.name}</span>
-                    </div>
+                    <div className="font-medium">{team.team.name}</div>
                     <div className="text-muted-foreground">
                       Created {formatDate(team.team.created_at)}
                     </div>
@@ -230,12 +226,12 @@ export function TeamDetail() {
                 </div>
                 
                 <div>
-                  <h4 className="font-medium mb-2">League Details</h4>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    League Details
+                  </h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{team.league.name}</span>
-                    </div>
+                    <div className="font-medium">{team.league.name}</div>
                     <div className="text-muted-foreground">
                       {formatDate(team.league.start_date)} - {formatDate(team.league.end_date)}
                     </div>
