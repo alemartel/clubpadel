@@ -109,7 +109,7 @@ export function FreePlayerMarketModal({
             <Users className="w-5 h-5" />
             Free Player Market
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-left">
             Available players for Level {level} • {gender}
           </DialogDescription>
         </DialogHeader>
