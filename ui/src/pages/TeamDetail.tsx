@@ -367,6 +367,7 @@ export function TeamDetail() {
           open={showPlayerMarketModal}
           onOpenChange={setShowPlayerMarketModal}
           teamId={team.team.id}
+          leagueId={team.league.id}
           level={team.group.level}
           gender={team.group.gender}
           onMemberAdded={loadTeam}

@@ -3,6 +3,7 @@ import type { User } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { api } from "./serverComm";
+import { databaseHealthChecker, type DatabaseHealthStatus } from "./database-health";
 
 type ServerUser = {
   id: string;
@@ -27,6 +28,8 @@ type AuthContextType = {
   isAdmin: boolean;
   hasValidatedLevel: boolean;
   canCreateTeams: boolean;
+  databaseHealth: DatabaseHealthStatus;
+  checkDatabaseHealth: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -36,12 +39,39 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   hasValidatedLevel: false,
   canCreateTeams: false,
+  databaseHealth: {
+    isHealthy: false,
+    isConnected: false,
+    lastChecked: new Date(),
+  },
+  checkDatabaseHealth: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [serverUser, setServerUser] = useState<ServerUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [databaseHealth, setDatabaseHealth] = useState<DatabaseHealthStatus>({
+    isHealthy: false,
+    isConnected: false,
+    lastChecked: new Date(),
+  });
+
+  // Database health monitoring
+  useEffect(() => {
+    const unsubscribe = databaseHealthChecker.subscribe(setDatabaseHealth);
+    
+    // Start periodic health checks
+    databaseHealthChecker.startPeriodicCheck(30000); // Check every 30 seconds
+    
+    // Initial health check
+    databaseHealthChecker.checkHealth();
+
+    return () => {
+      unsubscribe();
+      databaseHealthChecker.stopPeriodicCheck();
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -69,6 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  const checkDatabaseHealth = async () => {
+    await databaseHealthChecker.checkHealth();
+  };
+
   const isAdmin = serverUser?.role === "admin";
   const hasValidatedLevel = serverUser?.level_validation_status === "approved";
   const canCreateTeams = !isAdmin && hasValidatedLevel;
@@ -80,7 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       isAdmin, 
       hasValidatedLevel, 
-      canCreateTeams 
+      canCreateTeams,
+      databaseHealth,
+      checkDatabaseHealth
     }}>
       {children}
     </AuthContext.Provider>

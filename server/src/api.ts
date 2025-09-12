@@ -23,7 +23,7 @@ import {
   type NewTeamMember,
   type NewTeamAvailability,
 } from "./schema/teams";
-import { eq, and, ne, sql, notInArray, desc } from "drizzle-orm";
+import { eq, and, or, ne, sql, notInArray, desc } from "drizzle-orm";
 
 type Env = {
   RUNTIME?: string;
@@ -714,14 +714,20 @@ adminRoutes.post("/level-validations/:userId/approve", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if user exists and has pending validation
+    // Check if user exists and has pending or rejected validation
     const [user] = await db
       .select()
       .from(users)
-      .where(and(eq(users.id, userId), eq(users.level_validation_status, "pending")));
+      .where(and(
+        eq(users.id, userId), 
+        or(
+          eq(users.level_validation_status, "pending"),
+          eq(users.level_validation_status, "rejected")
+        )
+      ));
 
     if (!user) {
-      return c.json({ error: "User not found or no pending validation" }, 404);
+      return c.json({ error: "User not found or no validation request to approve" }, 404);
     }
 
     // Update user with approved level
@@ -931,15 +937,18 @@ adminRoutes.get("/groups/:groupId/teams", async (c) => {
           last_name: users.last_name,
           display_name: users.display_name,
         },
-        member_count: sql<number>`count(${team_members.id})`,
+        member_count: sql<number>`(
+          SELECT COUNT(*) 
+          FROM ${team_members} tm 
+          INNER JOIN ${users} u ON tm.user_id = u.id
+          WHERE tm.team_id = ${teams.id}
+        )`,
       })
       .from(teams)
       .innerJoin(leagues, eq(teams.league_id, leagues.id))
       .innerJoin(groups, eq(teams.group_id, groups.id))
       .innerJoin(users, eq(teams.created_by, users.id))
-      .leftJoin(team_members, eq(teams.id, team_members.team_id))
-      .where(eq(teams.group_id, groupId))
-      .groupBy(teams.id, leagues.id, groups.id, users.id, users.email, users.first_name, users.last_name, users.display_name);
+      .where(eq(teams.group_id, groupId));
 
     return c.json({
       teams: groupTeams,
@@ -1061,6 +1070,7 @@ protectedRoutes.get("/teams", async (c) => {
         member_count: sql<number>`(
           SELECT COUNT(*) 
           FROM ${team_members} tm 
+          INNER JOIN ${users} u ON tm.user_id = u.id
           WHERE tm.team_id = ${teams.id}
         )`,
       })
@@ -1490,7 +1500,7 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
 protectedRoutes.get("/players/free-market", async (c) => {
   try {
     const user = c.get("user");
-    const { level, gender, exclude_team_id } = c.req.query();
+    const { level, gender, league_id } = c.req.query();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
@@ -1498,8 +1508,31 @@ protectedRoutes.get("/players/free-market", async (c) => {
       return c.json({ error: "Level parameter is required" }, 400);
     }
 
-    // Build query for available players
-    let query = db
+    if (!league_id) {
+      return c.json({ error: "League ID parameter is required" }, 400);
+    }
+
+    // Verify the league exists
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, league_id));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    // Get all players who are already on teams in this league
+    const leagueTeamMembers = await db
+      .select({ user_id: team_members.user_id })
+      .from(team_members)
+      .innerJoin(teams, eq(team_members.team_id, teams.id))
+      .where(eq(teams.league_id, league_id));
+
+    const excludedUserIds = leagueTeamMembers.map(m => m.user_id);
+
+    // Build query for available players (excluding those already on teams in this league)
+    const availablePlayers = await db
       .select({
         user: users,
       })
@@ -1508,7 +1541,8 @@ protectedRoutes.get("/players/free-market", async (c) => {
         and(
           eq(users.level_validation_status, "approved"),
           eq(users.claimed_level, level as "1" | "2" | "3" | "4"),
-          ne(users.id, user.id) // Exclude current user
+          ne(users.id, user.id), // Exclude current user
+          excludedUserIds.length > 0 ? notInArray(users.id, excludedUserIds) : undefined
         )
       );
 
@@ -1518,51 +1552,14 @@ protectedRoutes.get("/players/free-market", async (c) => {
       // For now, we'll just filter by level
     }
 
-    // Exclude players already on teams in the same league if exclude_team_id is provided
-    if (exclude_team_id) {
-      const [excludeTeam] = await db
-        .select()
-        .from(teams)
-        .where(eq(teams.id, exclude_team_id));
-
-      if (excludeTeam) {
-        // Get all team members in the same league
-        const leagueTeamMembers = await db
-          .select({ user_id: team_members.user_id })
-          .from(team_members)
-          .innerJoin(teams, eq(team_members.team_id, teams.id))
-          .where(eq(teams.league_id, excludeTeam.league_id));
-
-        const excludedUserIds = leagueTeamMembers.map(m => m.user_id);
-        
-        if (excludedUserIds.length > 0) {
-          const availablePlayers = await db
-            .select({
-              user: users,
-            })
-            .from(users)
-            .where(
-              and(
-                eq(users.level_validation_status, "approved"),
-                eq(users.claimed_level, level as "1" | "2" | "3" | "4"),
-                ne(users.id, user.id),
-                notInArray(users.id, excludedUserIds)
-              )
-            );
-          
-          return c.json({
-            players: availablePlayers,
-            message: "Available players retrieved successfully",
-          });
-        }
-      }
-    }
-
-    const availablePlayers = await query;
-
     return c.json({
       players: availablePlayers,
       message: "Available players retrieved successfully",
+      totalAvailable: availablePlayers.length,
+      league: {
+        id: league.id,
+        name: league.name
+      }
     });
   } catch (error) {
     console.error("Free market players error:", error);

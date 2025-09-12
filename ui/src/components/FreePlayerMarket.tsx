@@ -20,12 +20,13 @@ interface Player {
 
 interface FreePlayerMarketProps {
   teamId: string;
+  leagueId: string;
   level: string;
   gender: string;
   onMemberAdded?: () => void;
 }
 
-export function FreePlayerMarket({ teamId, level, gender, onMemberAdded }: FreePlayerMarketProps) {
+export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdded }: FreePlayerMarketProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +35,13 @@ export function FreePlayerMarket({ teamId, level, gender, onMemberAdded }: FreeP
 
   useEffect(() => {
     loadPlayers();
-  }, [level, gender, teamId]);
+  }, [level, gender, leagueId]);
 
   const loadPlayers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.getFreePlayers(level, gender, teamId);
+      const response = await api.getFreePlayers(level, leagueId, gender);
       if (response.error) {
         setError(response.error);
       } else {

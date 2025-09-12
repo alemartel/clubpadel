@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Calendar, Trophy, UserCheck } from "lucide-react";
+import { Users, Plus, Calendar, Trophy } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";

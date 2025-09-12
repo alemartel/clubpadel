@@ -365,10 +365,9 @@ export async function removeTeamMember(teamId: string, userId: string) {
   return response.json();
 }
 
-export async function getFreePlayers(level: string, gender?: string, excludeTeamId?: string) {
-  const params = new URLSearchParams({ level });
+export async function getFreePlayers(level: string, leagueId: string, gender?: string) {
+  const params = new URLSearchParams({ level, league_id: leagueId });
   if (gender) params.append("gender", gender);
-  if (excludeTeamId) params.append("exclude_team_id", excludeTeamId);
   
   const response = await fetchWithAuth(`/api/v1/protected/players/free-market?${params}`);
   return response.json();

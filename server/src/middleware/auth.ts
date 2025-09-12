@@ -21,6 +21,11 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const token = authHeader.split("Bearer ")[1];
     const firebaseProjectId = getFirebaseProjectId();
     const firebaseUser = await verifyFirebaseToken(token, firebaseProjectId);
+    
+    console.log("Firebase user from token:", {
+      id: firebaseUser.id,
+      email: firebaseUser.email
+    });
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
@@ -44,7 +49,45 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
       .where(eq(users.id, firebaseUser.id))
       .limit(1);
 
+    console.log("User lookup result:", {
+      firebaseId: firebaseUser.id,
+      foundUser: user ? { id: user.id, email: user.email } : null
+    });
+
     if (!user) {
+      // Try to find user by email as fallback
+      const [userByEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, firebaseUser.email!))
+        .limit(1);
+      
+      console.log("User lookup by email:", {
+        email: firebaseUser.email,
+        foundUser: userByEmail ? { id: userByEmail.id, email: userByEmail.email } : null
+      });
+      
+      if (userByEmail) {
+        // Update the user's ID to match the Firebase ID
+        await db
+          .update(users)
+          .set({ id: firebaseUser.id })
+          .where(eq(users.email, firebaseUser.email!));
+        
+        // Get the updated user
+        const [updatedUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, firebaseUser.id))
+          .limit(1);
+        
+        if (updatedUser) {
+          c.set("user", updatedUser);
+          await next();
+          return;
+        }
+      }
+      
       throw new Error("Failed to create or retrieve user");
     }
 

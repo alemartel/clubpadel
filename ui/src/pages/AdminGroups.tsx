@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy, UserCheck } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy } from "lucide-react";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 export function AdminGroups() {

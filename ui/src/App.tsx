@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LoginForm } from "@/components/login-form";
 import { Navbar } from "@/components/navbar";
 import { AppSidebar } from "@/components/appSidebar";
+import { DatabaseError } from "@/components/database-error";
 import { Home } from "@/pages/Home";
 import { Settings } from "@/pages/Settings";
 import { Profile } from "@/pages/Profile";
@@ -101,7 +102,7 @@ function AuthRedirectHandler() {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, databaseHealth, checkDatabaseHealth } = useAuth();
 
   if (loading) {
     return (
@@ -112,6 +113,13 @@ function AppContent() {
   return (
     <SidebarProvider>
       <div className="flex flex-col w-full min-h-screen bg-background">
+        {/* Database Error Banner */}
+        {(!databaseHealth.isHealthy || !databaseHealth.isConnected) && (
+          <div className="p-4">
+            <DatabaseError onRetry={checkDatabaseHealth} />
+          </div>
+        )}
+        
         {!user ? (
           <div className="relative min-h-screen">
             <div 
