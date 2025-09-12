@@ -346,11 +346,12 @@ export function AdminTeams() {
                 Generate and manage match schedules for this group
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="destructive"
                 onClick={handleClearCalendar}
                 disabled={teams.length < 2 || clearingCalendar}
+                className="w-full sm:w-auto"
               >
                 {clearingCalendar && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {clearingCalendar ? "Clearing..." : "Clear Calendar"}
@@ -358,6 +359,7 @@ export function AdminTeams() {
               <Button
                 onClick={() => setShowCalendarModal(true)}
                 disabled={teams.length < 2}
+                className="w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Generate Calendar

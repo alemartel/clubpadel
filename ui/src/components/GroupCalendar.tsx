@@ -82,81 +82,44 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
 
   if (loading || externalLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            League Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-            <span>{externalLoading ? "Generating calendar..." : "Loading calendar..."}</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+        <span>{externalLoading ? "Generating calendar..." : "Loading calendar..."}</span>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            League Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={loadCalendar} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <p className="text-destructive mb-4">{error}</p>
+        <Button onClick={loadCalendar} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
     );
   }
 
   if (matches.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            League Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No calendar generated yet</p>
-            <p className="text-sm">Generate a calendar to see match schedules</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8 text-muted-foreground">
+        <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <p>No calendar generated yet</p>
+        <p className="text-sm">Generate a calendar to see match schedules</p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            League Calendar
-          </CardTitle>
-          <Button onClick={loadCalendar} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+    <div>
+      <div className="flex items-center justify-end mb-4">
+        <Button onClick={loadCalendar} variant="outline" size="sm">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+      <div className="space-y-6">
           {weeks.map((week) => (
             <div key={week} className="space-y-3">
               <div className="flex items-center gap-2">
@@ -196,8 +159,7 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
               </div>
             </div>
           ))}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
