@@ -268,6 +268,32 @@ export interface NewTeamMember {
   user_id: string;
 }
 
+// Match interfaces
+export interface Match {
+  id: string;
+  league_id: string;
+  group_id: string;
+  home_team_id: string;
+  away_team_id: string;
+  match_date: string;
+  match_time: string;
+  week_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchWithTeams {
+  match: Match;
+  home_team: {
+    id: string;
+    name: string;
+  };
+  away_team: {
+    id: string;
+    name: string;
+  };
+}
+
 export async function getGroups(leagueId: string) {
   const response = await fetchWithAuth(
     `/api/v1/leagues/${leagueId}/groups`
@@ -373,6 +399,41 @@ export async function getFreePlayers(level: string, leagueId: string, gender?: s
   return response.json();
 }
 
+// Calendar API functions
+export async function generateGroupCalendar(groupId: string, startDate: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/generate-calendar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ start_date: startDate }),
+  });
+  return response.json();
+}
+
+export async function getGroupCalendar(groupId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/calendar`);
+  return response.json();
+}
+
+export async function clearGroupCalendar(groupId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/calendar`, {
+    method: "DELETE",
+  });
+  return response.json();
+}
+
+export async function updateLeagueDates(leagueId: string, startDate: string, endDate: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/dates`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+  });
+  return response.json();
+}
+
 export async function getAdminTeamsByGroup(groupId: string) {
   const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/teams`);
   return response.json();
@@ -427,4 +488,8 @@ export const api = {
   getAllPlayers,
   getTeamAvailability,
   updateTeamAvailability,
+  generateGroupCalendar,
+  getGroupCalendar,
+  clearGroupCalendar,
+  updateLeagueDates,
 };

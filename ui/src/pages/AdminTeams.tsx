@@ -21,7 +21,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2, Plus, Loader2 } from "lucide-react";
+import { GenerateCalendarModal } from "../components/GenerateCalendarModal";
+import { GroupCalendar } from "../components/GroupCalendar";
 
 interface TeamWithDetails {
   team: Team;
@@ -61,6 +63,11 @@ export function AdminTeams() {
 
   // State for delete confirmation
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<TeamWithDetails | null>(null);
+
+  // State for calendar generation
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [clearingCalendar, setClearingCalendar] = useState(false);
+  const [generatingCalendar, setGeneratingCalendar] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -126,6 +133,32 @@ export function AdminTeams() {
     } catch (error) {
       console.error("Failed to delete team:", error);
     }
+  };
+
+  const handleClearCalendar = async () => {
+    if (!groupId) return;
+
+    try {
+      setClearingCalendar(true);
+      await api.clearGroupCalendar(groupId);
+      // Refresh teams data to update calendar display
+      loadTeams();
+    } catch (error) {
+      console.error("Failed to clear calendar:", error);
+    } finally {
+      setClearingCalendar(false);
+    }
+  };
+
+  const handleCalendarGenerated = () => {
+    setGeneratingCalendar(true);
+    // Refresh teams data to update calendar display
+    loadTeams();
+    // Trigger calendar refresh after a short delay to ensure data is ready
+    setTimeout(() => {
+      // The GroupCalendar will automatically refresh due to the onRefresh callback
+      setGeneratingCalendar(false);
+    }, 500);
   };
 
 
@@ -299,6 +332,65 @@ export function AdminTeams() {
           )}
         </CardContent>
       </Card>
+
+      {/* Calendar Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                League Calendar
+              </CardTitle>
+              <CardDescription>
+                Generate and manage match schedules for this group
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleClearCalendar}
+                disabled={teams.length < 2 || clearingCalendar}
+              >
+                {clearingCalendar && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {clearingCalendar ? "Clearing..." : "Clear Calendar"}
+              </Button>
+              <Button
+                onClick={() => setShowCalendarModal(true)}
+                disabled={teams.length < 2}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Generate Calendar
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {teams.length < 2 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>At least 2 teams are required to generate a calendar</p>
+            </div>
+          ) : (
+            <GroupCalendar 
+              groupId={groupId!} 
+              loading={generatingCalendar}
+              onRefresh={() => {
+                // Refresh teams data if needed
+                loadTeams();
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Generate Calendar Modal */}
+      <GenerateCalendarModal
+        open={showCalendarModal}
+        onOpenChange={setShowCalendarModal}
+        groupId={groupId!}
+        onCalendarGenerated={handleCalendarGenerated}
+      />
 
       {/* Delete Team Confirmation */}
       <Dialog

@@ -12,8 +12,10 @@ import { users, levelEnum } from "./schema/users";
 import {
   leagues,
   groups,
+  matches,
   type NewLeague,
   type NewGroup,
+  type NewMatch,
 } from "./schema/leagues";
 import {
   teams,
@@ -23,12 +25,22 @@ import {
   type NewTeamMember,
   type NewTeamAvailability,
 } from "./schema/teams";
-import { eq, and, or, ne, sql, notInArray, desc } from "drizzle-orm";
+import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
+import { CalendarGenerator } from "./lib/calendar-generator";
 
 type Env = {
   RUNTIME?: string;
   [key: string]: any;
 };
+
+// Helper function to create standardized error responses
+function createErrorResponse(message: string, status: number = 500, details?: string) {
+  return {
+    error: message,
+    ...(details && { details }),
+    timestamp: new Date().toISOString(),
+  };
+}
 
 // Helper function to handle database constraint errors
 function handleDatabaseError(error: any): { message: string; status: number } {
@@ -1564,6 +1576,204 @@ protectedRoutes.get("/players/free-market", async (c) => {
   } catch (error) {
     console.error("Free market players error:", error);
     return c.json({ error: "Failed to retrieve available players" }, 500);
+  }
+});
+
+// Calendar Generation Endpoints (Admin Only)
+adminRoutes.post("/groups/:groupId/generate-calendar", async (c) => {
+  try {
+    const groupId = c.req.param("groupId");
+    const body = await c.req.json();
+    const { start_date } = body;
+
+    if (!start_date) {
+      return c.json({ error: "Start date is required" }, 400);
+    }
+
+    const startDate = new Date(start_date);
+    if (isNaN(startDate.getTime())) {
+      return c.json({ error: "Invalid start date format" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get group and league info
+    console.log(`Getting group info for groupId: ${groupId}`);
+    const [group] = await db
+      .select()
+      .from(groups)
+      .where(eq(groups.id, groupId));
+
+    if (!group) {
+      console.log(`Group not found for groupId: ${groupId}`);
+      return c.json({ error: "Group not found" }, 404);
+    }
+
+    console.log(`Found group:`, { id: group.id, name: group.name, league_id: group.league_id });
+
+    if (!group.league_id) {
+      console.error(`Group ${groupId} has no league_id`);
+      return c.json({ error: "Group has no associated league" }, 400);
+    }
+
+    console.log(`Getting league info for leagueId: ${group.league_id}`);
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, group.league_id));
+
+    if (!league) {
+      console.log(`League not found for leagueId: ${group.league_id}`);
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    console.log(`Found league:`, { id: league.id, name: league.name });
+
+    // Generate calendar
+    console.log("Creating calendar generator and generating calendar");
+    const generator = new CalendarGenerator(db);
+    const result = await generator.generateCalendar(groupId, startDate);
+
+    console.log(`Calendar generation completed. Saving ${result.matches.length} matches to database`);
+    // Save matches to database
+    await generator.saveMatches(result.matches, league.id, groupId);
+
+    console.log("Updating league dates");
+    // Update league dates
+    await generator.updateLeagueDates(league.id, result.start_date, result.end_date);
+
+    return c.json({
+      matches: result.matches,
+      total_weeks: result.total_weeks,
+      start_date: result.start_date,
+      end_date: result.end_date,
+      message: "Calendar generated successfully",
+    });
+  } catch (error) {
+    console.error("Calendar generation error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate calendar";
+    return c.json(createErrorResponse(errorMessage, 500), 500);
+  }
+});
+
+adminRoutes.get("/groups/:groupId/calendar", async (c) => {
+  try {
+    const groupId = c.req.param("groupId");
+    console.log(`Retrieving calendar for group: ${groupId}`);
+    
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get all matches for the group first
+    const groupMatches = await db
+      .select()
+      .from(matches)
+      .where(eq(matches.group_id, groupId))
+      .orderBy(matches.week_number, matches.match_date);
+    
+    console.log(`Found ${groupMatches.length} matches for group ${groupId}`);
+
+    // Get team details for all unique team IDs
+    const teamIds = new Set<string>();
+    groupMatches.forEach(match => {
+      teamIds.add(match.home_team_id);
+      teamIds.add(match.away_team_id);
+    });
+
+    const teamDetails = teamIds.size > 0 ? await db
+      .select({
+        id: teams.id,
+        name: teams.name,
+      })
+      .from(teams)
+      .where(inArray(teams.id, Array.from(teamIds))) : [];
+
+    // Create a map for quick team lookup
+    const teamMap = new Map(teamDetails.map(team => [team.id, team]));
+
+    // Combine matches with team details
+    const matchesWithTeams = groupMatches.map(match => ({
+      match,
+      home_team: teamMap.get(match.home_team_id) || { id: match.home_team_id, name: "Unknown Team" },
+      away_team: teamMap.get(match.away_team_id) || { id: match.away_team_id, name: "Unknown Team" },
+    }));
+
+    return c.json({
+      matches: matchesWithTeams,
+      message: "Calendar retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Calendar retrieval error:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      groupId: c.req.param("groupId")
+    });
+    return c.json(createErrorResponse("Failed to retrieve calendar", 500), 500);
+  }
+});
+
+adminRoutes.put("/leagues/:id/dates", async (c) => {
+  try {
+    const leagueId = c.req.param("id");
+    const body = await c.req.json();
+    const { start_date, end_date } = body;
+
+    if (!start_date || !end_date) {
+      return c.json({ error: "Start date and end date are required" }, 400);
+    }
+
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return c.json({ error: "Invalid date format" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    await db
+      .update(leagues)
+      .set({
+        start_date: startDate,
+        end_date: endDate,
+        updated_at: new Date(),
+      })
+      .where(eq(leagues.id, leagueId));
+
+    return c.json({
+      message: "League dates updated successfully",
+    });
+  } catch (error) {
+    console.error("League dates update error:", error);
+    return c.json(createErrorResponse("Failed to update league dates", 500), 500);
+  }
+});
+
+// Clear calendar endpoint for testing
+adminRoutes.delete("/groups/:groupId/calendar", async (c) => {
+  try {
+    const groupId = c.req.param("groupId");
+    console.log(`Clearing calendar for group: ${groupId}`);
+    
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Delete all matches for this group
+    const deletedMatches = await db
+      .delete(matches)
+      .where(eq(matches.group_id, groupId));
+
+    console.log(`Deleted matches for group ${groupId}`);
+
+    return c.json({
+      message: "Calendar cleared successfully",
+    });
+  } catch (error) {
+    console.error("Calendar clear error:", error);
+    return c.json(createErrorResponse("Failed to clear calendar", 500), 500);
   }
 });
 
