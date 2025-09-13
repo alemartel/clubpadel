@@ -2,16 +2,15 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Users, RefreshCw } from "lucide-react";
+import { Calendar, Clock, Users, RefreshCw, Loader2 } from "lucide-react";
 import { api, type MatchWithTeams } from "@/lib/serverComm";
 
 interface GroupCalendarProps {
   groupId: string;
   loading?: boolean;
-  onRefresh?: () => void;
 }
 
-export function GroupCalendar({ groupId, loading: externalLoading = false, onRefresh }: GroupCalendarProps) {
+export function GroupCalendar({ groupId, loading: externalLoading = false }: GroupCalendarProps) {
   const [matches, setMatches] = useState<MatchWithTeams[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +21,6 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
     }
   }, [groupId]);
 
-  // Refresh calendar when onRefresh is called
-  useEffect(() => {
-    if (onRefresh) {
-      loadCalendar();
-    }
-  }, [onRefresh]);
 
   const loadCalendar = async () => {
     try {
@@ -83,7 +76,7 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
   if (loading || externalLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+        <Loader2 className="w-6 h-6 animate-spin mr-2" />
         <span>{externalLoading ? "Generating calendar..." : "Loading calendar..."}</span>
       </div>
     );
@@ -112,15 +105,8 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-end mb-4">
-        <Button onClick={loadCalendar} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-      <div className="space-y-6">
-          {weeks.map((week) => (
+    <div className="space-y-6">
+      {weeks.map((week) => (
             <div key={week} className="space-y-3">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">Week {week}</Badge>
@@ -158,8 +144,7 @@ export function GroupCalendar({ groupId, loading: externalLoading = false, onRef
                 ))}
               </div>
             </div>
-          ))}
-      </div>
+      ))}
     </div>
   );
 }

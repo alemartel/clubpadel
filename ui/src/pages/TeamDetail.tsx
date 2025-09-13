@@ -209,8 +209,8 @@ export function TeamDetail() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
                 Team Information
               </CardTitle>
             </CardHeader>
@@ -303,8 +303,8 @@ export function TeamDetail() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   Team Members ({team.members.length})
                 </CardTitle>
                 {isTeamCreator && (

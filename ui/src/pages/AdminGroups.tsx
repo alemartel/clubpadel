@@ -5,7 +5,6 @@ import {
   api,
   Group,
   NewGroup,
-  UpdateGroup,
 } from "@/lib/serverComm";
 import {
   validateGroup,
@@ -20,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -39,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Edit, Trash2, Users, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, Users, Trophy } from "lucide-react";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 
 export function AdminGroups() {
@@ -55,8 +53,6 @@ export function AdminGroups() {
 
   // Form states
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<Group | null>(null);
 
   // Form data
   const [groupForm, setGroupForm] = useState<NewGroup>({
@@ -134,55 +130,7 @@ export function AdminGroups() {
     }
   };
 
-  const handleUpdateGroup = async () => {
-    if (!editingGroup) return;
 
-    const updateData: UpdateGroup = {};
-    if (groupForm.name !== editingGroup.name) updateData.name = groupForm.name;
-    if (groupForm.level !== editingGroup.level)
-      updateData.level = groupForm.level;
-    if (groupForm.gender !== editingGroup.gender)
-      updateData.gender = groupForm.gender;
-
-    const validation = validateGroup(groupForm);
-    if (!validation.isValid) {
-      setGroupErrors(validation.errors);
-      return;
-    }
-
-    try {
-      await api.updateGroup(editingGroup.id, updateData);
-      setEditingGroup(null);
-      setGroupForm({ name: "", level: "1", gender: "mixed" });
-      setGroupErrors([]);
-      loadGroups();
-    } catch (error) {
-      console.error("Failed to update group:", error);
-      setGroupErrors([{ field: "general", message: "Failed to update group" }]);
-    }
-  };
-
-  const handleDeleteGroup = async () => {
-    if (!deleteConfirmGroup) return;
-
-    try {
-      await api.deleteGroup(deleteConfirmGroup.id);
-      setDeleteConfirmGroup(null);
-      loadGroups();
-    } catch (error) {
-      console.error("Failed to delete group:", error);
-    }
-  };
-
-  const startEditGroup = (group: Group) => {
-    setEditingGroup(group);
-    setGroupForm({
-      name: group.name,
-      level: group.level,
-      gender: group.gender,
-    });
-    setGroupErrors([]);
-  };
 
   if (loading) {
     return (
@@ -199,24 +147,24 @@ export function AdminGroups() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Back to Leagues</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold">
-              <span className="hidden sm:inline">Groups - {leagueName}</span>
-              <span className="sm:hidden">Groups</span>
-            </h1>
-            <p className="text-muted-foreground">
-              <span className="hidden sm:inline">Manage groups for this league</span>
-              <span className="sm:hidden">{leagueName}</span>
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Back to Leagues</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold">
+                <span className="hidden sm:inline">Groups - {leagueName}</span>
+                <span className="sm:hidden">Groups</span>
+              </h1>
+              <p className="text-muted-foreground">
+                <span className="hidden sm:inline">Manage groups for this league</span>
+                <span className="sm:hidden">{leagueName}</span>
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex justify-end">
           <Button onClick={() => setShowCreateGroup(true)}>
             <Plus className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Create Group</span>
@@ -228,11 +176,7 @@ export function AdminGroups() {
       {/* Groups Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="w-5 h-5 mr-2" />
-            Groups
-          </CardTitle>
-          <CardDescription>Manage all groups in this league</CardDescription>
+          <CardDescription className="text-sm sm:text-base">Manage all groups in this league</CardDescription>
         </CardHeader>
         <CardContent>
           {groupsLoading ? (
@@ -248,9 +192,16 @@ export function AdminGroups() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {groups.map((group) => (
-                <Card key={group.id} className="hover:shadow-md transition-shadow">
+                <Card 
+                  key={group.id} 
+                  className="hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={() => navigate(`/admin/leagues/${leagueId}/groups/${group.id}/teams`)}
+                >
                   <CardHeader>
-                    <CardTitle className="text-xl">{group.name}</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl flex items-center justify-between">
+                      {group.name}
+                      <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2">
@@ -262,35 +213,6 @@ export function AdminGroups() {
                       </Badge>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex gap-2 pt-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/admin/leagues/${leagueId}/groups/${group.id}/teams`)}
-                      className="flex-1 min-h-[44px]"
-                    >
-                      <Trophy className="w-4 h-4 mr-1 hidden sm:block" />
-                      <span className="sm:hidden">Teams</span>
-                      <span className="hidden sm:inline">Teams</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startEditGroup(group)}
-                      className="min-h-[44px] min-w-[44px]"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteConfirmGroup(group)}
-                      className="min-h-[44px] min-w-[44px]"
-                      disabled
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </CardFooter>
                 </Card>
               ))}
             </div>
@@ -397,129 +319,6 @@ export function AdminGroups() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Group Dialog */}
-      <Dialog open={!!editingGroup} onOpenChange={() => setEditingGroup(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Group</DialogTitle>
-            <DialogDescription>Update the group details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-group-name">Group Name</Label>
-              <Input
-                id="edit-group-name"
-                value={groupForm.name}
-                onChange={(e) =>
-                  setGroupForm({ ...groupForm, name: e.target.value })
-                }
-                className={
-                  hasFieldError(groupErrors, "name") ? "border-red-500" : ""
-                }
-              />
-              {getFieldError(groupErrors, "name") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "name")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-group-level">Level</Label>
-              <Select
-                value={groupForm.level}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    level: value as "1" | "2" | "3" | "4",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "level") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
-                  <SelectItem value="4">Level 4</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "level") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "level")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-group-gender">Gender</Label>
-              <Select
-                value={groupForm.gender}
-                onValueChange={(value) =>
-                  setGroupForm({
-                    ...groupForm,
-                    gender: value as "male" | "female" | "mixed",
-                  })
-                }
-              >
-                <SelectTrigger
-                  className={
-                    hasFieldError(groupErrors, "gender") ? "border-red-500" : ""
-                  }
-                >
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(groupErrors, "gender") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(groupErrors, "gender")}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingGroup(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateGroup}>Update Group</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Group Confirmation */}
-      <Dialog
-        open={!!deleteConfirmGroup}
-        onOpenChange={() => setDeleteConfirmGroup(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Group</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{deleteConfirmGroup?.name}"? This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmGroup(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteGroup}>
-              Delete Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

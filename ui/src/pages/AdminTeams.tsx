@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2, Plus, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { GenerateCalendarModal } from "../components/GenerateCalendarModal";
 import { GroupCalendar } from "../components/GroupCalendar";
 
@@ -68,6 +68,10 @@ export function AdminTeams() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [clearingCalendar, setClearingCalendar] = useState(false);
   const [generatingCalendar, setGeneratingCalendar] = useState(false);
+
+  // State for collapsible sections
+  const [teamsSectionCollapsed, setTeamsSectionCollapsed] = useState(true);
+  const [calendarSectionCollapsed, setCalendarSectionCollapsed] = useState(true);
 
   // Redirect if not admin
   useEffect(() => {
@@ -156,7 +160,6 @@ export function AdminTeams() {
     loadTeams();
     // Trigger calendar refresh after a short delay to ensure data is ready
     setTimeout(() => {
-      // The GroupCalendar will automatically refresh due to the onRefresh callback
       setGeneratingCalendar(false);
     }, 500);
   };
@@ -189,8 +192,8 @@ export function AdminTeams() {
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl font-bold">
-              <span className="hidden sm:inline">Teams - {groupName}</span>
-              <span className="sm:hidden">Teams</span>
+              <span className="hidden sm:inline">Group - {groupName}</span>
+              <span className="sm:hidden">Group</span>
             </h1>
             <p className="text-muted-foreground">
               <span className="hidden sm:inline">{leagueName} • Level {teams[0]?.group.level} • {teams[0]?.group.gender}</span>
@@ -203,15 +206,14 @@ export function AdminTeams() {
       {/* Group Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Calendar className="w-5 h-5 mr-2" />
+          <CardTitle className="flex items-center text-lg sm:text-xl">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Group Information
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <h4 className="font-medium mb-2">Group Details</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{groupName}</span>
@@ -266,13 +268,30 @@ export function AdminTeams() {
       {/* Teams Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="w-5 h-5 mr-2" />
-            Teams
-          </CardTitle>
-          <CardDescription>All teams in this group</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center text-lg sm:text-xl">
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                Teams
+              </CardTitle>
+              <CardDescription>All teams in this group</CardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTeamsSectionCollapsed(!teamsSectionCollapsed)}
+              className="p-2"
+            >
+              {teamsSectionCollapsed ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        {!teamsSectionCollapsed && (
+          <CardContent>
           {teamsLoading ? (
             <div className="text-center py-4">Loading teams...</div>
           ) : teamsError ? (
@@ -288,7 +307,7 @@ export function AdminTeams() {
               {teams.map((teamData) => (
                 <Card key={teamData.team.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-xl">{teamData.team.name}</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">{teamData.team.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -330,7 +349,8 @@ export function AdminTeams() {
               ))}
             </div>
           )}
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Calendar Section */}
@@ -338,36 +358,51 @@ export function AdminTeams() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 League Calendar
               </CardTitle>
               <CardDescription>
                 Generate and manage match schedules for this group
               </CardDescription>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleClearCalendar}
+                  disabled={teams.length < 2 || clearingCalendar}
+                >
+                  {clearingCalendar && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                  {clearingCalendar ? "Clearing..." : "Clear"}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCalendarModal(true)}
+                  disabled={teams.length < 2}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Generate
+                </Button>
+              </div>
               <Button
-                variant="destructive"
-                onClick={handleClearCalendar}
-                disabled={teams.length < 2 || clearingCalendar}
-                className="w-full sm:w-auto"
+                variant="ghost"
+                size="sm"
+                onClick={() => setCalendarSectionCollapsed(!calendarSectionCollapsed)}
+                className="p-2"
               >
-                {clearingCalendar && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {clearingCalendar ? "Clearing..." : "Clear Calendar"}
-              </Button>
-              <Button
-                onClick={() => setShowCalendarModal(true)}
-                disabled={teams.length < 2}
-                className="w-full sm:w-auto"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Generate Calendar
+                {calendarSectionCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        {!calendarSectionCollapsed && (
+          <CardContent>
           {teams.length < 2 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -377,13 +412,10 @@ export function AdminTeams() {
             <GroupCalendar 
               groupId={groupId!} 
               loading={generatingCalendar}
-              onRefresh={() => {
-                // Refresh teams data if needed
-                loadTeams();
-              }}
             />
           )}
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Generate Calendar Modal */}

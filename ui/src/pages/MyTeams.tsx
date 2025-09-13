@@ -128,7 +128,7 @@ export function MyTeams() {
           {teams.map((teamData) => (
             <Card key={teamData.team.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle className="text-xl">{teamData.team.name}</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">{teamData.team.name}</CardTitle>
                 <CardDescription className="mt-1">
                   {teamData.league.name}
                 </CardDescription>

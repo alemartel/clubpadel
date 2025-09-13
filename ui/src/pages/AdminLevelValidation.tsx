@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Search, Users, Filter, CheckSquare, Square, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Search, Users, CheckSquare, Square, Clock, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Player {
@@ -289,8 +289,8 @@ export function AdminLevelValidation() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search by name or email..."
@@ -300,7 +300,7 @@ export function AdminLevelValidation() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -311,10 +311,6 @@ export function AdminLevelValidation() {
             <SelectItem value="null">No Request</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={loadAllPlayers} disabled={loadingPlayers}>
-          <Filter className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
       </div>
 
       {/* Error Display */}

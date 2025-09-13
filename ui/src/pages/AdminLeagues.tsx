@@ -190,8 +190,8 @@ export function AdminLeagues() {
       {/* Leagues Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Calendar className="w-5 h-5 mr-2" />
+          <CardTitle className="flex items-center text-lg sm:text-xl">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Leagues
           </CardTitle>
           <CardDescription>Manage all leagues</CardDescription>
@@ -211,7 +211,7 @@ export function AdminLeagues() {
               {leagues.map((league) => (
                 <Card key={league.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-xl">{league.name}</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">{league.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
