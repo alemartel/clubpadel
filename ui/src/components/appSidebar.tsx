@@ -11,13 +11,23 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 export function AppSidebar() {
   const location = useLocation();
   const { isAdmin } = useAuth();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleMenuClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
 
   return (
     <Sidebar
@@ -35,7 +45,7 @@ export function AppSidebar() {
                   isActive={isActive("/")}
                   asChild
                 >
-                  <Link to="/">
+                  <Link to="/" onClick={handleMenuClick}>
                     <Home className="w-4 h-4" />
                     <span>Home</span>
                   </Link>
@@ -49,7 +59,7 @@ export function AppSidebar() {
                     isActive={isActive("/teams")}
                     asChild
                   >
-                    <Link to="/teams">
+                    <Link to="/teams" onClick={handleMenuClick}>
                       <Users className="w-4 h-4" />
                       <span>My Teams</span>
                     </Link>
@@ -65,7 +75,7 @@ export function AppSidebar() {
                       isActive={isActive("/admin/leagues")}
                       asChild
                     >
-                      <Link to="/admin/leagues">
+                      <Link to="/admin/leagues" onClick={handleMenuClick}>
                         <Calendar className="w-4 h-4" />
                         <span>League Management</span>
                       </Link>
@@ -77,9 +87,21 @@ export function AppSidebar() {
                       isActive={isActive("/admin/player-management")}
                       asChild
                     >
-                      <Link to="/admin/player-management">
+                      <Link to="/admin/player-management" onClick={handleMenuClick}>
                         <Shield className="w-4 h-4" />
                         <span>Player Management</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Settings"
+                      isActive={isActive("/settings")}
+                      asChild
+                    >
+                      <Link to="/settings" onClick={handleMenuClick}>
+                        <Settings className="w-4 h-4" />
+                        <span>Settings</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -92,18 +114,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Settings"
-              isActive={isActive("/settings")}
-              asChild
-            >
-              <Link to="/settings">
-                <Settings className="w-4 h-4" />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {/* Footer content can be added here if needed */}
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

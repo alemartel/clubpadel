@@ -147,7 +147,14 @@ function AppContent() {
               <main className="flex-1">
                 <Routes>
                   <Route path="/" element={<Home />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route
+                    path="/settings"
+                    element={
+                      <AdminRoute>
+                        <Settings />
+                      </AdminRoute>
+                    }
+                  />
                   <Route path="/profile" element={<Profile />} />
                   <Route
                     path="/admin/leagues"
