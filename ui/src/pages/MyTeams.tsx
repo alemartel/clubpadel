@@ -7,6 +7,7 @@ import { Users, Plus, Calendar, Trophy } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface TeamWithDetails {
   team: Team;
@@ -27,6 +28,8 @@ interface TeamWithDetails {
 
 export function MyTeams() {
   const { canCreateTeams } = useAuth();
+  const { t } = useTranslation('teams');
+  const { t: tCommon } = useTranslation('common');
   const [teams, setTeams] = useState<TeamWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export function MyTeams() {
         setTeams(response.teams);
       }
     } catch (err) {
-      setError("Failed to load teams");
+      setError(tCommon('failedToLoadTeams'));
       console.error("Error loading teams:", err);
     } finally {
       setLoading(false);
@@ -63,7 +66,7 @@ export function MyTeams() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading your teams...</p>
+            <p>{t('loadingYourTeams')}</p>
           </div>
         </div>
       </div>
@@ -76,7 +79,7 @@ export function MyTeams() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={loadTeams}>Try Again</Button>
+            <Button onClick={loadTeams}>{t('tryAgain')}</Button>
           </div>
         </div>
       </div>
@@ -87,16 +90,16 @@ export function MyTeams() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">My Teams</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('myTeams')}</h1>
           <p className="text-muted-foreground">
-            Manage your teams and view team details
+            {t('manageTeams')}
           </p>
         </div>
         {canCreateTeams && (
           <Button asChild>
             <Link to="/teams/create">
               <Plus className="w-4 h-4 mr-2" />
-              Create Team
+{t('createTeam')}
             </Link>
           </Button>
         )}
@@ -106,18 +109,18 @@ export function MyTeams() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No teams yet</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('noTeamsYet')}</h3>
             <p className="text-muted-foreground text-center mb-4">
               {canCreateTeams 
-                ? "Create your first team to get started with league play."
-                : "You need a validated level to create teams. Update your profile to get your level validated."
+                ? t('createFirstTeam')
+                : t('needValidatedLevel')
               }
             </p>
             {canCreateTeams && (
               <Button asChild>
                 <Link to="/teams/create">
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Team
+{t('createYourFirstTeam')}
                 </Link>
               </Button>
             )}
@@ -151,7 +154,7 @@ export function MyTeams() {
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />
-                    <span>{teamData.member_count} member{teamData.member_count !== 1 ? 's' : ''}</span>
+                    <span>{t('memberCount', { count: teamData.member_count })}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -164,7 +167,7 @@ export function MyTeams() {
                   <div className="pt-2">
                     <Button asChild variant="outline" className="w-full">
                       <Link to={`/teams/${teamData.team.id}`}>
-                        View Team Details
+{t('viewTeamDetails')}
                       </Link>
                     </Button>
                   </div>

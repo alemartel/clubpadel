@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type League, type Group, type NewTeam } from "@/lib/serverComm";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function CreateTeam() {
   const { serverUser } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('teams');
+  const { t: tCommon } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -48,7 +51,7 @@ export function CreateTeam() {
         setLeagues(response.leagues);
       }
     } catch (err) {
-      setError("Failed to load leagues");
+        setError(t('failedToLoadLeagues'));
       console.error("Error loading leagues:", err);
     } finally {
       setLoadingData(false);
@@ -64,7 +67,7 @@ export function CreateTeam() {
         setGroups(response.groups);
       }
     } catch (err) {
-      setError("Failed to load groups");
+        setError(t('failedToLoadGroups'));
       console.error("Error loading groups:", err);
     }
   };
@@ -73,7 +76,7 @@ export function CreateTeam() {
     e.preventDefault();
     
     if (!teamName.trim() || !selectedLeagueId || !selectedGroupId) {
-      setError("Please fill in all fields");
+      setError(t('pleaseFillAllFields'));
       return;
     }
 
@@ -96,7 +99,7 @@ export function CreateTeam() {
         navigate(`/teams/${response.team.id}`);
       }
     } catch (err) {
-      setError("Failed to create team");
+      setError(t('failedToCreateTeam'));
       console.error("Error creating team:", err);
     } finally {
       setLoading(false);
@@ -110,7 +113,7 @@ export function CreateTeam() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading leagues and groups...</p>
+            <p>{t('loadingLeaguesGroups')}</p>
           </div>
         </div>
       </div>
@@ -122,12 +125,12 @@ export function CreateTeam() {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/teams")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Teams
+{t('backToTeams')}
         </Button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Create Team</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('createTeam')}</h1>
           <p className="text-muted-foreground">
-            Create a new team to participate in league play
+            {t('createNewTeam')}
           </p>
         </div>
       </div>
@@ -136,12 +139,12 @@ export function CreateTeam() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Team Information
+{t('teamInformation')}
           </CardTitle>
           <CardDescription>
             {serverUser?.claimed_level && (
               <span>
-                Your validated level: <strong>Level {serverUser.claimed_level}</strong>
+{t('yourValidatedLevel', { level: serverUser.claimed_level })}
               </span>
             )}
           </CardDescription>
@@ -155,25 +158,25 @@ export function CreateTeam() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="teamName">Team Name</Label>
+              <Label htmlFor="teamName">{t('teamName')}</Label>
               <Input
                 id="teamName"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Enter team name"
+                placeholder={t('teamNamePlaceholder')}
                 required
                 maxLength={100}
               />
               <p className="text-sm text-muted-foreground">
-                Team name must be unique within the selected league
+{t('teamNameUnique')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="league">League</Label>
+              <Label htmlFor="league">{t('selectLeague')}</Label>
               <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a league" />
+                  <SelectValue placeholder={t('selectLeague')} />
                 </SelectTrigger>
                 <SelectContent>
                   {leagues.map((league) => (
@@ -186,14 +189,14 @@ export function CreateTeam() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="group">Group</Label>
+              <Label htmlFor="group">{t('selectGroup')}</Label>
               <Select 
                 value={selectedGroupId} 
                 onValueChange={setSelectedGroupId}
                 disabled={!selectedLeagueId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a group" />
+                  <SelectValue placeholder={t('selectGroup')} />
                 </SelectTrigger>
                 <SelectContent>
                   {groups.map((group) => (
@@ -201,7 +204,7 @@ export function CreateTeam() {
                       <div className="flex items-center gap-2">
                         <span>{group.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          (Level {group.level}, {group.gender})
+                          ({t('level')} {group.level}, {group.gender})
                         </span>
                       </div>
                     </SelectItem>
@@ -210,7 +213,7 @@ export function CreateTeam() {
               </Select>
               {selectedLeagueId && groups.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  No groups available in this league
+{t('noGroupsAvailable')}
                 </p>
               )}
             </div>
@@ -223,7 +226,7 @@ export function CreateTeam() {
               
               return levelMismatch && (
                 <div className="p-3 border border-destructive/20 bg-destructive/10 rounded text-destructive text-sm">
-                  ⚠️ Your validated level ({serverUser?.claimed_level}) doesn't match this group's level ({selectedGroup.level})
+                  ⚠️ {t('levelMismatch', { level: serverUser?.claimed_level, groupLevel: selectedGroup.level })}
                 </div>
               );
             })()}
@@ -237,7 +240,7 @@ export function CreateTeam() {
                 })()}
                 className="flex-1"
               >
-                {loading ? "Creating Team..." : "Create Team"}
+{loading ? t('creatingTeam') : t('createTeam')}
               </Button>
               <Button
                 type="button"
@@ -245,7 +248,7 @@ export function CreateTeam() {
                 onClick={() => navigate("/teams")}
                 disabled={loading}
               >
-                Cancel
+{tCommon('cancel')}
               </Button>
             </div>
           </form>

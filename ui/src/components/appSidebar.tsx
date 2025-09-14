@@ -1,6 +1,7 @@
 import { Home, Settings, Calendar, Shield, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
+import { useTranslation } from "@/hooks/useTranslation";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +19,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { isAdmin } = useAuth();
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
+  const { t } = useTranslation('navigation');
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -47,7 +49,7 @@ export function AppSidebar() {
                 >
                   <Link to="/" onClick={handleMenuClick}>
                     <Home className="w-4 h-4" />
-                    <span>Home</span>
+                    <span>{t('home')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -61,7 +63,7 @@ export function AppSidebar() {
                   >
                     <Link to="/teams" onClick={handleMenuClick}>
                       <Users className="w-4 h-4" />
-                      <span>My Teams</span>
+                      <span>{t('myTeams')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -77,7 +79,7 @@ export function AppSidebar() {
                     >
                       <Link to="/admin/leagues" onClick={handleMenuClick}>
                         <Calendar className="w-4 h-4" />
-                        <span>League Management</span>
+                        <span>{t('leagueManagement')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -89,7 +91,7 @@ export function AppSidebar() {
                     >
                       <Link to="/admin/player-management" onClick={handleMenuClick}>
                         <Shield className="w-4 h-4" />
-                        <span>Player Management</span>
+                        <span>{t('playerManagement')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -101,7 +103,7 @@ export function AppSidebar() {
                     >
                       <Link to="/settings" onClick={handleMenuClick}>
                         <Settings className="w-4 h-4" />
-                        <span>Settings</span>
+                        <span>{t('settings')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

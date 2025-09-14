@@ -39,11 +39,14 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Users, Trophy } from "lucide-react";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function AdminGroups() {
   const { isAdmin, loading } = useAuth();
   const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('leagues');
+  const { t: tCommon } = useTranslation('common');
 
   // State for groups
   const [groups, setGroups] = useState<Group[]>([]);
@@ -135,7 +138,7 @@ export function AdminGroups() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{tCommon('loading')}</div>
       </div>
     );
   }
@@ -151,24 +154,24 @@ export function AdminGroups() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/admin/leagues")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Leagues</span>
-              <span className="sm:hidden">Back</span>
+              <span className="hidden sm:inline">{t('backToLeagues')}</span>
+              <span className="sm:hidden">{tCommon('back')}</span>
             </Button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">
-                <span className="hidden sm:inline">Groups - {leagueName}</span>
-                <span className="sm:hidden">Groups</span>
+                <span className="hidden sm:inline">{t('groups')} - {leagueName}</span>
+                <span className="sm:hidden">{t('groups')}</span>
               </h1>
               <p className="text-muted-foreground">
-                <span className="hidden sm:inline">Manage groups for this league</span>
+                <span className="hidden sm:inline">{t('manageGroupsForLeague')}</span>
                 <span className="sm:hidden">{leagueName}</span>
               </p>
             </div>
           </div>
           <Button onClick={() => setShowCreateGroup(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Create Group</span>
-            <span className="sm:hidden">Create</span>
+            <span className="hidden sm:inline">{t('createGroup')}</span>
+            <span className="sm:hidden">{tCommon('create')}</span>
           </Button>
         </div>
       </div>
@@ -176,18 +179,18 @@ export function AdminGroups() {
       {/* Groups Section */}
       <Card>
         <CardHeader>
-          <CardDescription className="text-sm sm:text-base">Manage all groups in this league</CardDescription>
+          <CardDescription className="text-sm sm:text-base">{t('manageAllGroupsInLeague')}</CardDescription>
         </CardHeader>
         <CardContent>
           {groupsLoading ? (
-            <div className="text-center py-4">Loading groups...</div>
+            <div className="text-center py-4">{t('loadingGroups')}</div>
           ) : groupsError ? (
             <div className="text-center text-red-500 py-4">{groupsError}</div>
           ) : groups.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No groups created yet</p>
-              <p className="text-sm">Create your first group to get started</p>
+              <p>{t('noGroupsFound')}</p>
+              <p className="text-sm">{t('createFirstGroup')}</p>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -206,7 +209,7 @@ export function AdminGroups() {
                   <CardContent>
                     <div className="flex items-center gap-2">
                       <Badge variant={getLevelBadgeVariant(group.level)}>
-                        Level {group.level}
+{tCommon('level')} {group.level}
                       </Badge>
                       <Badge variant={getGenderBadgeVariant(group.gender)}>
                         {group.gender}
@@ -224,14 +227,14 @@ export function AdminGroups() {
       <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Group</DialogTitle>
+            <DialogTitle>{t('createNewGroup')}</DialogTitle>
             <DialogDescription>
-              Enter the details for the new group in {leagueName}.
+              {t('enterGroupDetails', { leagueName })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="group-name">Group Name</Label>
+              <Label htmlFor="group-name">{t('groupName')}</Label>
               <Input
                 id="group-name"
                 value={groupForm.name}
@@ -249,7 +252,7 @@ export function AdminGroups() {
               )}
             </div>
             <div>
-              <Label htmlFor="group-level">Level</Label>
+              <Label htmlFor="group-level">{tCommon('level')}</Label>
               <Select
                 value={groupForm.level}
                 onValueChange={(value) =>
@@ -264,13 +267,13 @@ export function AdminGroups() {
                     hasFieldError(groupErrors, "level") ? "border-red-500" : ""
                   }
                 >
-                  <SelectValue placeholder="Select level" />
+                  <SelectValue placeholder={t('selectLevel')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
-                  <SelectItem value="4">Level 4</SelectItem>
+                  <SelectItem value="1">{tCommon('level')} 1</SelectItem>
+                  <SelectItem value="2">{tCommon('level')} 2</SelectItem>
+                  <SelectItem value="3">{tCommon('level')} 3</SelectItem>
+                  <SelectItem value="4">{tCommon('level')} 4</SelectItem>
                 </SelectContent>
               </Select>
               {getFieldError(groupErrors, "level") && (
@@ -280,7 +283,7 @@ export function AdminGroups() {
               )}
             </div>
             <div>
-              <Label htmlFor="group-gender">Gender</Label>
+              <Label htmlFor="group-gender">{tCommon('gender')}</Label>
               <Select
                 value={groupForm.gender}
                 onValueChange={(value) =>
@@ -295,12 +298,12 @@ export function AdminGroups() {
                     hasFieldError(groupErrors, "gender") ? "border-red-500" : ""
                   }
                 >
-                  <SelectValue placeholder="Select gender" />
+                  <SelectValue placeholder={t('selectGender')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
+                  <SelectItem value="male">{tCommon('male')}</SelectItem>
+                  <SelectItem value="female">{tCommon('female')}</SelectItem>
+                  <SelectItem value="mixed">{tCommon('mixed')}</SelectItem>
                 </SelectContent>
               </Select>
               {getFieldError(groupErrors, "gender") && (
@@ -312,9 +315,9 @@ export function AdminGroups() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateGroup(false)}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
-            <Button onClick={handleCreateGroup}>Create Group</Button>
+            <Button onClick={handleCreateGroup}>{t('createGroup')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

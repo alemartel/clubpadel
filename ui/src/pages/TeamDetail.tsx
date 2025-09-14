@@ -9,6 +9,7 @@ import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 import { FreePlayerMarketModal } from "../components/FreePlayerMarketModal";
 import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface TeamWithDetails {
   team: Team;
@@ -40,6 +41,7 @@ export function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { serverUser, isAdmin } = useAuth();
+  const { t } = useTranslation('teams');
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function TeamDetail() {
         setTeam(response.team);
       }
     } catch (err) {
-      setError("Failed to load team details");
+      setError(t('failedToLoadTeamDetails'));
       console.error("Error loading team:", err);
     } finally {
       setLoading(false);
@@ -116,7 +118,7 @@ export function TeamDetail() {
         await loadTeam();
       }
     } catch (err) {
-      setError("Failed to remove team member");
+      setError(t('failedToRemoveMember'));
       console.error("Error removing member:", err);
     }
   };
@@ -132,13 +134,13 @@ export function TeamDetail() {
 
   const getDayName = (dayKey: string) => {
     const days: { [key: string]: string } = {
-      'monday': 'Monday',
-      'tuesday': 'Tuesday', 
-      'wednesday': 'Wednesday',
-      'thursday': 'Thursday',
-      'friday': 'Friday',
-      'saturday': 'Saturday',
-      'sunday': 'Sunday'
+      'monday': t('monday'),
+      'tuesday': t('tuesday'), 
+      'wednesday': t('wednesday'),
+      'thursday': t('thursday'),
+      'friday': t('friday'),
+      'saturday': t('saturday'),
+      'sunday': t('sunday')
     };
     return days[dayKey] || dayKey;
   };
@@ -161,7 +163,7 @@ export function TeamDetail() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading team details...</p>
+            <p>{t('loadingTeamDetails')}</p>
           </div>
         </div>
       </div>
@@ -173,9 +175,9 @@ export function TeamDetail() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Team not found"}</p>
+            <p className="text-destructive mb-4">{error || t('teamNotFound')}</p>
             <Button onClick={() => navigate(getBackUrl())}>
-              Back
+{t('back')}
             </Button>
           </div>
         </div>
@@ -188,7 +190,7 @@ export function TeamDetail() {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+{t('back')}
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
@@ -211,7 +213,7 @@ export function TeamDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
-                Team Information
+{t('teamInformation')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -220,7 +222,7 @@ export function TeamDetail() {
                   <div className="space-y-2 text-sm">
                     <div className="font-medium">{team.team.name}</div>
                     <div className="text-muted-foreground">
-                      Created {formatDate(team.team.created_at)}
+  {t('createdOn', { date: formatDate(team.team.created_at) })}
                     </div>
                   </div>
                 </div>
@@ -228,7 +230,7 @@ export function TeamDetail() {
                 <div>
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    League Details
+{t('leagueDetails')}
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="font-medium">{team.league.name}</div>
@@ -252,12 +254,12 @@ export function TeamDetail() {
               <div className="mt-6">
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Team Availability
+{t('teamAvailability')}
                 </h4>
                 {availabilityLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    Loading availability...
+{t('loadingAvailability')}
                   </div>
                 ) : teamAvailability.length > 0 ? (
                   <div className="space-y-2">
@@ -277,13 +279,13 @@ export function TeamDetail() {
                       ))}
                     {teamAvailability.filter(day => day.is_available).length === 0 && (
                       <div className="text-sm text-muted-foreground">
-                        No availability set
+{t('noAvailabilitySet')}
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">
-                    No availability set
+{t('noAvailabilitySet')}
                   </div>
                 )}
                 
@@ -291,7 +293,7 @@ export function TeamDetail() {
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
                       <Edit className="w-4 h-4 mr-2" />
-                      Edit Availability
+{t('editAvailability')}
                     </Button>
                   </div>
                 )}
@@ -305,7 +307,7 @@ export function TeamDetail() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Team Members ({team.members.length})
+{t('teamMembers')} ({team.members.length})
                 </CardTitle>
                 {isTeamCreator && (
                   <Button 
@@ -314,7 +316,7 @@ export function TeamDetail() {
                     onClick={() => setShowPlayerMarketModal(true)}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Add Players
+{t('addPlayers')}
                   </Button>
                 )}
               </div>
@@ -323,7 +325,7 @@ export function TeamDetail() {
               {team.members.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No team members yet</p>
+                  <p>{t('noTeamMembersYet')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">

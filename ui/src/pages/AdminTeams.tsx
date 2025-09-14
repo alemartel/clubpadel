@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Calendar, Trophy, Eye, Trash2, Plus, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { GenerateCalendarModal } from "../components/GenerateCalendarModal";
 import { GroupCalendar } from "../components/GroupCalendar";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface TeamWithDetails {
   team: Team;
@@ -53,6 +54,8 @@ export function AdminTeams() {
   const { isAdmin, loading } = useAuth();
   const { leagueId, groupId } = useParams<{ leagueId: string; groupId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('leagues');
+  const { t: tCommon } = useTranslation('common');
 
   // State for teams
   const [teams, setTeams] = useState<TeamWithDetails[]>([]);
@@ -101,7 +104,7 @@ export function AdminTeams() {
       }
     } catch (error) {
       console.error("Failed to load teams:", error);
-      setTeamsError("Failed to load teams");
+      setTeamsError(tCommon('failedToLoadTeams'));
     } finally {
       setTeamsLoading(false);
     }
@@ -172,7 +175,7 @@ export function AdminTeams() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{tCommon('loading')}</div>
       </div>
     );
   }
@@ -187,16 +190,16 @@ export function AdminTeams() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/leagues/${leagueId}/groups`)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Back to Groups</span>
-            <span className="sm:hidden">Back</span>
+            <span className="hidden sm:inline">{t('backToGroups')}</span>
+            <span className="sm:hidden">{tCommon('back')}</span>
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl font-bold">
-              <span className="hidden sm:inline">Group - {groupName}</span>
-              <span className="sm:hidden">Group</span>
+              <span className="hidden sm:inline">{tCommon('group')} - {groupName}</span>
+              <span className="sm:hidden">{tCommon('group')}</span>
             </h1>
             <p className="text-muted-foreground">
-              <span className="hidden sm:inline">{leagueName} • Level {teams[0]?.group.level} • {teams[0]?.group.gender}</span>
+              <span className="hidden sm:inline">{leagueName} • {tCommon('level')} {teams[0]?.group.level} • {teams[0]?.group.gender}</span>
               <span className="sm:hidden">{groupName}</span>
             </p>
           </div>
@@ -208,7 +211,7 @@ export function AdminTeams() {
         <CardHeader>
           <CardTitle className="flex items-center text-lg sm:text-xl">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Group Information
+{t('groupInformation')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -220,7 +223,7 @@ export function AdminTeams() {
                   {teams.length > 0 && (
                     <>
                       <Badge variant={getLevelBadgeVariant(teams[0]?.group.level)}>
-                        Level {teams[0]?.group.level}
+{tCommon('level')} {teams[0]?.group.level}
                       </Badge>
                       <Badge variant={getGenderBadgeVariant(teams[0]?.group.gender)}>
                         {teams[0]?.group.gender}
@@ -232,7 +235,7 @@ export function AdminTeams() {
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">League Details</h4>
+              <h4 className="font-medium mb-2">{t('leagueDetails')}</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
@@ -247,16 +250,16 @@ export function AdminTeams() {
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">Statistics</h4>
+              <h4 className="font-medium mb-2">{t('statistics')}</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4" />
-                  <span>{teams.length} team{teams.length !== 1 ? 's' : ''}</span>
+                  <span>{teams.length} {teams.length !== 1 ? t('teams') : t('team')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   <span>
-                    {teams.reduce((total, team) => total + parseInt(team.member_count.toString()), 0)} total members
+{t('totalMembers', { count: teams.reduce((total, team) => total + parseInt(team.member_count.toString()), 0) })}
                   </span>
                 </div>
               </div>
@@ -272,9 +275,9 @@ export function AdminTeams() {
             <div>
               <CardTitle className="flex items-center text-lg sm:text-xl">
                 <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Teams
+{t('teams')}
               </CardTitle>
-              <CardDescription>All teams in this group</CardDescription>
+              <CardDescription>{t('allTeamsInGroup')}</CardDescription>
             </div>
             <Button
               variant="ghost"
@@ -293,14 +296,14 @@ export function AdminTeams() {
         {!teamsSectionCollapsed && (
           <CardContent>
           {teamsLoading ? (
-            <div className="text-center py-4">Loading teams...</div>
+            <div className="text-center py-4">{t('loadingTeams')}</div>
           ) : teamsError ? (
             <div className="text-center text-red-500 py-4">{teamsError}</div>
           ) : teams.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No teams created yet</p>
-              <p className="text-sm">Teams will appear here when players create them</p>
+              <p>{t('noTeamsFound')}</p>
+              <p className="text-sm">{t('teamsWillAppearHere')}</p>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -313,14 +316,14 @@ export function AdminTeams() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>Created by {teamData.creator.display_name || 
+                        <span>{t('createdBy')} {teamData.creator.display_name || 
                           `${teamData.creator.first_name || ''} ${teamData.creator.last_name || ''}`.trim() || 
                           teamData.creator.email}</span>
                       </div>
                       
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>{teamData.member_count} member{teamData.member_count !== 1 ? 's' : ''}</span>
+                        <span>{teamData.member_count} {teamData.member_count !== 1 ? tCommon('members') : tCommon('member')}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -332,8 +335,8 @@ export function AdminTeams() {
                       className="flex-1 min-h-[44px]"
                     >
                       <Eye className="w-4 h-4 mr-1 hidden sm:block" />
-                      <span className="sm:hidden">View</span>
-                      <span className="hidden sm:inline">View</span>
+                      <span className="sm:hidden">{tCommon('view')}</span>
+                      <span className="hidden sm:inline">{tCommon('view')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -360,10 +363,10 @@ export function AdminTeams() {
             <div>
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-                League Calendar
+{t('leagueCalendar')}
               </CardTitle>
               <CardDescription>
-                Generate and manage match schedules for this group
+{t('generateAndManageSchedules')}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -375,7 +378,7 @@ export function AdminTeams() {
                   disabled={teams.length < 2 || clearingCalendar}
                 >
                   {clearingCalendar && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                  {clearingCalendar ? "Clearing..." : "Clear"}
+{clearingCalendar ? t('clearing') : tCommon('clear')}
                 </Button>
                 <Button
                   size="sm"
@@ -383,7 +386,7 @@ export function AdminTeams() {
                   disabled={teams.length < 2}
                 >
                   <Plus className="w-3 h-3 mr-1" />
-                  Generate
+{t('generate')}
                 </Button>
               </div>
               <Button
@@ -406,7 +409,7 @@ export function AdminTeams() {
           {teams.length < 2 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>At least 2 teams are required to generate a calendar</p>
+              <p>{t('atLeastTwoTeamsRequired')}</p>
             </div>
           ) : (
             <GroupCalendar 
@@ -433,10 +436,9 @@ export function AdminTeams() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Team</DialogTitle>
+            <DialogTitle>{tCommon('delete')} {t('team')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteConfirmTeam?.team.name}"? This
-              action cannot be undone and will remove all team members.
+              {t('deleteTeamConfirm', { name: deleteConfirmTeam?.team.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -444,10 +446,10 @@ export function AdminTeams() {
               variant="outline"
               onClick={() => setDeleteConfirmTeam(null)}
             >
-              Cancel
+{tCommon('cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteTeam}>
-              Delete Team
+{tCommon('delete')} {t('team')}
             </Button>
           </DialogFooter>
         </DialogContent>

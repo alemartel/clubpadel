@@ -1,13 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function Settings() {
+  const { t } = useTranslation('common');
+  
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('settings')}</h1>
           <p className="text-muted-foreground">
-            Manage your account settings and preferences.
+            {t('manageAccountSettings')}
           </p>
         </div>
 
@@ -15,12 +18,12 @@ export function Settings() {
         <Card>
           <CardHeader>
             <CardDescription>
-              Configure system-wide settings and preferences.
+              {t('configureSystemSettings')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Settings options will be added here in the future.
+              {t('settingsOptionsFuture')}
             </p>
           </CardContent>
         </Card>

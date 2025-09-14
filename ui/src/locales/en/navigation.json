@@ -1,0 +1,17 @@
+{
+  "home": "Home",
+  "myTeams": "My Teams",
+  "createTeam": "Create Team",
+  "teamDetail": "Team Detail",
+  "leagueManagement": "League Management",
+  "playerManagement": "Player Management",
+  "groupManagement": "Group Management",
+  "teamManagement": "Team Management",
+  "settings": "Settings",
+  "profile": "Profile",
+  "signOut": "Sign Out",
+  "navigation": "Navigation",
+  "admin": "Admin",
+  "checkingAdminAccess": "Checking admin access...",
+  "adminAccessRequired": "Admin access required"
+}

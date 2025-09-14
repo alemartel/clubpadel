@@ -33,10 +33,13 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Plus, Edit, Trash2, Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function AdminLeagues() {
   const { isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('leagues');
+  const { t: tCommon } = useTranslation('common');
 
   // State for leagues
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -63,7 +66,7 @@ export function AdminLeagues() {
   // Redirect if not admin
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate("/", { state: { error: "Admin access required" } });
+      navigate("/", { state: { error: t('adminAccessRequired') } });
     }
   }, [isAdmin, loading, navigate]);
 
@@ -82,7 +85,7 @@ export function AdminLeagues() {
       setLeagues(response.leagues);
     } catch (error) {
       console.error("Failed to load leagues:", error);
-      setLeaguesError("Failed to load leagues");
+      setLeaguesError(t('failedToLoadLeagues'));
     } finally {
       setLeaguesLoading(false);
     }
@@ -104,7 +107,7 @@ export function AdminLeagues() {
     } catch (error) {
       console.error("Failed to create league:", error);
       setLeagueErrors([
-        { field: "general", message: "Failed to create league" },
+        { field: "general", message: t('failedToCreateLeague') },
       ]);
     }
   };
@@ -135,7 +138,7 @@ export function AdminLeagues() {
     } catch (error) {
       console.error("Failed to update league:", error);
       setLeagueErrors([
-        { field: "general", message: "Failed to update league" },
+        { field: "general", message: t('failedToUpdateLeague') },
       ]);
     }
   };
@@ -165,7 +168,7 @@ export function AdminLeagues() {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{tCommon('loading')}</div>
       </div>
     );
   }
@@ -178,12 +181,12 @@ export function AdminLeagues() {
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">League Management</h1>
-          <p className="text-muted-foreground">Manage leagues and groups</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('leagueManagement')}</h1>
+          <p className="text-muted-foreground">{t('manageLeaguesAndGroups')}</p>
         </div>
         <Button onClick={() => setShowCreateLeague(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Create League
+{t('createLeague')}
         </Button>
       </div>
 
@@ -192,19 +195,19 @@ export function AdminLeagues() {
         <CardHeader>
           <CardTitle className="flex items-center text-lg sm:text-xl">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Leagues
+{t('leagues')}
           </CardTitle>
-          <CardDescription>Manage all leagues</CardDescription>
+          <CardDescription>{t('manageAllLeagues')}</CardDescription>
         </CardHeader>
         <CardContent>
           {leaguesLoading ? (
-            <div className="text-center py-4">Loading leagues...</div>
+            <div className="text-center py-4">{t('loadingLeagues')}</div>
           ) : leaguesError ? (
             <div className="text-center text-red-500 py-4">{leaguesError}</div>
           ) : leagues.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No leagues created yet</p>
+              <p>{t('noLeaguesFound')}</p>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -231,8 +234,8 @@ export function AdminLeagues() {
                       className="flex-1 min-h-[44px]"
                     >
                       <Users className="w-4 h-4 mr-1 hidden sm:block" />
-                      <span className="sm:hidden">Groups</span>
-                      <span className="hidden sm:inline">Groups</span>
+                      <span className="sm:hidden">{t('groups')}</span>
+                      <span className="hidden sm:inline">{t('groups')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -264,14 +267,14 @@ export function AdminLeagues() {
       <Dialog open={showCreateLeague} onOpenChange={setShowCreateLeague}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New League</DialogTitle>
+            <DialogTitle>{t('createNewLeague')}</DialogTitle>
             <DialogDescription>
-              Enter the details for the new league.
+              {t('enterLeagueDetails')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="league-name">League Name</Label>
+              <Label htmlFor="league-name">{t('leagueName')}</Label>
               <Input
                 id="league-name"
                 value={leagueForm.name}
@@ -289,7 +292,7 @@ export function AdminLeagues() {
               )}
             </div>
             <div>
-              <Label htmlFor="league-start-date">Start Date</Label>
+              <Label htmlFor="league-start-date">{t('startDate')}</Label>
               <DatePicker
                 value={
                   leagueForm.start_date
@@ -302,7 +305,7 @@ export function AdminLeagues() {
                     start_date: date?.toISOString() || "",
                   }))
                 }
-                placeholder="Select start date"
+                placeholder={t('selectStartDate')}
                 className={
                   hasFieldError(leagueErrors, "start_date")
                     ? "border-red-500"
@@ -316,7 +319,7 @@ export function AdminLeagues() {
               )}
             </div>
             <div>
-              <Label htmlFor="league-end-date">End Date</Label>
+              <Label htmlFor="league-end-date">{t('endDate')}</Label>
               <DatePicker
                 value={
                   leagueForm.end_date
@@ -329,7 +332,7 @@ export function AdminLeagues() {
                     end_date: date?.toISOString() || "",
                   }))
                 }
-                placeholder="Select end date"
+                placeholder={t('selectEndDate')}
                 className={
                   hasFieldError(leagueErrors, "end_date")
                     ? "border-red-500"
@@ -348,9 +351,9 @@ export function AdminLeagues() {
               variant="outline"
               onClick={() => setShowCreateLeague(false)}
             >
-              Cancel
+{tCommon('cancel')}
             </Button>
-            <Button onClick={handleCreateLeague}>Create League</Button>
+            <Button onClick={handleCreateLeague}>{t('createLeague')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -362,12 +365,12 @@ export function AdminLeagues() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit League</DialogTitle>
-            <DialogDescription>Update the league details.</DialogDescription>
+            <DialogTitle>{t('editLeague')}</DialogTitle>
+            <DialogDescription>{t('updateLeagueDetails')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-league-name">League Name</Label>
+              <Label htmlFor="edit-league-name">{t('leagueName')}</Label>
               <Input
                 id="edit-league-name"
                 value={leagueForm.name}
@@ -385,7 +388,7 @@ export function AdminLeagues() {
               )}
             </div>
             <div>
-              <Label htmlFor="edit-league-start-date">Start Date</Label>
+              <Label htmlFor="edit-league-start-date">{t('startDate')}</Label>
               <DatePicker
                 value={
                   leagueForm.start_date
@@ -398,7 +401,7 @@ export function AdminLeagues() {
                     start_date: date?.toISOString() || "",
                   })
                 }
-                placeholder="Select start date"
+                placeholder={t('selectStartDate')}
                 className={
                   hasFieldError(leagueErrors, "start_date")
                     ? "border-red-500"
@@ -412,7 +415,7 @@ export function AdminLeagues() {
               )}
             </div>
             <div>
-              <Label htmlFor="edit-league-end-date">End Date</Label>
+              <Label htmlFor="edit-league-end-date">{t('endDate')}</Label>
               <DatePicker
                 value={
                   leagueForm.end_date
@@ -425,7 +428,7 @@ export function AdminLeagues() {
                     end_date: date?.toISOString() || "",
                   })
                 }
-                placeholder="Select end date"
+                placeholder={t('selectEndDate')}
                 className={
                   hasFieldError(leagueErrors, "end_date")
                     ? "border-red-500"
@@ -441,9 +444,9 @@ export function AdminLeagues() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingLeague(null)}>
-              Cancel
+{tCommon('cancel')}
             </Button>
-            <Button onClick={handleUpdateLeague}>Update League</Button>
+            <Button onClick={handleUpdateLeague}>{t('updateLeague')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -456,11 +459,9 @@ export function AdminLeagues() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete League</DialogTitle>
+            <DialogTitle>{t('deleteLeague')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteConfirmLeague?.name}"?
-              This will also delete all groups in this league. This action
-              cannot be undone.
+              {t('deleteLeagueConfirm', { name: deleteConfirmLeague?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -468,10 +469,10 @@ export function AdminLeagues() {
               variant="outline"
               onClick={() => setDeleteConfirmLeague(null)}
             >
-              Cancel
+{tCommon('cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteLeague}>
-              Delete League
+              {t('deleteLeague')}
             </Button>
           </DialogFooter>
         </DialogContent>

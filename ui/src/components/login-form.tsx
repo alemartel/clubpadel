@@ -4,6 +4,7 @@ import { Input } from "./ui/input"
 import { Button } from "./ui/button"
 import { auth, googleProvider } from "@/lib/firebase"
 import { signInWithEmailAndPassword, signInWithPopup, createUserWithEmailAndPassword } from "firebase/auth"
+import { useTranslation } from "@/hooks/useTranslation"
 
 const GoogleIcon = () => (
   <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -15,6 +16,7 @@ const GoogleIcon = () => (
 )
 
 export function LoginForm() {
+  const { t } = useTranslation('auth')
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -31,11 +33,11 @@ export function LoginForm() {
           await createUserWithEmailAndPassword(auth, email, password)
           console.log('User automatically registered and signed in')
         } catch (registerErr: any) {
-          setError(`Failed to register: ${registerErr.message}`)
+          setError(`${t('signUpError')}: ${registerErr.message}`)
           console.error('Registration error:', registerErr)
         }
       } else {
-        setError("Failed to sign in. Please check your credentials.")
+        setError(t('loginError'))
         console.error(err)
       }
     }
@@ -45,7 +47,7 @@ export function LoginForm() {
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (err) {
-      setError("Failed to sign in with Google.")
+      setError(t('googleSignInError'))
       console.error(err)
     }
   }
@@ -53,8 +55,8 @@ export function LoginForm() {
   return (
     <Card className="w-[350px]">
       <CardHeader>
-        <CardTitle>Login</CardTitle>
-        <CardDescription>Enter your credentials to access your account.</CardDescription>
+        <CardTitle>{t('login')}</CardTitle>
+        <CardDescription>{t('loginSubtitle')}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent>
@@ -62,7 +64,7 @@ export function LoginForm() {
             <div className="flex flex-col space-y-1.5">
               <Input
                 id="email"
-                placeholder="Email"
+                placeholder={t('email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -72,7 +74,7 @@ export function LoginForm() {
             <div className="flex flex-col space-y-1.5">
               <Input
                 id="password"
-                placeholder="Password"
+                placeholder={t('password')}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -83,13 +85,13 @@ export function LoginForm() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button type="submit" className="w-full">Sign in / Register</Button>
+          <Button type="submit" className="w-full">{t('loginButton')} / {t('signUpButton')}</Button>
           <div className="relative w-full">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-background px-2 text-muted-foreground">{t('orContinueWith')}</span>
             </div>
           </div>
           <Button 
@@ -99,7 +101,7 @@ export function LoginForm() {
             onClick={handleGoogleSignIn}
           >
             <GoogleIcon />
-            Sign in with Google
+{t('signInWithGoogle')}
           </Button>
         </CardFooter>
       </form>

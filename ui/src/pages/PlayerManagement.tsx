@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Search, Users, CheckSquare, Square, Clock, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface Player {
   id: string;
@@ -56,6 +57,8 @@ interface Player {
 export function PlayerManagement() {
   const { isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('players');
+  const { t: tCommon } = useTranslation('common');
 
   // State for all players
   const [players, setPlayers] = useState<Player[]>([]);
@@ -76,9 +79,9 @@ export function PlayerManagement() {
   // Redirect if not admin
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate("/", { state: { error: "Admin access required" } });
+      navigate("/", { state: { error: t('adminAccessRequired') } });
     }
-  }, [isAdmin, loading, navigate]);
+  }, [isAdmin, loading, navigate, t]);
 
   // Load all players on mount
   useEffect(() => {
@@ -118,7 +121,7 @@ export function PlayerManagement() {
       const response = await getAllPlayers();
       setPlayers(response.players);
     } catch (err: any) {
-      setError(err.message || "Failed to load players");
+      setError(err.message || t('failedToLoadPlayers'));
     } finally {
       setLoadingPlayers(false);
     }
@@ -138,7 +141,7 @@ export function PlayerManagement() {
       setNotes("");
       await loadAllPlayers();
     } catch (err: any) {
-      setError(err.message || "Failed to approve validation");
+      setError(err.message || t('failedToApproveValidation'));
     } finally {
       setActionLoading(false);
     }
@@ -156,7 +159,7 @@ export function PlayerManagement() {
       setNotes("");
       await loadAllPlayers();
     } catch (err: any) {
-      setError(err.message || "Failed to reject validation");
+      setError(err.message || t('failedToRejectValidation'));
     } finally {
       setActionLoading(false);
     }
@@ -197,13 +200,13 @@ export function PlayerManagement() {
   const getPlayerName = (player: Player) => {
     if (player.display_name) return player.display_name;
     if (player.first_name && player.last_name) return `${player.first_name} ${player.last_name}`;
-    return "Unknown Player";
+    return t('unknownPlayer');
   };
 
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{tCommon('loading')}</div>
       </div>
     );
   }
@@ -220,16 +223,8 @@ export function PlayerManagement() {
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Player Management</h1>
-          <p className="text-muted-foreground">Manage all players and their level validation status</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {filteredPlayers.length} of {players.length} players
-            </span>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('playerManagement')}</h1>
+          <p className="text-muted-foreground">{t('manageAllPlayers')}</p>
         </div>
       </div>
 
@@ -239,7 +234,7 @@ export function PlayerManagement() {
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('total')}</p>
                 <p className="text-lg md:text-2xl font-bold">{players.length}</p>
               </div>
               <Users className="w-5 h-5 md:w-8 md:h-8 text-muted-foreground" />
@@ -250,7 +245,7 @@ export function PlayerManagement() {
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('pending')}</p>
                 <p className="text-lg md:text-2xl font-bold text-yellow-600">{pendingCount}</p>
               </div>
               <Clock className="w-5 h-5 md:w-8 md:h-8 text-yellow-600" />
@@ -261,7 +256,7 @@ export function PlayerManagement() {
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Approved</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('approved')}</p>
                 <p className="text-lg md:text-2xl font-bold text-green-600">{approvedCount}</p>
               </div>
               <CheckCircle className="w-5 h-5 md:w-8 md:h-8 text-green-600" />
@@ -272,7 +267,7 @@ export function PlayerManagement() {
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Rejected</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('rejected')}</p>
                 <p className="text-lg md:text-2xl font-bold text-red-600">{rejectedCount}</p>
               </div>
               <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-600" />
@@ -286,7 +281,7 @@ export function PlayerManagement() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
-            placeholder="Search by name or email..."
+            placeholder={t('searchByNameOrEmail')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -294,14 +289,14 @@ export function PlayerManagement() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-32 sm:w-40">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder={t('filterByStatus')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Players</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="null">No Request</SelectItem>
+            <SelectItem value="all">{t('allPlayers')}</SelectItem>
+            <SelectItem value="pending">{t('pending')}</SelectItem>
+            <SelectItem value="approved">{t('approved')}</SelectItem>
+            <SelectItem value="rejected">{t('rejected')}</SelectItem>
+            <SelectItem value="null">{t('noRequest')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -318,23 +313,23 @@ export function PlayerManagement() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>All Players</CardTitle>
+              <CardTitle>{t('allPlayersTitle')}</CardTitle>
               <CardDescription>
-                Manage player level validation requests and view player information
+                {t('managePlayerLevelValidation')}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {selectedPlayers.size > 0 && (
                 <>
                   <span className="text-sm text-muted-foreground">
-                    {selectedPlayers.size} selected
+                    {selectedPlayers.size} {t('selected')}
                   </span>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setSelectedPlayers(new Set())}
                   >
-                    Clear Selection
+                    {t('clearSelection')}
                   </Button>
                 </>
               )}
@@ -345,18 +340,18 @@ export function PlayerManagement() {
           {loadingPlayers ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="ml-3 text-muted-foreground">Loading players...</span>
+              <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
             </div>
           ) : filteredPlayers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm || statusFilter !== "all" ? "No matching players found" : "No players found"}
+                {searchTerm || statusFilter !== "all" ? t('noMatchingPlayersFound') : t('noPlayersFound')}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your search terms or filters"
-                  : "No players have been registered yet"
+                  ? t('tryAdjustingSearch')
+                  : t('noPlayersRegisteredYet')
                 }
               </p>
             </div>
@@ -421,8 +416,8 @@ export function PlayerManagement() {
                             className="text-green-600 border-green-200 hover:bg-green-50 flex-1 min-h-[44px]"
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            <span className="sm:hidden">Approve</span>
-                            <span className="hidden sm:inline">Approve</span>
+                            <span className="sm:hidden">{t('approve')}</span>
+                            <span className="hidden sm:inline">{t('approve')}</span>
                           </Button>
                           <Button
                             size="sm"
@@ -431,8 +426,8 @@ export function PlayerManagement() {
                             className="text-red-600 border-red-200 hover:bg-red-50 flex-1 min-h-[44px]"
                           >
                             <XCircle className="w-4 h-4 mr-1" />
-                            <span className="sm:hidden">Reject</span>
-                            <span className="hidden sm:inline">Reject</span>
+                            <span className="sm:hidden">{t('reject')}</span>
+                            <span className="hidden sm:inline">{t('reject')}</span>
                           </Button>
                         </>
                       )}
@@ -444,8 +439,8 @@ export function PlayerManagement() {
                           className="text-green-600 border-green-200 hover:bg-green-50 w-full min-h-[44px]"
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          <span className="sm:hidden">Approve</span>
-                          <span className="hidden sm:inline">Approve</span>
+                          <span className="sm:hidden">{t('approve')}</span>
+                          <span className="hidden sm:inline">{t('approve')}</span>
                         </Button>
                       )}
                       {player.level_validation_status === "approved" && (
@@ -456,8 +451,8 @@ export function PlayerManagement() {
                           className="text-red-600 border-red-200 hover:bg-red-50 w-full min-h-[44px]"
                         >
                           <XCircle className="w-4 h-4 mr-1" />
-                          <span className="sm:hidden">Reject</span>
-                          <span className="hidden sm:inline">Reject</span>
+                          <span className="sm:hidden">{t('reject')}</span>
+                          <span className="hidden sm:inline">{t('reject')}</span>
                         </Button>
                       )}
                     </div>
@@ -473,25 +468,25 @@ export function PlayerManagement() {
       <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Approve Level Validation</DialogTitle>
+            <DialogTitle>{t('approveLevelValidation')}</DialogTitle>
             <DialogDescription>
-              Approve the level validation for {selectedPlayer && getPlayerName(selectedPlayer)}
+              {t('approveLevelValidationFor', { playerName: selectedPlayer && getPlayerName(selectedPlayer) })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Player Details</h4>
-              <p><strong>Player:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
-              <p><strong>Email:</strong> {selectedPlayer?.email}</p>
-              <p><strong>Claimed Level:</strong> Level {selectedPlayer?.claimed_level}</p>
+              <h4 className="font-medium mb-2">{t('playerDetails')}</h4>
+              <p><strong>{t('player')}:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
+              <p><strong>{t('email')}:</strong> {selectedPlayer?.email}</p>
+              <p><strong>{t('claimedLevel')}:</strong> {tCommon('level')} {selectedPlayer?.claimed_level}</p>
             </div>
             <div>
-              <Label htmlFor="approve-notes">Optional Notes</Label>
+              <Label htmlFor="approve-notes">{t('optionalNotes')}</Label>
               <Textarea
                 id="approve-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any notes about this approval..."
+                placeholder={t('addNotesAboutApproval')}
                 rows={3}
               />
             </div>
@@ -502,14 +497,14 @@ export function PlayerManagement() {
               onClick={() => setShowApproveModal(false)}
               disabled={actionLoading}
             >
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={() => handleApprove()}
               disabled={actionLoading}
               className="bg-green-600 hover:bg-green-700"
             >
-              {actionLoading ? "Approving..." : "Approve Level"}
+              {actionLoading ? t('approving') : t('approveLevel')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -519,30 +514,30 @@ export function PlayerManagement() {
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Level Validation</DialogTitle>
+            <DialogTitle>{t('rejectLevelValidation')}</DialogTitle>
             <DialogDescription>
-              Reject the level validation for {selectedPlayer && getPlayerName(selectedPlayer)}
+              {t('rejectLevelValidationFor', { playerName: selectedPlayer && getPlayerName(selectedPlayer) })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Player Details</h4>
-              <p><strong>Player:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
-              <p><strong>Email:</strong> {selectedPlayer?.email}</p>
-              <p><strong>Claimed Level:</strong> Level {selectedPlayer?.claimed_level}</p>
+              <h4 className="font-medium mb-2">{t('playerDetails')}</h4>
+              <p><strong>{t('player')}:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
+              <p><strong>{t('email')}:</strong> {selectedPlayer?.email}</p>
+              <p><strong>{t('claimedLevel')}:</strong> {tCommon('level')} {selectedPlayer?.claimed_level}</p>
             </div>
             <div>
-              <Label htmlFor="reject-notes">Rejection Reason *</Label>
+              <Label htmlFor="reject-notes">{t('rejectionReason')} *</Label>
               <Textarea
                 id="reject-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Please provide a reason for rejecting this level request..."
+                placeholder={t('provideReasonForRejection')}
                 rows={3}
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">
-                This reason will be shown to the player
+                {t('reasonShownToPlayer')}
               </p>
             </div>
           </div>
@@ -552,14 +547,14 @@ export function PlayerManagement() {
               onClick={() => setShowRejectModal(false)}
               disabled={actionLoading}
             >
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={() => handleReject()}
               disabled={actionLoading || !notes.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {actionLoading ? "Rejecting..." : "Reject Level"}
+              {actionLoading ? t('rejecting') : t('rejectLevel')}
             </Button>
           </DialogFooter>
         </DialogContent>

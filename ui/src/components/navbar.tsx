@@ -1,16 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserAvatar } from "@/components/user-avatar";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function Navbar() {
   const { user, serverUser } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
 
   const handleProfileClick = () => {
     navigate("/profile");
@@ -34,6 +37,7 @@ export function Navbar() {
         <span className="font-semibold ml-3">Club Padel</span>
       </div>
       <div className="flex items-center gap-3 ml-auto">
+        <LanguageSwitcher />
         <ModeToggle />
         {user && serverUser && (
           <UserAvatar
@@ -49,8 +53,15 @@ export function Navbar() {
           />
         )}
         {user && (
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            Sign Out
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSignOut} 
+            title={t('signOut')}
+            className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="sr-only">{t('signOut')}</span>
           </Button>
         )}
       </div>

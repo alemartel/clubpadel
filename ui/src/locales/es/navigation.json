@@ -1,0 +1,17 @@
+{
+  "home": "Inicio",
+  "myTeams": "Mis Equipos",
+  "createTeam": "Crear Equipo",
+  "teamDetail": "Detalle del Equipo",
+  "leagueManagement": "Gestión de Ligas",
+  "playerManagement": "Gestión de Jugadores",
+  "groupManagement": "Gestión de Grupos",
+  "teamManagement": "Gestión de Equipos",
+  "settings": "Configuración",
+  "profile": "Perfil",
+  "signOut": "Cerrar Sesión",
+  "navigation": "Navegación",
+  "admin": "Administrador",
+  "checkingAdminAccess": "Verificando acceso de administrador...",
+  "adminAccessRequired": "Se requiere acceso de administrador"
+}

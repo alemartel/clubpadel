@@ -24,10 +24,13 @@ import { UserAvatar } from "@/components/user-avatar";
 import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { uploadWidgetConfig } from "@/lib/cloudinary";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function Profile() {
   const { user: firebaseUser, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('profile');
+  const { t: tCommon } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -250,17 +253,17 @@ export function Profile() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="text-gray-600 mt-2">Update your personal information</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-600 mt-2">{t('subtitle')}</p>
         </div>
 
         <Card className="bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl text-gray-900">
-              Personal Information
+              {t('personalInformation')}
             </CardTitle>
             <CardDescription className="text-gray-600">
-              Manage your account details and contact information
+              {t('personalInformationSubtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -280,9 +283,9 @@ export function Profile() {
                     className="border-2 border-border"
                   />
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">Profile Picture</h4>
+                    <h4 className="font-medium text-gray-900">{t('profilePicture')}</h4>
                     <p className="text-sm text-gray-600">
-                      {formData.profile_picture_url ? 'You have a custom profile picture' : 'No custom picture set'}
+                      {formData.profile_picture_url ? t('hasCustomPicture') : t('noCustomPicture')}
                     </p>
                   </div>
                 </div>
@@ -356,7 +359,7 @@ export function Profile() {
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        {formData.profile_picture_url ? 'Change Picture' : 'Upload Picture'}
+                        {formData.profile_picture_url ? t('changePicture') : t('uploadPicture')}
                       </>
                     )}
                   </Button>
@@ -370,7 +373,7 @@ export function Profile() {
                       className="text-red-600 border-red-200 hover:bg-red-50"
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Remove
+                      {t('removePicture')}
                     </Button>
                   )}
                 </div>
@@ -382,7 +385,7 @@ export function Profile() {
                     htmlFor="first_name"
                     className="text-sm font-medium text-gray-700"
                   >
-                    First Name
+                    {t('firstName')}
                   </Label>
                   <Input
                     id="first_name"
@@ -392,7 +395,7 @@ export function Profile() {
                       handleInputChange("first_name", e.target.value)
                     }
                     className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
-                    placeholder="Enter your first name"
+                    placeholder={t('firstNamePlaceholder')}
                   />
                 </div>
 
@@ -401,7 +404,7 @@ export function Profile() {
                     htmlFor="last_name"
                     className="text-sm font-medium text-gray-700"
                   >
-                    Last Name
+                    {t('lastName')}
                   </Label>
                   <Input
                     id="last_name"
@@ -411,7 +414,7 @@ export function Profile() {
                       handleInputChange("last_name", e.target.value)
                     }
                     className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
-                    placeholder="Enter your last name"
+                    placeholder={t('lastNamePlaceholder')}
                   />
                 </div>
               </div>
@@ -441,7 +444,7 @@ export function Profile() {
                   htmlFor="phone_number"
                   className="text-sm font-medium text-gray-700"
                 >
-                  Phone Number
+                  {t('phoneNumber')}
                 </Label>
                 <Input
                   id="phone_number"
@@ -451,7 +454,7 @@ export function Profile() {
                     handleInputChange("phone_number", e.target.value)
                   }
                   className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Enter your phone number"
+                  placeholder={t('phoneNumberPlaceholder')}
                 />
               </div>
 
@@ -488,12 +491,12 @@ export function Profile() {
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Saving...
+                      {t('saving')}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                      {t('saveChanges')}
                     </>
                   )}
                 </Button>
@@ -516,9 +519,9 @@ export function Profile() {
         <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remove Profile Picture</DialogTitle>
+              <DialogTitle>{t('removePictureConfirm')}</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove your profile picture? This action cannot be undone.
+                {t('removePictureConfirmMessage')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -527,7 +530,7 @@ export function Profile() {
                 onClick={handleCancelRemove}
                 disabled={pictureLoading}
               >
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button
                 variant="destructive"
@@ -537,10 +540,10 @@ export function Profile() {
                 {pictureLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Removing...
+                    {t('removing')}
                   </>
                 ) : (
-                  'Remove Picture'
+                  t('removePicture')
                 )}
               </Button>
             </DialogFooter>
