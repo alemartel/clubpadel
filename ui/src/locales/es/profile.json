@@ -32,5 +32,13 @@
   "uploadAuthError": "Error de autenticación al subir. Por favor intenta de nuevo.",
   "uploadFileTooLarge": "El archivo es muy grande. Por favor elige una imagen más pequeña.",
   "uploading": "Subiendo...",
-  "removing": "Eliminando..."
+  "removing": "Eliminando...",
+  "emailAddress": "Dirección de Correo",
+  "playerLevel": "Nivel del Jugador",
+  "selectYourLevel": "Selecciona tu nivel",
+  "level1": "Nivel 1 - Experto",
+  "level2": "Nivel 2 - Avanzado",
+  "level3": "Nivel 3 - Intermedio", 
+  "level4": "Nivel 4 - Principiante",
+  "levelChangePending": "Tu solicitud de cambio de nivel está pendiente de aprobación del administrador. No puedes hacer cambios hasta que sea revisada."
 }

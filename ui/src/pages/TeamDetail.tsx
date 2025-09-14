@@ -42,6 +42,7 @@ export function TeamDetail() {
   const navigate = useNavigate();
   const { serverUser, isAdmin } = useAuth();
   const { t } = useTranslation('teams');
+  const { t: tCommon } = useTranslation('common');
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,13 +147,6 @@ export function TeamDetail() {
   };
 
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "captain": return "default";
-      case "member": return "secondary";
-      default: return "outline";
-    }
-  };
 
   const isTeamCreator = team && serverUser && team.team.created_by === serverUser.id;
   const isTeamMember = team && serverUser && team.members.some(member => member.user.id === serverUser.id);
@@ -190,7 +184,7 @@ export function TeamDetail() {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-{t('back')}
+          {tCommon('back')}
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
@@ -293,7 +287,8 @@ export function TeamDetail() {
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
                       <Edit className="w-4 h-4 mr-2" />
-{t('editAvailability')}
+                      <span className="hidden sm:inline">{t('editAvailability')}</span>
+                      <span className="sm:hidden">{tCommon('edit')}</span>
                     </Button>
                   </div>
                 )}
@@ -316,7 +311,8 @@ export function TeamDetail() {
                     onClick={() => setShowPlayerMarketModal(true)}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
-{t('addPlayers')}
+                    <span className="hidden sm:inline">{t('addPlayers')}</span>
+                    <span className="sm:hidden">{tCommon('add')}</span>
                   </Button>
                 )}
               </div>
@@ -340,9 +336,6 @@ export function TeamDetail() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={getRoleBadgeVariant(member.role)}>
-                          {member.role}
-                        </Badge>
                         {isTeamCreator && member.role !== "captain" && (
                           <Button
                             variant="ghost"

@@ -38,7 +38,7 @@ export function AppSidebar() {
     >
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>

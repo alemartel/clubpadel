@@ -154,7 +154,9 @@ export function MyTeams() {
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />
-                    <span>{t('memberCount', { count: teamData.member_count })}</span>
+                    <span>
+                      {teamData.member_count} {teamData.member_count === 1 ? tCommon('member') : tCommon('members')}
+                    </span>
                   </div>
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

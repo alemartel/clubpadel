@@ -43,8 +43,17 @@
   "friday": "Friday",
   "saturday": "Saturday",
   "sunday": "Sunday",
-  "memberCount": "{{count}} member{{count, plural, one {} other {s}}}",
+  "memberCount": "{{count}} members",
   "viewTeamDetails": "View Team Details",
   "failedToRemoveMember": "Failed to remove team member",
-  "loadingYourTeams": "Loading your teams..."
+  "loadingYourTeams": "Loading your teams...",
+  "teamAvailabilityModalTitle": "Team Availability",
+  "teamAvailabilityModalDescription": "Set your team's weekly availability for games. Choose the days and time ranges when your team can play.",
+  "loadingAvailabilityModal": "Loading availability...",
+  "startTime": "Start Time",
+  "endTime": "End Time",
+  "saveAvailability": "Save Availability",
+  "savingAvailability": "Saving...",
+  "failedToLoadAvailability": "Failed to load current availability",
+  "failedToSaveAvailability": "Failed to save availability"
 }

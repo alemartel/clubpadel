@@ -43,8 +43,17 @@
   "friday": "Viernes",
   "saturday": "Sábado",
   "sunday": "Domingo",
-  "memberCount": "{{count}} miembro{{count, plural, one {} other {s}}}",
+  "memberCount": "{{count}} miembros",
   "viewTeamDetails": "Ver Detalles del Equipo",
   "failedToRemoveMember": "Error al eliminar miembro del equipo",
-  "loadingYourTeams": "Cargando tus equipos..."
+  "loadingYourTeams": "Cargando tus equipos...",
+  "teamAvailabilityModalTitle": "Disponibilidad del Equipo",
+  "teamAvailabilityModalDescription": "Configura la disponibilidad semanal de tu equipo para los juegos. Elige los días y rangos de horarios cuando tu equipo puede jugar.",
+  "loadingAvailabilityModal": "Cargando disponibilidad...",
+  "startTime": "Hora de Inicio",
+  "endTime": "Hora de Fin",
+  "saveAvailability": "Guardar Disponibilidad",
+  "savingAvailability": "Guardando...",
+  "failedToLoadAvailability": "Error al cargar la disponibilidad actual",
+  "failedToSaveAvailability": "Error al guardar la disponibilidad"
 }

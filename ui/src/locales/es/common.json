@@ -44,14 +44,14 @@
   "view": "Ver",
   "details": "Detalles",
   "information": "Información",
-  "members": "Miembros",
+  "members": "Jugadores",
   "level": "Nivel",
   "gender": "Género",
   "male": "Masculino",
   "female": "Femenino",
   "mixed": "Mixto",
   "captain": "Capitán",
-  "member": "Miembro",
+  "member": "Jugador",
   "pending": "Pendiente",
   "approved": "Aprobado",
   "rejected": "Rechazado",
@@ -245,5 +245,9 @@
   "7z": "7Z",
   "un7z": "Descomprimir 7Z",
   "failedToLoadTeams": "Error al cargar equipos",
-  "players": "jugadores"
+  "players": "jugadores",
+  "levelApproved": "Nivel {{level}} Aprobado",
+  "levelPending": "Nivel {{level}} Pendiente",
+  "levelRejected": "Nivel {{level}} Rechazado",
+  "noLevelClaimed": "Ningún Nivel Reclamado"
 }

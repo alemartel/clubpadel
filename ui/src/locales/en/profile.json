@@ -32,5 +32,13 @@
   "uploadAuthError": "Upload failed due to authentication error. Please try again.",
   "uploadFileTooLarge": "File is too large. Please choose a smaller image.",
   "uploading": "Uploading...",
-  "removing": "Removing..."
+  "removing": "Removing...",
+  "emailAddress": "Email Address",
+  "playerLevel": "Player Level",
+  "selectYourLevel": "Select your level",
+  "level1": "Level 1 - Expert",
+  "level2": "Level 2 - Advanced", 
+  "level3": "Level 3 - Intermediate",
+  "level4": "Level 4 - Beginner",
+  "levelChangePending": "Your level change request is pending admin approval. You cannot make changes until it's reviewed."
 }

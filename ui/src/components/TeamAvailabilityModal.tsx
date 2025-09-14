@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Calendar } from "lucide-react";
 import { api } from "@/lib/serverComm";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface TeamAvailabilityModalProps {
   teamId: string;
@@ -44,16 +45,17 @@ interface TeamAvailabilityResponse {
 }
 
 const DAYS_OF_WEEK = [
-  { key: 'monday', label: 'Monday' },
-  { key: 'tuesday', label: 'Tuesday' },
-  { key: 'wednesday', label: 'Wednesday' },
-  { key: 'thursday', label: 'Thursday' },
-  { key: 'friday', label: 'Friday' },
-  { key: 'saturday', label: 'Saturday' },
-  { key: 'sunday', label: 'Sunday' },
+  { key: 'monday', translationKey: 'monday' },
+  { key: 'tuesday', translationKey: 'tuesday' },
+  { key: 'wednesday', translationKey: 'wednesday' },
+  { key: 'thursday', translationKey: 'thursday' },
+  { key: 'friday', translationKey: 'friday' },
+  { key: 'saturday', translationKey: 'saturday' },
+  { key: 'sunday', translationKey: 'sunday' },
 ];
 
 export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }: TeamAvailabilityModalProps) {
+  const { t } = useTranslation('teams');
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,7 +98,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
       }
     } catch (err: any) {
       console.error('Failed to load availability:', err);
-      setError(err.message || 'Failed to load current availability');
+      setError(err.message || t('failedToLoadAvailability'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
       onSuccess?.();
     } catch (err: any) {
       console.error('Failed to save availability:', err);
-      setError(err.message || 'Failed to save availability');
+      setError(err.message || t('failedToSaveAvailability'));
     } finally {
       setSaving(false);
     }
@@ -151,10 +153,10 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Team Availability
+            {t('teamAvailabilityModalTitle')}
           </DialogTitle>
           <DialogDescription>
-            Set your team's weekly availability for games. Choose the days and time ranges when your team can play.
+            {t('teamAvailabilityModalDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -168,7 +170,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="ml-3 text-muted-foreground">Loading availability...</span>
+              <span className="ml-3 text-muted-foreground">{t('loadingAvailabilityModal')}</span>
             </div>
           ) : (
             availability.map((day) => {
@@ -177,7 +179,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
                 <Card key={day.day_of_week}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center justify-between">
-                      <span>{dayInfo?.label}</span>
+                      <span>{t(dayInfo?.translationKey || '')}</span>
                       <Switch
                         checked={day.is_available}
                         onCheckedChange={(checked) => handleDayToggle(day.day_of_week, checked)}
@@ -189,7 +191,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor={`${day.day_of_week}-start`} className="text-sm">
-                            Start Time
+                            {t('startTime')}
                           </Label>
                           <div className="relative">
                             <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -204,7 +206,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
                         </div>
                         <div>
                           <Label htmlFor={`${day.day_of_week}-end`} className="text-sm">
-                            End Time
+                            {t('endTime')}
                           </Label>
                           <div className="relative">
                             <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -232,13 +234,13 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? "Saving..." : "Save Availability"}
+            {saving ? t('savingAvailability') : t('saveAvailability')}
           </Button>
         </DialogFooter>
       </DialogContent>

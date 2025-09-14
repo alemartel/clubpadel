@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, XCircle, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LevelValidationStatus } from "@/lib/serverComm";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface LevelStatusBadgeProps {
   status: LevelValidationStatus;
@@ -18,6 +19,8 @@ export function LevelStatusBadge({
   validatedAt,
   className,
 }: LevelStatusBadgeProps) {
+  const { t } = useTranslation('common');
+
   const getStatusConfig = () => {
     switch (status) {
       case "approved":
@@ -25,21 +28,21 @@ export function LevelStatusBadge({
           variant: "default" as const,
           className: "bg-green-100 text-green-800 border-green-200",
           icon: CheckCircle,
-          label: `Level ${level} Approved`,
+          label: t('levelApproved', { level }),
         };
       case "pending":
         return {
           variant: "secondary" as const,
           className: "bg-orange-100 text-orange-800 border-orange-200",
           icon: Clock,
-          label: `Level ${level} Pending`,
+          label: t('levelPending', { level }),
         };
       case "rejected":
         return {
           variant: "destructive" as const,
           className: "bg-red-100 text-red-800 border-red-200",
           icon: XCircle,
-          label: `Level ${level} Rejected`,
+          label: t('levelRejected', { level }),
         };
       case "none":
       default:
@@ -47,7 +50,7 @@ export function LevelStatusBadge({
           variant: "outline" as const,
           className: "bg-gray-100 text-gray-600 border-gray-200",
           icon: Minus,
-          label: "No Level Claimed",
+          label: t('noLevelClaimed'),
         };
     }
   };

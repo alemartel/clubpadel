@@ -44,14 +44,14 @@
   "view": "View",
   "details": "Details",
   "information": "Information",
-  "members": "Members",
+  "members": "Players",
   "level": "Level",
   "gender": "Gender",
   "male": "Male",
   "female": "Female",
   "mixed": "Mixed",
   "captain": "Captain",
-  "member": "Member",
+  "member": "Player",
   "pending": "Pending",
   "approved": "Approved",
   "rejected": "Rejected",
@@ -245,5 +245,9 @@
   "7z": "7Z",
   "un7z": "Un7Z",
   "failedToLoadTeams": "Failed to load teams",
-  "players": "players"
+  "players": "players",
+  "levelApproved": "Level {{level}} Approved",
+  "levelPending": "Level {{level}} Pending",
+  "levelRejected": "Level {{level}} Rejected",
+  "noLevelClaimed": "No Level Claimed"
 }

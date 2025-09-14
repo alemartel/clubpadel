@@ -2,6 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LevelStatusBadge } from "./LevelStatusBadge";
 import { LevelValidationStatus } from "@/lib/serverComm";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface LevelSelectorProps {
   value?: string;
@@ -22,25 +23,26 @@ export function LevelSelector({
   validatedAt,
   className,
 }: LevelSelectorProps) {
+  const { t } = useTranslation('profile');
   const isDisabled = disabled || validationStatus === "pending";
 
   return (
     <div className={cn("space-y-3", className)}>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Player Level</label>
+        <label className="text-sm font-medium">{t('playerLevel')}</label>
         <Select
           value={value}
           onValueChange={onChange}
           disabled={isDisabled}
         >
           <SelectTrigger className={cn(isDisabled && "opacity-50")}>
-            <SelectValue placeholder="Select your level" />
+            <SelectValue placeholder={t('selectYourLevel')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Level 1 - Expert</SelectItem>
-            <SelectItem value="2">Level 2 - Advanced</SelectItem>
-            <SelectItem value="3">Level 3 - Intermediate</SelectItem>
-            <SelectItem value="4">Level 4 - Beginner</SelectItem>
+            <SelectItem value="1">{t('level1')}</SelectItem>
+            <SelectItem value="2">{t('level2')}</SelectItem>
+            <SelectItem value="3">{t('level3')}</SelectItem>
+            <SelectItem value="4">{t('level4')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -54,7 +56,7 @@ export function LevelSelector({
       
       {validationStatus === "pending" && (
         <p className="text-sm text-orange-600">
-          Your level change request is pending admin approval. You cannot make changes until it's reviewed.
+          {t('levelChangePending')}
         </p>
       )}
     </div>

@@ -424,7 +424,7 @@ export function Profile() {
                   htmlFor="email"
                   className="text-sm font-medium text-gray-700"
                 >
-                  Email Address
+                  {t('emailAddress')}
                 </Label>
                 <Input
                   id="email"

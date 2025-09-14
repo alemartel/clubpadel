@@ -49,7 +49,7 @@ export function Navbar() {
               email: user.email,
             }}
             onClick={handleProfileClick}
-            size="sm"
+            size="md"
           />
         )}
         {user && (
