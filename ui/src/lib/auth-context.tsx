@@ -17,6 +17,7 @@ type ServerUser = {
   level_validated_at?: string;
   level_validated_by?: string;
   level_validation_notes?: string;
+  profile_picture_url?: string;
   created_at: string;
   updated_at: string;
 };

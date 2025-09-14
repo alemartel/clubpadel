@@ -23,6 +23,7 @@ export const users = appSchema.table("users", {
   level_validated_at: timestamp("level_validated_at"),
   level_validated_by: text("level_validated_by"),
   level_validation_notes: text("level_validation_notes"),
+  profile_picture_url: text("profile_picture_url"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -9,7 +9,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 
 export function Navbar() {
-  const { user } = useAuth();
+  const { user, serverUser } = useAuth();
   const navigate = useNavigate();
 
   const handleProfileClick = () => {
@@ -35,12 +35,13 @@ export function Navbar() {
       </div>
       <div className="flex items-center gap-3 ml-auto">
         <ModeToggle />
-        {user && (
+        {user && serverUser && (
           <UserAvatar
             user={{
               photo_url: user.photoURL,
-              first_name: user.displayName?.split(" ")[0],
-              last_name: user.displayName?.split(" ")[1],
+              profile_picture_url: serverUser.profile_picture_url,
+              first_name: serverUser.first_name || user.displayName?.split(" ")[0],
+              last_name: serverUser.last_name || user.displayName?.split(" ")[1],
               email: user.email,
             }}
             onClick={handleProfileClick}

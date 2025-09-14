@@ -294,6 +294,73 @@ protectedRoutes.put("/profile/level", async (c) => {
   }
 });
 
+// Profile picture update endpoint
+protectedRoutes.put("/profile/picture", async (c) => {
+  try {
+    const user = c.get("user");
+    const body = await c.req.json();
+
+    const { imageUrl } = body;
+
+    // Validate imageUrl
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return c.json({ error: "Valid image URL is required" }, 400);
+    }
+
+    // Validate that it's a Cloudinary URL
+    if (!imageUrl.includes("cloudinary.com")) {
+      return c.json({ error: "Invalid image URL. Must be a Cloudinary URL." }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        profile_picture_url: imageUrl,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+
+    return c.json({
+      user: updatedUser,
+      message: "Profile picture updated successfully",
+    });
+  } catch (error) {
+    console.error("Profile picture update error:", error);
+    return c.json({ error: "Failed to update profile picture" }, 500);
+  }
+});
+
+// Profile picture removal endpoint
+protectedRoutes.delete("/profile/picture", async (c) => {
+  try {
+    const user = c.get("user");
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        profile_picture_url: null,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+
+    return c.json({
+      user: updatedUser,
+      message: "Profile picture removed successfully",
+    });
+  } catch (error) {
+    console.error("Profile picture removal error:", error);
+    return c.json({ error: "Failed to remove profile picture" }, 500);
+  }
+});
+
 // Get player level status
 protectedRoutes.get("/profile/level-status", async (c) => {
   try {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { api, ProfileUpdateData, getPlayerLevelStatus, updatePlayerLevel } from "@/lib/serverComm";
+import { api, ProfileUpdateData, getPlayerLevelStatus, updatePlayerLevel, updateProfilePicture, removeProfilePicture } from "@/lib/serverComm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LevelSelector } from "@/components/LevelSelector";
-import { ArrowLeft, Save, X } from "lucide-react";
+import { UserAvatar } from "@/components/user-avatar";
+import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { uploadWidgetConfig } from "@/lib/cloudinary";
 
 export function Profile() {
   const { user: firebaseUser, isAdmin } = useAuth();
@@ -22,6 +32,11 @@ export function Profile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
+  const [pictureLoading, setPictureLoading] = useState(false);
+  const [pictureError, setPictureError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const uploadWidgetRef = useRef<any>(null);
 
   // Form state - we'll fetch user data from server
   const [formData, setFormData] = useState({
@@ -29,6 +44,7 @@ export function Profile() {
     last_name: "",
     phone_number: "",
     email: firebaseUser?.email || "",
+    profile_picture_url: "",
   });
 
   // Level validation state
@@ -58,6 +74,7 @@ export function Profile() {
           last_name: userResponse.user.last_name || "",
           phone_number: userResponse.user.phone_number || "",
           email: userResponse.user.email || "",
+          profile_picture_url: userResponse.user.profile_picture_url || "",
         });
 
         // Only set level status for players
@@ -141,6 +158,52 @@ export function Profile() {
     navigate(-1);
   };
 
+  const handlePictureChange = async (imageUrl: string) => {
+    setPictureLoading(true);
+    setPictureError("");
+    setSuccess(""); // Clear previous success message
+    
+    try {
+      await updateProfilePicture(imageUrl);
+      setFormData((prev) => ({ ...prev, profile_picture_url: imageUrl }));
+      setSuccess("Profile picture updated successfully!");
+    } catch (err: any) {
+      setPictureError(err.message || "Failed to update profile picture");
+    } finally {
+      setPictureLoading(false);
+    }
+  };
+
+  const handlePictureRemove = async () => {
+    setPictureLoading(true);
+    setPictureError("");
+    setSuccess(""); // Clear previous success message
+    
+    try {
+      await removeProfilePicture();
+      setFormData((prev) => ({ ...prev, profile_picture_url: "" }));
+      setSuccess("Profile picture removed successfully!");
+    } catch (err: any) {
+      setPictureError(err.message || "Failed to remove profile picture");
+    } finally {
+      setPictureLoading(false);
+    }
+  };
+
+  const handlePictureError = (error: string) => {
+    setPictureError(error);
+    setSuccess(""); // Clear success message when error occurs
+  };
+
+  const handleConfirmRemove = () => {
+    handlePictureRemove();
+    setShowRemoveDialog(false);
+  };
+
+  const handleCancelRemove = () => {
+    setShowRemoveDialog(false);
+  };
+
   // Show loading state while fetching initial data
   if (initialLoading) {
     return (
@@ -202,6 +265,117 @@ export function Profile() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Profile Picture Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <UserAvatar
+                    user={{
+                      photo_url: null,
+                      profile_picture_url: formData.profile_picture_url,
+                      first_name: formData.first_name,
+                      last_name: formData.last_name,
+                      email: formData.email,
+                    }}
+                    size="lg"
+                    className="border-2 border-border"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">Profile Picture</h4>
+                    <p className="text-sm text-gray-600">
+                      {formData.profile_picture_url ? 'You have a custom profile picture' : 'No custom picture set'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {pictureError && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-sm text-red-600">{pictureError}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (uploadWidgetRef.current) {
+                        uploadWidgetRef.current.open();
+                        return;
+                      }
+
+                      // Create upload widget
+                      uploadWidgetRef.current = (window as any).cloudinary.createUploadWidget(
+                        uploadWidgetConfig,
+                        (error: any, result: any) => {
+                          if (error) {
+                            console.error('Upload error:', error);
+                            setIsUploading(false);
+                            
+                            // Provide user-friendly error messages
+                            let errorMessage = 'Upload failed. Please try again.';
+                            
+                            if (error.status === 'Unknown API key') {
+                              errorMessage = 'Upload service is not configured. Please contact support.';
+                            } else if (error.status === 401) {
+                              errorMessage = 'Upload failed due to authentication error. Please try again.';
+                            } else if (error.status === 413) {
+                              errorMessage = 'File is too large. Please choose a smaller image.';
+                            } else if (error.message) {
+                              errorMessage = error.message;
+                            } else if (error.statusText) {
+                              errorMessage = error.statusText;
+                            }
+                            
+                            handlePictureError(errorMessage);
+                            return;
+                          }
+
+                          if (result && result.event === 'success') {
+                            const imageUrl = result.info.secure_url;
+                            handlePictureChange(imageUrl);
+                            setIsUploading(false);
+                          } else if (result && result.event === 'close') {
+                            // User closed the widget without uploading
+                            setIsUploading(false);
+                          }
+                        }
+                      );
+
+                      uploadWidgetRef.current.open();
+                      setIsUploading(true);
+                    }}
+                    disabled={pictureLoading || isUploading}
+                    className="flex-1"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {formData.profile_picture_url ? 'Change Picture' : 'Upload Picture'}
+                      </>
+                    )}
+                  </Button>
+                  
+                  {formData.profile_picture_url && (
+                    <Button
+                      type="button"
+                      onClick={() => setShowRemoveDialog(true)}
+                      disabled={pictureLoading || isUploading}
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
@@ -337,6 +511,41 @@ export function Profile() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Remove Confirmation Dialog */}
+        <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Profile Picture</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove your profile picture? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleCancelRemove}
+                disabled={pictureLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmRemove}
+                disabled={pictureLoading}
+              >
+                {pictureLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  'Remove Picture'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

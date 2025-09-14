@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 interface UserAvatarProps {
   user: {
     photo_url?: string | null;
+    profile_picture_url?: string | null;
     first_name?: string | null;
     last_name?: string | null;
     email?: string | null;
@@ -47,7 +48,12 @@ export function UserAvatar({
       )}
       onClick={onClick}
     >
-      {user.photo_url && <AvatarImage src={user.photo_url} alt="User avatar" />}
+      {(user.profile_picture_url || user.photo_url) && (
+        <AvatarImage 
+          src={user.profile_picture_url || user.photo_url || ""} 
+          alt="User avatar" 
+        />
+      )}
       <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
         {getInitials()}
       </AvatarFallback>

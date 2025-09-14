@@ -68,6 +68,7 @@ export interface ProfileUpdateData {
   first_name?: string;
   last_name?: string;
   phone_number?: string;
+  profile_picture_url?: string;
 }
 
 // Import types from server schema (these should match the server types)
@@ -100,6 +101,25 @@ export async function updateUserProfile(data: ProfileUpdateData) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+// Profile picture API functions
+export async function updateProfilePicture(imageUrl: string) {
+  const response = await fetchWithAuth("/api/v1/protected/profile/picture", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageUrl }),
+  });
+  return response.json();
+}
+
+export async function removeProfilePicture() {
+  const response = await fetchWithAuth("/api/v1/protected/profile/picture", {
+    method: "DELETE",
   });
   return response.json();
 }
