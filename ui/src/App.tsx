@@ -10,7 +10,7 @@ import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
 import { AdminGroups } from "@/pages/AdminGroups";
 import { AdminTeams } from "@/pages/AdminTeams";
-import { AdminLevelValidation } from "@/pages/AdminLevelValidation";
+import { PlayerManagement } from "@/pages/PlayerManagement";
 import { MyTeams } from "./pages/MyTeams";
 import { CreateTeam } from "./pages/CreateTeam";
 import { TeamDetail } from "./pages/TeamDetail";
@@ -174,10 +174,10 @@ function AppContent() {
                     }
                   />
                   <Route
-                    path="/admin/level-validation"
+                    path="/admin/player-management"
                     element={
                       <AdminRoute>
-                        <AdminLevelValidation />
+                        <PlayerManagement />
                       </AdminRoute>
                     }
                   />

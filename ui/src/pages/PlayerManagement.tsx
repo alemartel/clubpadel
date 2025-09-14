@@ -53,7 +53,7 @@ interface Player {
   updated_at: string;
 }
 
-export function AdminLevelValidation() {
+export function PlayerManagement() {
   const { isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -184,13 +184,6 @@ export function AdminLevelValidation() {
     setSelectedPlayers(newSelected);
   };
 
-  const handleSelectAll = () => {
-    if (selectedPlayers.size === filteredPlayers.length) {
-      setSelectedPlayers(new Set());
-    } else {
-      setSelectedPlayers(new Set(filteredPlayers.map(p => p.id)));
-    }
-  };
 
 
   const getLevelBadge = (level: string) => {
@@ -331,7 +324,7 @@ export function AdminLevelValidation() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {selectedPlayers.size > 0 ? (
+              {selectedPlayers.size > 0 && (
                 <>
                   <span className="text-sm text-muted-foreground">
                     {selectedPlayers.size} selected
@@ -344,15 +337,6 @@ export function AdminLevelValidation() {
                     Clear Selection
                   </Button>
                 </>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSelectAll}
-                >
-                  <CheckSquare className="w-4 h-4 mr-1" />
-                  Select All
-                </Button>
               )}
             </div>
           </div>
