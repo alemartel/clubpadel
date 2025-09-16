@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Search, Users, CheckSquare, Square, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Search, Users, Clock, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -67,7 +67,6 @@ export function PlayerManagement() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
 
   // Modal states
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -177,15 +176,6 @@ export function PlayerManagement() {
     setShowRejectModal(true);
   };
 
-  const handleSelectPlayer = (playerId: string) => {
-    const newSelected = new Set(selectedPlayers);
-    if (newSelected.has(playerId)) {
-      newSelected.delete(playerId);
-    } else {
-      newSelected.add(playerId);
-    }
-    setSelectedPlayers(newSelected);
-  };
 
 
 
@@ -318,22 +308,6 @@ export function PlayerManagement() {
                 {t('managePlayerLevelValidation')}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              {selectedPlayers.size > 0 && (
-                <>
-                  <span className="text-sm text-muted-foreground">
-                    {selectedPlayers.size} {t('selected')}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedPlayers(new Set())}
-                  >
-                    {t('clearSelection')}
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -360,101 +334,87 @@ export function PlayerManagement() {
               {filteredPlayers.map((player) => (
                 <Card key={player.id} className="relative">
                   <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">
-                          {getPlayerName(player)}
-                        </CardTitle>
-                        <CardDescription className="truncate">
-                          {player.email}
-                        </CardDescription>
-                        {player.phone_number && (
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {player.phone_number}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSelectPlayer(player.id)}
-                        className="h-8 w-8 p-0 ml-2 flex-shrink-0"
-                      >
-                        {selectedPlayers.has(player.id) ? (
-                          <CheckSquare className="w-4 h-4" />
-                        ) : (
-                          <Square className="w-4 h-4" />
-                        )}
-                      </Button>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">
+                        {getPlayerName(player)}
+                      </CardTitle>
+                      <CardDescription className="truncate">
+                        {player.email}
+                      </CardDescription>
+                      {player.phone_number && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {player.phone_number}
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      {getLevelBadge(player.claimed_level)}
-                      {player.level_validation_status === "approved" && (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      )}
-                      {player.level_validation_status === "pending" && (
-                        <Clock className="w-4 h-4 text-yellow-600" />
-                      )}
-                      {player.level_validation_status === "rejected" && (
-                        <XCircle className="w-4 h-4 text-red-600" />
-                      )}
-                      {player.level_validation_status === "none" && (
-                        <AlertCircle className="w-4 h-4 text-gray-400" />
-                      )}
-                    </div>
-                  </CardContent>
                   <CardFooter className="pt-0">
-                    <div className="flex flex-wrap gap-2 w-full">
-                      {player.level_validation_status === "pending" && (
-                        <>
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        {getLevelBadge(player.claimed_level)}
+                        {player.level_validation_status === "approved" && (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        )}
+                        {player.level_validation_status === "pending" && (
+                          <Clock className="w-4 h-4 text-yellow-600" />
+                        )}
+                        {player.level_validation_status === "rejected" && (
+                          <XCircle className="w-4 h-4 text-red-600" />
+                        )}
+                        {player.level_validation_status === "none" && (
+                          <AlertCircle className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {player.level_validation_status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openApproveModal(player)}
+                              className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-1.5 text-xs"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              <span className="sm:hidden">{t('approve')}</span>
+                              <span className="hidden sm:inline">{t('approve')}</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openRejectModal(player)}
+                              className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-1.5 text-xs"
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              <span className="sm:hidden">{t('reject')}</span>
+                              <span className="hidden sm:inline">{t('reject')}</span>
+                            </Button>
+                          </>
+                        )}
+                        {player.level_validation_status === "rejected" && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openApproveModal(player)}
-                            className="text-green-600 border-green-200 hover:bg-green-50 flex-1 min-h-[44px]"
+                            className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-1.5 text-xs"
                           >
-                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <CheckCircle className="w-3 h-3 mr-1" />
                             <span className="sm:hidden">{t('approve')}</span>
                             <span className="hidden sm:inline">{t('approve')}</span>
                           </Button>
+                        )}
+                        {player.level_validation_status === "approved" && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openRejectModal(player)}
-                            className="text-red-600 border-red-200 hover:bg-red-50 flex-1 min-h-[44px]"
+                            className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-1.5 text-xs"
                           >
-                            <XCircle className="w-4 h-4 mr-1" />
+                            <XCircle className="w-3 h-3 mr-1" />
                             <span className="sm:hidden">{t('reject')}</span>
                             <span className="hidden sm:inline">{t('reject')}</span>
                           </Button>
-                        </>
-                      )}
-                      {player.level_validation_status === "rejected" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openApproveModal(player)}
-                          className="text-green-600 border-green-200 hover:bg-green-50 w-full min-h-[44px]"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          <span className="sm:hidden">{t('approve')}</span>
-                          <span className="hidden sm:inline">{t('approve')}</span>
-                        </Button>
-                      )}
-                      {player.level_validation_status === "approved" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openRejectModal(player)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 w-full min-h-[44px]"
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          <span className="sm:hidden">{t('reject')}</span>
-                          <span className="hidden sm:inline">{t('reject')}</span>
-                        </Button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </CardFooter>
                 </Card>
