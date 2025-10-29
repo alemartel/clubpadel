@@ -1,0 +1,5 @@
+# Explicitly allow .env files in server and ui directories
+# This ensures they are NOT ignored by Cursor
+!server/.env
+!ui/.env
+!.env
