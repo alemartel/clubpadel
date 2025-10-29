@@ -60,7 +60,7 @@
   "failedToRemoveMember": "Error al eliminar miembro del equipo",
   "loadingYourTeams": "Cargando tus equipos...",
   "teamAvailabilityModalTitle": "Disponibilidad del Equipo",
-  "teamAvailabilityModalDescription": "Configura la disponibilidad semanal de tu equipo para los juegos. Elige los días y rangos de horarios cuando tu equipo puede jugar.",
+  "teamAvailabilityModalDescription": "Configura la disponibilidad semanal de tu equipo para los partidos. Elige los días y rangos de horarios cuando tu equipo puede jugar. (hora de inicio del partido)",
   "loadingAvailabilityModal": "Cargando disponibilidad...",
   "startTime": "Hora de Inicio",
   "endTime": "Hora de Fin",
@@ -72,5 +72,7 @@
   "teamIncompleteMinPlayers": "El equipo está incompleto. Se requieren mínimo 2 jugadores.",
   "teamIncompleteMixedMissingBoth": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugador masculino y 1 jugador femenino.",
   "teamIncompleteMixedMissingMale": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugador masculino.",
-  "teamIncompleteMixedMissingFemale": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugadora femenina."
+  "teamIncompleteMixedMissingFemale": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugadora femenina.",
+  "availabilityWarningTitle": "Requisitos de Disponibilidad No Cumplidos",
+  "availabilityWarningDescription": "Requisito mínimo:\n- 3 días entre semana,\n- Jugar a las 21:00 en un día entre semana o jugar un día de fin de semana de 9:00 a 12:00.\n\nSi tienes alguna pregunta, por favor contacta al administrador."
 }

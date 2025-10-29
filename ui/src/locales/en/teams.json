@@ -60,7 +60,7 @@
   "failedToRemoveMember": "Failed to remove team member",
   "loadingYourTeams": "Loading your teams...",
   "teamAvailabilityModalTitle": "Team Availability",
-  "teamAvailabilityModalDescription": "Set your team's weekly availability for games. Choose the days and time ranges when your team can play.",
+  "teamAvailabilityModalDescription": "Set your team's weekly availability for matches. Choose the days and time ranges when your team can play. (match start time)",
   "loadingAvailabilityModal": "Loading availability...",
   "startTime": "Start Time",
   "endTime": "End Time",
@@ -72,5 +72,7 @@
   "teamIncompleteMinPlayers": "Team is incomplete. Minimum 2 players required.",
   "teamIncompleteMixedMissingBoth": "Team is incomplete. Mixed teams must have at least 1 masculine and 1 feminine player.",
   "teamIncompleteMixedMissingMale": "Team is incomplete. Mixed teams must have at least 1 masculine player.",
-  "teamIncompleteMixedMissingFemale": "Team is incomplete. Mixed teams must have at least 1 feminine player."
+  "teamIncompleteMixedMissingFemale": "Team is incomplete. Mixed teams must have at least 1 feminine player.",
+  "availabilityWarningTitle": "Availability Requirements Not Met",
+  "availabilityWarningDescription": "Minimum requirement:\n- 3 weekdays,\n- Play at 21:00 on a weekday or play a weekend day from 9:00 to 12:00.\n\nIf you have any questions, please contact the administrator."
 }

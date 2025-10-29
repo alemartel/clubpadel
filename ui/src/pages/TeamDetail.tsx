@@ -185,6 +185,62 @@ export function TeamDetail() {
     return "";
   };
 
+  // Validate availability requirements
+  const validateAvailability = () => {
+    if (!teamAvailability || teamAvailability.length === 0) {
+      return { meetsRequirements: false };
+    }
+
+    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const weekends = ['saturday', 'sunday'];
+    
+    // Count available weekdays
+    const availableWeekdays = teamAvailability.filter(day => 
+      weekdays.includes(day.day_of_week) && day.is_available
+    );
+    
+    // Check if we have minimum 3 weekdays
+    const hasMinimumWeekdays = availableWeekdays.length >= 3;
+    
+    // Check if any weekday plays until 9:00 PM or later (21:00)
+    const hasLateWeekday = availableWeekdays.some(day => {
+      if (!day.end_time) return false;
+      const endTime = day.end_time.toString();
+      const timeStr = endTime.includes(':') ? endTime : `${endTime}:00`;
+      const [hours] = timeStr.split(':').map(Number);
+      return hours >= 21; // 9:00 PM = 21:00
+    });
+    
+    // Check if any weekend day is available from 9:00 AM to 12:00 PM
+    const availableWeekends = teamAvailability.filter(day => 
+      weekends.includes(day.day_of_week) && day.is_available
+    );
+    
+    const hasValidWeekend = availableWeekends.some(day => {
+      if (!day.start_time || !day.end_time) return false;
+      const startTime = day.start_time.toString();
+      const endTime = day.end_time.toString();
+      const startTimeStr = startTime.includes(':') ? startTime : `${startTime}:00`;
+      const endTimeStr = endTime.includes(':') ? endTime : `${endTime}:00`;
+      const [startHours] = startTimeStr.split(':').map(Number);
+      const [endHours] = endTimeStr.split(':').map(Number);
+      // Weekend day from 9:00 AM (9) to at least 12:00 PM (12)
+      return startHours <= 9 && endHours >= 12;
+    });
+    
+    // Requirements: 3+ weekdays AND (late weekday OR valid weekend)
+    const meetsRequirements = hasMinimumWeekdays && (hasLateWeekday || hasValidWeekend);
+    
+    return {
+      meetsRequirements,
+      hasMinimumWeekdays,
+      hasLateWeekday,
+      hasValidWeekend,
+    };
+  };
+  
+  const availabilityValidation = validateAvailability();
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -306,6 +362,21 @@ export function TeamDetail() {
                   <Clock className="w-4 h-4" />
 {t('teamAvailability')}
                 </h4>
+                {!availabilityValidation.meetsRequirements && teamAvailability.length > 0 && !availabilityLoading && (
+                  <div className="mb-4 p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">
+                          {t('availabilityWarningTitle')}
+                        </p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-line">
+                          {t('availabilityWarningDescription')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {availabilityLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
