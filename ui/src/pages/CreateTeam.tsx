@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { api, type League, type Group, type NewTeam } from "@/lib/serverComm";
+import { api, type NewTeam } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export function CreateTeam() {
@@ -20,64 +20,35 @@ export function CreateTeam() {
   
   // Form state
   const [teamName, setTeamName] = useState("");
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
-  
-  // Data state
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState<string>("");
+  const [selectedGender, setSelectedGender] = useState<string>("");
 
-  useEffect(() => {
-    loadLeagues();
-  }, []);
-
-  useEffect(() => {
-    if (selectedLeagueId) {
-      loadGroups(selectedLeagueId);
-    } else {
-      setGroups([]);
-      setSelectedGroupId("");
-    }
-  }, [selectedLeagueId]);
-
-  const loadLeagues = async () => {
-    try {
-      setLoadingData(true);
-      const response = await api.getLeagues();
-      if (response.error) {
-        setError(response.error);
-      } else {
-        setLeagues(response.leagues);
-      }
-    } catch (err) {
-        setError(t('failedToLoadLeagues'));
-      console.error("Error loading leagues:", err);
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  const loadGroups = async (leagueId: string) => {
-    try {
-      const response = await api.getGroups(leagueId);
-      if (response.error) {
-        setError(response.error);
-      } else {
-        setGroups(response.groups);
-      }
-    } catch (err) {
-        setError(t('failedToLoadGroups'));
-      console.error("Error loading groups:", err);
-    }
+  // Map display gender values to backend values
+  const genderMap: Record<string, string> = {
+    "Masculine": "male",
+    "Femenine": "female",
+    "Mixed": "mixed"
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!teamName.trim() || !selectedLeagueId || !selectedGroupId) {
+    if (!teamName.trim() || !selectedLevel || !selectedGender) {
       setError(t('pleaseFillAllFields'));
       return;
+    }
+
+    // Validate creator's gender matches team gender requirement (if creator has gender set)
+    if (serverUser?.gender) {
+      const backendGender = genderMap[selectedGender];
+      if (backendGender === "male" && serverUser.gender !== "male") {
+        setError(t('genderMismatch'));
+        return;
+      }
+      if (backendGender === "female" && serverUser.gender !== "female") {
+        setError(t('genderMismatch'));
+        return;
+      }
     }
 
     try {
@@ -86,8 +57,8 @@ export function CreateTeam() {
 
       const teamData: NewTeam = {
         name: teamName.trim(),
-        league_id: selectedLeagueId,
-        group_id: selectedGroupId,
+        level: selectedLevel,
+        gender: genderMap[selectedGender],
       };
 
       const response = await api.createTeam(teamData);
@@ -105,20 +76,6 @@ export function CreateTeam() {
       setLoading(false);
     }
   };
-
-
-  if (loadingData) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>{t('loadingLeaguesGroups')}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
@@ -170,47 +127,44 @@ export function CreateTeam() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="league">{t('selectLeague')}</Label>
-              <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
+              <Label htmlFor="level">{t('selectLevel')}</Label>
+              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('selectLeague')} />
+                  <SelectValue placeholder={t('selectLevel')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {leagues.map((league) => (
-                    <SelectItem key={league.id} value={league.id}>
-                      {league.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="group">{t('selectGroup')}</Label>
-              <Select 
-                value={selectedGroupId} 
-                onValueChange={setSelectedGroupId}
-                disabled={!selectedLeagueId}
-              >
+              <Label htmlFor="gender">{t('selectGender')}</Label>
+              <Select value={selectedGender} onValueChange={setSelectedGender}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('selectGroup')} />
+                  <SelectValue placeholder={t('selectGender')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{group.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({t('level')} {group.level}, {group.gender})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Masculine">{t('masculine')}</SelectItem>
+                  <SelectItem value="Femenine">{t('femenine')}</SelectItem>
+                  <SelectItem value="Mixed">{t('mixed')}</SelectItem>
                 </SelectContent>
               </Select>
-              {selectedLeagueId && groups.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-{t('noGroupsAvailable')}
+              {serverUser?.gender && selectedGender && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  {(() => {
+                    const backendGender = genderMap[selectedGender];
+                    if (backendGender === "male" && serverUser.gender !== "male") {
+                      return t('genderMismatch');
+                    }
+                    if (backendGender === "female" && serverUser.gender !== "female") {
+                      return t('genderMismatch');
+                    }
+                    return null;
+                  })()}
                 </p>
               )}
             </div>
@@ -219,7 +173,7 @@ export function CreateTeam() {
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                disabled={loading || !teamName.trim() || !selectedLeagueId || !selectedGroupId}
+                disabled={loading || !teamName.trim() || !selectedLevel || !selectedGender}
                 className="flex-1"
               >
 {loading ? t('creatingTeam') : t('createTeam')}

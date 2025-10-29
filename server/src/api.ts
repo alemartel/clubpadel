@@ -209,7 +209,7 @@ protectedRoutes.put("/profile", async (c) => {
     const body = await c.req.json();
 
     // Validate input data
-    const { first_name, last_name, phone_number, dni, tshirt_size } = body;
+    const { first_name, last_name, phone_number, dni, tshirt_size, gender } = body;
 
     // Only update provided fields
     const updateData: any = { updated_at: new Date() };
@@ -218,6 +218,13 @@ protectedRoutes.put("/profile", async (c) => {
     if (phone_number !== undefined) updateData.phone_number = phone_number;
     if (dni !== undefined) updateData.dni = dni;
     if (tshirt_size !== undefined) updateData.tshirt_size = tshirt_size;
+    if (gender !== undefined) {
+      // Validate gender is one of: "male", "female", "mixed", or null
+      if (gender !== null && !["male", "female", "mixed"].includes(gender)) {
+        return c.json({ error: "Gender must be male, female, or mixed" }, 400);
+      }
+      updateData.gender = gender;
+    }
 
     // Update user in database
     const databaseUrl = getDatabaseUrl();
@@ -838,55 +845,67 @@ protectedRoutes.post("/teams", async (c) => {
   try {
     const user = c.get("user");
     const body = await c.req.json();
-    const { name, league_id, group_id } = body;
+    const { name, level, gender } = body;
 
     // Sanitize and validate required fields
     const sanitizedName = sanitizeText(name);
-    if (!sanitizedName || !league_id || !group_id) {
-      return c.json({ error: "Team name, league, and group are required" }, 400);
+    if (!sanitizedName || !level || !gender) {
+      return c.json({ error: "Team name, level, and gender are required" }, 400);
     }
 
-    // Verify league and group exist
+    // Validate level is one of: "1", "2", "3", "4"
+    if (!["1", "2", "3", "4"].includes(level)) {
+      return c.json({ error: "Level must be 1, 2, 3, or 4" }, 400);
+    }
+
+    // Validate gender is one of: "male", "female", "mixed"
+    if (!["male", "female", "mixed"].includes(gender)) {
+      return c.json({ error: "Gender must be male, female, or mixed" }, 400);
+    }
+
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    const [league] = await db
+    // Validate creator's gender matches team gender requirement
+    const [creator] = await db
       .select()
-      .from(leagues)
-      .where(eq(leagues.id, league_id));
+      .from(users)
+      .where(eq(users.id, user.id));
 
-    if (!league) {
-      return c.json({ error: "League not found" }, 404);
+    if (creator?.gender) {
+      if (gender === "male" && creator.gender !== "male") {
+        return c.json({ 
+          error: "Masculine teams can only be created by male players" 
+        }, 403);
+      }
+      if (gender === "female" && creator.gender !== "female") {
+        return c.json({ 
+          error: "Feminine teams can only be created by female players" 
+        }, 403);
+      }
     }
 
-    const [group] = await db
-      .select()
-      .from(groups)
-      .where(and(eq(groups.id, group_id), eq(groups.league_id, league_id)));
-
-    if (!group) {
-      return c.json({ error: "Group not found in this league" }, 404);
-    }
-
-    // Check if team name is unique within league
+    // Check if team name is unique (globally since teams no longer require leagues)
     const [existingTeam] = await db
       .select()
       .from(teams)
-      .where(and(eq(teams.league_id, league_id), eq(teams.name, sanitizedName)));
+      .where(eq(teams.name, sanitizedName));
 
     if (existingTeam) {
-      return c.json({ error: "Team name must be unique within the league" }, 409);
+      return c.json({ error: "Team name must be unique" }, 409);
     }
 
-    // Create team
+    // Create team without league_id and group_id
     const teamId = randomUUID();
     const [newTeam] = await db
       .insert(teams)
       .values({
         id: teamId,
         name: sanitizedName,
-        league_id,
-        group_id,
+        level: level as "1" | "2" | "3" | "4",
+        gender: gender as "male" | "female" | "mixed",
+        league_id: null,
+        group_id: null,
         created_by: user.id,
       })
       .returning();
@@ -918,12 +937,22 @@ protectedRoutes.get("/teams", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get teams where user is a member
+    // Get teams where user is a member (using leftJoin for nullable league/group)
     const userTeams = await db
       .select({
         team: teams,
-        league: leagues,
-        group: groups,
+        league: {
+          id: leagues.id,
+          name: leagues.name,
+          start_date: leagues.start_date,
+          end_date: leagues.end_date,
+        },
+        group: {
+          id: groups.id,
+          name: groups.name,
+          level: groups.level,
+          gender: groups.gender,
+        },
         member_count: sql<number>`(
           SELECT COUNT(*) 
           FROM ${team_members} tm 
@@ -932,8 +961,8 @@ protectedRoutes.get("/teams", async (c) => {
         )`,
       })
       .from(teams)
-      .innerJoin(leagues, eq(teams.league_id, leagues.id))
-      .innerJoin(groups, eq(teams.group_id, groups.id))
+      .leftJoin(leagues, eq(teams.league_id, leagues.id))
+      .leftJoin(groups, eq(teams.group_id, groups.id))
       .where(
         sql`${teams.id} IN (
           SELECT tm.team_id 
@@ -942,8 +971,15 @@ protectedRoutes.get("/teams", async (c) => {
         )`
       );
 
+    // Normalize null league/group to null in response
+    const normalizedTeams = userTeams.map(t => ({
+      ...t,
+      league: t.league?.id ? t.league : null,
+      group: t.group?.id ? t.group : null,
+    }));
+
     return c.json({
-      teams: userTeams,
+      teams: normalizedTeams,
       message: "Teams retrieved successfully",
     });
   } catch (error) {
@@ -959,19 +995,29 @@ protectedRoutes.get("/teams/:id", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get team details with members
-    const [team] = await db
+    // Get team details with optional league and group (using leftJoin for nullable foreign keys)
+    const [teamData] = await db
       .select({
         team: teams,
-        league: leagues,
-        group: groups,
+        league: {
+          id: leagues.id,
+          name: leagues.name,
+          start_date: leagues.start_date,
+          end_date: leagues.end_date,
+        },
+        group: {
+          id: groups.id,
+          name: groups.name,
+          level: groups.level,
+          gender: groups.gender,
+        },
       })
       .from(teams)
-      .innerJoin(leagues, eq(teams.league_id, leagues.id))
-      .innerJoin(groups, eq(teams.group_id, groups.id))
+      .leftJoin(leagues, eq(teams.league_id, leagues.id))
+      .leftJoin(groups, eq(teams.group_id, groups.id))
       .where(eq(teams.id, teamId));
 
-    if (!team) {
+    if (!teamData || !teamData.team) {
       return c.json({ error: "Team not found" }, 404);
     }
 
@@ -997,7 +1043,12 @@ protectedRoutes.get("/teams/:id", async (c) => {
       .where(eq(team_members.team_id, teamId));
 
     return c.json({
-      team: { ...team, members },
+      team: {
+        team: teamData.team,
+        league: teamData.league || null,
+        group: teamData.group || null,
+        members,
+      },
       message: "Team details retrieved successfully",
     });
   } catch (error) {
@@ -1035,14 +1086,27 @@ protectedRoutes.put("/teams/:id", async (c) => {
       return c.json({ error: "Only the team creator can update team details" }, 403);
     }
 
-    // Check if new name is unique within league
-    const [existingTeam] = await db
-      .select()
-      .from(teams)
-      .where(and(eq(teams.league_id, team.league_id), eq(teams.name, sanitizedName), ne(teams.id, teamId)));
+    // Check if new name is unique (globally if no league, within league if league exists)
+    if (team.league_id) {
+      // If team has a league, check uniqueness within that league
+      const [existingTeam] = await db
+        .select()
+        .from(teams)
+        .where(and(eq(teams.league_id, team.league_id), eq(teams.name, sanitizedName), ne(teams.id, teamId)));
 
-    if (existingTeam) {
-      return c.json({ error: "Team name must be unique within the league" }, 409);
+      if (existingTeam) {
+        return c.json({ error: "Team name must be unique within the league" }, 409);
+      }
+    } else {
+      // If team has no league, check global uniqueness
+      const [existingTeam] = await db
+        .select()
+        .from(teams)
+        .where(and(eq(teams.name, sanitizedName), ne(teams.id, teamId)));
+
+      if (existingTeam) {
+        return c.json({ error: "Team name must be unique" }, 409);
+      }
     }
 
     // Update team
@@ -1129,11 +1193,15 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       return c.json({ error: "Only the team creator can add members" }, 403);
     }
 
-    // Get team's group to check level requirements
-    const [group] = await db
+    // Check if team has fewer than 4 members
+    const existingMembers = await db
       .select()
-      .from(groups)
-      .where(eq(groups.id, team.group_id));
+      .from(team_members)
+      .where(eq(team_members.team_id, teamId));
+
+    if (existingMembers.length >= 4) {
+      return c.json({ error: "Maximum number of players (4) reached" }, 400);
+    }
 
     // Check if target user exists
     const [targetUser] = await db
@@ -1145,15 +1213,58 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       return c.json({ error: "User not found" }, 404);
     }
 
-    // Check if user is already on a team in this league
+    // Check player is not an admin
+    if (targetUser.role === "admin") {
+      return c.json({ error: "Admins cannot be added to teams" }, 403);
+    }
+
+    // Validate gender compatibility
+    if (!targetUser.gender) {
+      return c.json({ error: "Player must have a gender set in their profile" }, 400);
+    }
+
+    if (team.gender === "male" && targetUser.gender !== "male") {
+      return c.json({ error: "Masculine teams can only contain male players" }, 400);
+    }
+
+    if (team.gender === "female" && targetUser.gender !== "female") {
+      return c.json({ error: "Feminine teams can only contain female players" }, 400);
+    }
+
+    // For mixed teams, validate both genders when reaching 4 members
+    if (team.gender === "mixed") {
+      if (existingMembers.length === 3) {
+        // Get genders of current members
+        const memberGenders = await db
+          .select({ gender: users.gender })
+          .from(users)
+          .innerJoin(team_members, eq(users.id, team_members.user_id))
+          .where(eq(team_members.team_id, teamId));
+
+        const maleCount = memberGenders.filter(m => m.gender === "male").length;
+        const femaleCount = memberGenders.filter(m => m.gender === "female").length;
+
+        // Calculate new counts after adding this player
+        const newMaleCount = targetUser.gender === "male" ? maleCount + 1 : maleCount;
+        const newFemaleCount = targetUser.gender === "female" ? femaleCount + 1 : femaleCount;
+
+        // Mixed teams must have at least one of each gender when full
+        if (newMaleCount === 0 || newFemaleCount === 0) {
+          return c.json({ 
+            error: "Mixed teams must contain both masculine and feminine players" 
+          }, 400);
+        }
+      }
+    }
+
+    // Check if user is already on another team (global check since teams may not have leagues)
     const [existingMembership] = await db
       .select()
       .from(team_members)
-      .innerJoin(teams, eq(team_members.team_id, teams.id))
-      .where(and(eq(team_members.user_id, user_id), eq(teams.league_id, team.league_id)));
+      .where(eq(team_members.user_id, user_id));
 
     if (existingMembership) {
-      return c.json({ error: "User is already on a team in this league" }, 409);
+      return c.json({ error: "User is already on a team" }, 409);
     }
 
     // Add member to team
@@ -1353,56 +1464,91 @@ protectedRoutes.get("/players/free-market", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    if (!league_id) {
-      return c.json({ error: "League ID parameter is required" }, 400);
+    // league_id is now optional (for backwards compatibility)
+    let excludedUserIds: string[] = [];
+
+    if (league_id) {
+      // Verify the league exists
+      const [league] = await db
+        .select()
+        .from(leagues)
+        .where(eq(leagues.id, league_id));
+
+      if (!league) {
+        return c.json({ error: "League not found" }, 404);
+      }
+
+      // Get all players who are already on teams in this league
+      const leagueTeamMembers = await db
+        .select({ user_id: team_members.user_id })
+        .from(team_members)
+        .innerJoin(teams, eq(team_members.team_id, teams.id))
+        .where(eq(teams.league_id, league_id));
+
+      excludedUserIds = leagueTeamMembers.map(m => m.user_id);
+    } else {
+      // If no league_id, exclude all users who are on any team
+      const allTeamMembers = await db
+        .select({ user_id: team_members.user_id })
+        .from(team_members);
+
+      excludedUserIds = allTeamMembers.map(m => m.user_id);
     }
 
-    // Verify the league exists
-    const [league] = await db
-      .select()
-      .from(leagues)
-      .where(eq(leagues.id, league_id));
+    // Build base query conditions
+    const conditions = [
+      ne(users.id, user.id), // Exclude current user
+      eq(users.role, "player"), // Exclude admins
+      excludedUserIds.length > 0 ? notInArray(users.id, excludedUserIds) : undefined
+    ];
 
-    if (!league) {
-      return c.json({ error: "League not found" }, 404);
+    // Filter by gender if provided
+    if (gender) {
+      if (gender === "male") {
+        conditions.push(eq(users.gender, "male"));
+      } else if (gender === "female") {
+        conditions.push(eq(users.gender, "female"));
+      } else if (gender === "mixed") {
+        // Mixed teams can have both male and female players
+        conditions.push(
+          or(
+            eq(users.gender, "male"),
+            eq(users.gender, "female")
+          )
+        );
+      }
     }
 
-    // Get all players who are already on teams in this league
-    const leagueTeamMembers = await db
-      .select({ user_id: team_members.user_id })
-      .from(team_members)
-      .innerJoin(teams, eq(team_members.team_id, teams.id))
-      .where(eq(teams.league_id, league_id));
-
-    const excludedUserIds = leagueTeamMembers.map(m => m.user_id);
-
-    // Build query for available players (excluding those already on teams in this league)
+    // Build query for available players
     const availablePlayers = await db
       .select({
         user: users,
       })
       .from(users)
-      .where(
-        and(
-          ne(users.id, user.id), // Exclude current user
-          excludedUserIds.length > 0 ? notInArray(users.id, excludedUserIds) : undefined
-        )
-      );
+      .where(and(...conditions.filter(c => c !== undefined)));
 
-    // Note: The `level` parameter is accepted but not currently used for filtering.
-    // It's kept for potential future use when team-level filtering is implemented.
-    // The `gender` parameter is also accepted but filtering will be implemented when
-    // the gender field is added to the users table.
-
-    return c.json({
+    const responseData: any = {
       players: availablePlayers,
       message: "Available players retrieved successfully",
       totalAvailable: availablePlayers.length,
-      league: {
-        id: league.id,
-        name: league.name
+    };
+
+    // Only include league info if league_id was provided and league exists
+    if (league_id) {
+      const [league] = await db
+        .select()
+        .from(leagues)
+        .where(eq(leagues.id, league_id));
+      
+      if (league) {
+        responseData.league = {
+          id: league.id,
+          name: league.name
+        };
       }
-    });
+    }
+
+    return c.json(responseData);
   } catch (error) {
     console.error("Free market players error:", error);
     return c.json({ error: "Failed to retrieve available players" }, 500);

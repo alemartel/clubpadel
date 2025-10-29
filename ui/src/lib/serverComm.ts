@@ -70,6 +70,7 @@ export interface ProfileUpdateData {
   phone_number?: string;
   dni?: string;
   tshirt_size?: string;
+  gender?: string;
   profile_picture_url?: string;
 }
 
@@ -193,8 +194,10 @@ export interface UpdateGroup {
 export interface Team {
   id: string;
   name: string;
-  league_id: string;
-  group_id: string;
+  level: string;
+  gender: string;
+  league_id?: string | null;
+  group_id?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -202,8 +205,8 @@ export interface Team {
 
 export interface NewTeam {
   name: string;
-  league_id: string;
-  group_id: string;
+  level: string;
+  gender: string;
 }
 
 export interface UpdateTeam {
@@ -345,11 +348,12 @@ export async function removeTeamMember(teamId: string, userId: string) {
   return response.json();
 }
 
-export async function getFreePlayers(level: string | undefined, leagueId: string, gender?: string) {
-  const params = new URLSearchParams({ league_id: leagueId });
+export async function getFreePlayers(level: string | undefined, leagueId: string | null | undefined, gender?: string) {
+  const params = new URLSearchParams();
+  if (leagueId) params.append("league_id", leagueId);
   if (level) params.append("level", level);
   if (gender) params.append("gender", gender);
-  
+
   const response = await fetchWithAuth(`/api/v1/protected/players/free-market?${params}`);
   return response.json();
 }

@@ -18,13 +18,13 @@ interface TeamWithDetails {
     name: string;
     start_date: string;
     end_date: string;
-  };
+  } | null;
   group: {
     id: string;
     name: string;
     level: string;
     gender: string;
-  };
+  } | null;
   members: Array<{
     member: TeamMember;
     user: {
@@ -53,8 +53,8 @@ export function TeamDetail() {
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
-    if (isAdmin && team) {
-      // If admin and we have team data, go back to admin teams page
+    if (isAdmin && team && team.league && team.group) {
+      // If admin and we have team data with league/group, go back to admin teams page
       return `/admin/leagues/${team.league.id}/groups/${team.group.id}/teams`;
     }
     // Otherwise, go to user's teams page
@@ -171,7 +171,7 @@ export function TeamDetail() {
           <div className="text-center">
             <p className="text-destructive mb-4">{error || t('teamNotFound')}</p>
             <Button onClick={() => navigate(getBackUrl())}>
-{t('back')}
+              {tCommon('back')}
             </Button>
           </div>
         </div>
@@ -183,13 +183,16 @@ export function TeamDetail() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {tCommon('back')}
+          <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
           <p className="text-muted-foreground">
-            {team.league.name} • {team.group.name}
+            {team.league && team.group ? (
+              <>
+                {team.league.name} • {team.group.name}
+              </>
+            ) : null}
           </p>
         </div>
       </div>
@@ -227,18 +230,37 @@ export function TeamDetail() {
 {t('leagueDetails')}
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <div className="font-medium">{team.league.name}</div>
-                    <div className="text-muted-foreground">
-                      {formatDate(team.league.start_date)} - {formatDate(team.league.end_date)}
-                    </div>
+                    {team.league ? (
+                      <>
+                        <div className="font-medium">{team.league.name}</div>
+                        <div className="text-muted-foreground">
+                          {formatDate(team.league.start_date)} - {formatDate(team.league.end_date)}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="font-medium text-muted-foreground">{t('noLeague')}</div>
+                    )}
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm">{team.group.name}</span>
-                      <Badge variant={getLevelBadgeVariant(team.group.level)}>
-                        Level {team.group.level}
-                      </Badge>
-                      <Badge variant={getGenderBadgeVariant(team.group.gender)}>
-                        {team.group.gender}
-                      </Badge>
+                      {team.team.league_id && team.group ? (
+                        <>
+                          <span className="text-sm">{team.group.name}</span>
+                          <Badge variant={getLevelBadgeVariant(team.group.level)}>
+                            Level {team.group.level}
+                          </Badge>
+                          <Badge variant={getGenderBadgeVariant(team.group.gender)}>
+                            {team.group.gender === "male" ? t('masculine') : team.group.gender === "female" ? t('femenine') : t('mixed')}
+                          </Badge>
+                        </>
+                      ) : (
+                        <>
+                          <Badge variant={getLevelBadgeVariant(team.team.level)}>
+                            Level {team.team.level}
+                          </Badge>
+                          <Badge variant={getGenderBadgeVariant(team.team.gender)}>
+                            {team.team.gender === "male" ? t('masculine') : team.team.gender === "female" ? t('femenine') : t('mixed')}
+                          </Badge>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -287,8 +309,7 @@ export function TeamDetail() {
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
                       <Edit className="w-4 h-4 mr-2" />
-                      <span className="hidden sm:inline">{t('editAvailability')}</span>
-                      <span className="sm:hidden">{tCommon('edit')}</span>
+                      {t('editAvailability')}
                     </Button>
                   </div>
                 )}
@@ -302,13 +323,14 @@ export function TeamDetail() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-{t('teamMembers')} ({team.members.length})
+{t('teamMembers')} ({team.members.length}/4)
                 </CardTitle>
                 {isTeamCreator && (
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowPlayerMarketModal(true)}
+                    disabled={team.members.length >= 4}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
                     <span className="hidden sm:inline">{t('addPlayers')}</span>
@@ -362,9 +384,9 @@ export function TeamDetail() {
           open={showPlayerMarketModal}
           onOpenChange={setShowPlayerMarketModal}
           teamId={team.team.id}
-          leagueId={team.league.id}
-          level={team.group.level}
-          gender={team.group.gender}
+          leagueId={team.team.league_id || null}
+          level={team.team.level}
+          gender={team.team.gender}
           onMemberAdded={loadTeam}
         />
       )}

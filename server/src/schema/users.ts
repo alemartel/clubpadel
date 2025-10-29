@@ -4,7 +4,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { userRoleEnum, levelEnum } from "./enums";
+import { userRoleEnum, levelEnum, genderEnum } from "./enums";
 
 // Create private schema for application tables
 export const appSchema = pgSchema("app");
@@ -19,6 +19,7 @@ export const users = appSchema.table("users", {
   phone_number: text("phone_number"),
   dni: text("dni"),
   tshirt_size: text("tshirt_size"),
+  gender: genderEnum("gender"), // Nullable to support existing users
   role: userRoleEnum("role").default("player").notNull(),
   profile_picture_url: text("profile_picture_url"),
   created_at: timestamp("created_at").defaultNow().notNull(),

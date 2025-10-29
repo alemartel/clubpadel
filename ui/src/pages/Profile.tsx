@@ -27,7 +27,7 @@ import { uploadWidgetConfig } from "@/lib/cloudinary";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export function Profile() {
-  const { user: firebaseUser, isAdmin } = useAuth();
+  const { user: firebaseUser, isAdmin, refreshServerUser } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('profile');
   const { t: tCommon } = useTranslation('common');
@@ -48,6 +48,7 @@ export function Profile() {
     phone_number: "",
     dni: "",
     tshirt_size: "",
+    gender: "",
     email: firebaseUser?.email || "",
     profile_picture_url: "",
   });
@@ -59,12 +60,21 @@ export function Profile() {
       try {
         const userResponse = await api.getCurrentUser();
         
+        // Map backend gender values to display values
+        const genderMap: Record<string, string> = {
+          "male": "Masculine",
+          "female": "Femenine",
+          "mixed": "Mixed"
+        };
+        const displayGender = userResponse.user.gender ? genderMap[userResponse.user.gender] || "" : "";
+
         setFormData({
           first_name: userResponse.user.first_name || "",
           last_name: userResponse.user.last_name || "",
           phone_number: userResponse.user.phone_number || "",
           dni: userResponse.user.dni || "",
           tshirt_size: userResponse.user.tshirt_size || "",
+          gender: displayGender,
           email: userResponse.user.email || "",
           profile_picture_url: userResponse.user.profile_picture_url || "",
         });
@@ -96,15 +106,26 @@ export function Profile() {
     setSuccess("");
 
     try {
+      // Map display gender values to backend values
+      const genderMap: Record<string, string> = {
+        "Masculine": "male",
+        "Femenine": "female",
+        "Mixed": "mixed"
+      };
+      const backendGender = formData.gender ? genderMap[formData.gender] || undefined : undefined;
+
       const updateData: ProfileUpdateData = {
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
         dni: formData.dni || undefined,
         tshirt_size: formData.tshirt_size || undefined,
+        gender: backendGender,
       };
 
       await api.updateUserProfile(updateData);
+      // Refresh server user data in auth context so ProfileWarning updates
+      await refreshServerUser();
       setSuccess("Profile updated successfully!");
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
@@ -125,6 +146,8 @@ export function Profile() {
     try {
       await updateProfilePicture(imageUrl);
       setFormData((prev) => ({ ...prev, profile_picture_url: imageUrl }));
+      // Refresh server user data in auth context
+      await refreshServerUser();
       setSuccess("Profile picture updated successfully!");
     } catch (err: any) {
       setPictureError(err.message || "Failed to update profile picture");
@@ -141,6 +164,8 @@ export function Profile() {
     try {
       await removeProfilePicture();
       setFormData((prev) => ({ ...prev, profile_picture_url: "" }));
+      // Refresh server user data in auth context
+      await refreshServerUser();
       setSuccess("Profile picture removed successfully!");
     } catch (err: any) {
       setPictureError(err.message || "Failed to remove profile picture");
@@ -451,6 +476,28 @@ export function Profile() {
                     <SelectItem value="S">S</SelectItem>
                     <SelectItem value="M">M</SelectItem>
                     <SelectItem value="L">L</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="gender"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {t('gender')}
+                </Label>
+                <Select
+                  value={formData.gender || undefined}
+                  onValueChange={(value) => handleInputChange("gender", value)}
+                >
+                  <SelectTrigger className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800 w-full">
+                    <SelectValue placeholder={t('selectGender')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Masculine">{t('masculine')}</SelectItem>
+                    <SelectItem value="Femenine">{t('femenine')}</SelectItem>
+                    <SelectItem value="Mixed">{t('mixed')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

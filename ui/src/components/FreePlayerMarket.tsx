@@ -18,7 +18,7 @@ interface Player {
 
 interface FreePlayerMarketProps {
   teamId: string;
-  leagueId: string;
+  leagueId: string | null;
   level?: string;
   gender: string;
   onMemberAdded?: () => void;
@@ -39,7 +39,7 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
     try {
       setLoading(true);
       setError(null);
-      const response = await api.getFreePlayers(level, leagueId, gender);
+      const response = await api.getFreePlayers(level, leagueId || null, gender);
       if (response.error) {
         setError(response.error);
       } else {

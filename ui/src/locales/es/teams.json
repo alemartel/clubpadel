@@ -42,6 +42,18 @@
   "thursday": "Jueves",
   "friday": "Viernes",
   "saturday": "Sábado",
+  "selectLevel": "Seleccionar Nivel",
+  "selectGender": "Seleccionar Género",
+  "level": "Nivel",
+  "gender": "Género",
+  "masculine": "Masculino",
+  "femenine": "Femenino",
+  "mixed": "Mixto",
+  "teamFull": "El equipo está completo ({{count}}/4 jugadores)",
+  "maxPlayersReached": "Número máximo de jugadores (4) alcanzado",
+  "genderMismatch": "Tu género no coincide con el requisito de género de este equipo",
+  "addPlayersDisabled": "No se pueden agregar más jugadores. El equipo está completo.",
+  "noLeague": "Sin liga asignada",
   "sunday": "Domingo",
   "memberCount": "{{count}} miembros",
   "viewTeamDetails": "Ver Detalles del Equipo",
@@ -55,5 +67,6 @@
   "saveAvailability": "Guardar Disponibilidad",
   "savingAvailability": "Guardando...",
   "failedToLoadAvailability": "Error al cargar la disponibilidad actual",
-  "failedToSaveAvailability": "Error al guardar la disponibilidad"
+  "failedToSaveAvailability": "Error al guardar la disponibilidad",
+  "cancel": "Cancelar"
 }

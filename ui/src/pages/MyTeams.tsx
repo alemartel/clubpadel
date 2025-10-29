@@ -16,13 +16,13 @@ interface TeamWithDetails {
     name: string;
     start_date: string;
     end_date: string;
-  };
+  } | null;
   group: {
     id: string;
     name: string;
     level: string;
     gender: string;
-  };
+  } | null;
   member_count: number;
 }
 
@@ -133,24 +133,37 @@ export function MyTeams() {
               <CardHeader>
                 <CardTitle className="text-lg sm:text-xl">{teamData.team.name}</CardTitle>
                 <CardDescription className="mt-1">
-                  {teamData.league.name}
+                  {teamData.league ? teamData.league.name : t('noLeague')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Trophy className="w-4 h-4" />
-                    <span>{teamData.group.name}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getLevelBadgeVariant(teamData.group.level)}>
-                      Level {teamData.group.level}
-                    </Badge>
-                    <Badge variant={getGenderBadgeVariant(teamData.group.gender)}>
-                      {teamData.group.gender}
-                    </Badge>
-                  </div>
+                  {teamData.group ? (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Trophy className="w-4 h-4" />
+                        <span>{teamData.group.name}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getLevelBadgeVariant(teamData.group.level)}>
+                          Level {teamData.group.level}
+                        </Badge>
+                        <Badge variant={getGenderBadgeVariant(teamData.group.gender)}>
+                          {teamData.group.gender === "male" ? t('masculine') : teamData.group.gender === "female" ? t('femenine') : t('mixed')}
+                        </Badge>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getLevelBadgeVariant(teamData.team.level)}>
+                        Level {teamData.team.level}
+                      </Badge>
+                      <Badge variant={getGenderBadgeVariant(teamData.team.gender)}>
+                        {teamData.team.gender === "male" ? t('masculine') : teamData.team.gender === "female" ? t('femenine') : t('mixed')}
+                      </Badge>
+                    </div>
+                  )}
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />
@@ -159,17 +172,19 @@ export function MyTeams() {
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {formatDate(teamData.league.start_date)} - {formatDate(teamData.league.end_date)}
-                    </span>
-                  </div>
+                  {teamData.league && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        {formatDate(teamData.league.start_date)} - {formatDate(teamData.league.end_date)}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="pt-2">
                     <Button asChild variant="outline" className="w-full">
                       <Link to={`/teams/${teamData.team.id}`}>
-{t('viewTeamDetails')}
+                        {t('viewTeamDetails')}
                       </Link>
                     </Button>
                   </div>

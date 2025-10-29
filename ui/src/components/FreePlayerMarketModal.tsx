@@ -26,7 +26,7 @@ interface FreePlayerMarketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teamId: string;
-  leagueId: string;
+  leagueId: string | null;
   level?: string;
   gender: string;
   onMemberAdded?: () => void;
@@ -56,7 +56,7 @@ export function FreePlayerMarketModal({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.getFreePlayers(level, leagueId, gender);
+      const response = await api.getFreePlayers(level, leagueId || null, gender);
       if (response.error) {
         setError(response.error);
       } else {

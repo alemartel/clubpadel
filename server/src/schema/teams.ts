@@ -8,18 +8,21 @@ import {
   time,
 } from "drizzle-orm/pg-core";
 import { appSchema, users } from "./users";
-import { leagues, groups } from "./leagues";
+import { leagues, groups, levelEnum, genderEnum } from "./leagues";
 
 export const teams = appSchema.table("teams", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  league_id: text("league_id").notNull(), // Foreign key to leagues.id
-  group_id: text("group_id").notNull(), // Foreign key to groups.id
+  level: levelEnum("level").notNull(), // Team level (1, 2, 3, 4)
+  gender: genderEnum("gender").notNull(), // Team gender (male, female, mixed)
+  league_id: text("league_id"), // Foreign key to leagues.id (nullable)
+  group_id: text("group_id"), // Foreign key to groups.id (nullable)
   created_by: text("created_by").notNull(), // Foreign key to users.id
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  // Unique constraint on team name within league
+  // Unique constraint on team name within league (only applies when league_id is not null)
+  // Note: This constraint will be NULL for teams without leagues, allowing global team name uniqueness
   leagueNameUnique: unique("teams_league_name_unique").on(table.league_id, table.name),
 }));
 

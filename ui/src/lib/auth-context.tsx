@@ -5,12 +5,15 @@ import { auth } from "./firebase";
 import { api } from "./serverComm";
 import { databaseHealthChecker, type DatabaseHealthStatus } from "./database-health";
 
-type ServerUser = {
+export type ServerUser = {
   id: string;
   email: string;
   first_name?: string;
   last_name?: string;
   phone_number?: string;
+  dni?: string;
+  tshirt_size?: string;
+  gender?: string;
   role: string;
   profile_picture_url?: string;
   created_at: string;
@@ -25,6 +28,7 @@ type AuthContextType = {
   canCreateTeams: boolean;
   databaseHealth: DatabaseHealthStatus;
   checkDatabaseHealth: () => Promise<void>;
+  refreshServerUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,6 +43,7 @@ const AuthContext = createContext<AuthContextType>({
     lastChecked: new Date(),
   },
   checkDatabaseHealth: async () => {},
+  refreshServerUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -97,6 +102,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await databaseHealthChecker.checkHealth();
   };
 
+  const refreshServerUser = async () => {
+    if (user) {
+      try {
+        const response = await api.getCurrentUser();
+        setServerUser(response.user);
+      } catch (error) {
+        console.error("Failed to refresh server user data:", error);
+      }
+    }
+  };
+
   const isAdmin = serverUser?.role === "admin";
   const canCreateTeams = !isAdmin;
 
@@ -108,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin, 
       canCreateTeams,
       databaseHealth,
-      checkDatabaseHealth
+      checkDatabaseHealth,
+      refreshServerUser
     }}>
       {children}
     </AuthContext.Provider>

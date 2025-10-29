@@ -8,6 +8,7 @@
   "cancel": "Cancelar",
   "delete": "Eliminar",
   "edit": "Editar",
+  "add": "Agregar",
   "close": "Cerrar",
   "open": "Abrir",
   "confirm": "Confirmar",
@@ -249,5 +250,15 @@
   "levelApproved": "Nivel {{level}} Aprobado",
   "levelPending": "Nivel {{level}} Pendiente",
   "levelRejected": "Nivel {{level}} Rechazado",
-  "noLevelClaimed": "Ningún Nivel Reclamado"
+  "noLevelClaimed": "Ningún Nivel Reclamado",
+  "profileMissingPhoneNumber": "Teléfono",
+  "profileMissingDNI": "DNI",
+  "profileMissingTshirtSize": "Talla de Camiseta",
+  "profileMissingGender": "Género",
+  "profileIncompleteWarningTitle": "Completa Tu Perfil",
+  "profileIncompleteWarningDescription": "La siguiente información falta en tu perfil:",
+  "profileIncompleteWarningDescriptionSingle": "Por favor completa tu {{field}} en tu perfil.",
+  "profileIncompleteWarningDescriptionMultiple": "Por favor completa lo siguiente en tu perfil: {{fields}}.",
+  "and": "y",
+  "profileIncompleteUpdateButton": "Actualizar Perfil"
 }
