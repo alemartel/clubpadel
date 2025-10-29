@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/serverComm";
-import { getLevelBadgeVariant } from "@/lib/badge-utils";
 
 interface Player {
   user: {
@@ -14,14 +13,13 @@ interface Player {
     first_name?: string;
     last_name?: string;
     display_name?: string;
-    claimed_level?: string;
   };
 }
 
 interface FreePlayerMarketProps {
   teamId: string;
   leagueId: string;
-  level: string;
+  level?: string;
   gender: string;
   onMemberAdded?: () => void;
 }
@@ -144,11 +142,6 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
                   <div className="text-sm text-muted-foreground truncate">
                     {player.user.email}
                   </div>
-                  {player.user.claimed_level && (
-                    <Badge variant={getLevelBadgeVariant(player.user.claimed_level)} className="mt-1">
-                      Level {player.user.claimed_level}
-                    </Badge>
-                  )}
                 </div>
                 <Button
                   size="sm"

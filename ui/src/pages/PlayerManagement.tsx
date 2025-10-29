@@ -2,12 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import {
   getAllPlayers,
-  approveLevelValidation,
-  rejectLevelValidation,
 } from "@/lib/serverComm";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -16,24 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Search, Users, Clock, AlertCircle } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -45,11 +24,6 @@ interface Player {
   display_name?: string;
   phone_number?: string;
   role: string;
-  claimed_level: string;
-  level_validation_status: "pending" | "approved" | "rejected" | "none" | null;
-  level_validation_notes?: string;
-  level_validated_at?: string;
-  level_validated_by?: string;
   created_at: string;
   updated_at: string;
 }
@@ -66,14 +40,6 @@ export function PlayerManagement() {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  // Modal states
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [notes, setNotes] = useState("");
 
   // Redirect if not admin
   useEffect(() => {
@@ -89,7 +55,7 @@ export function PlayerManagement() {
     }
   }, [isAdmin]);
 
-  // Filter players based on search term and status
+  // Filter players based on search term
   useEffect(() => {
     let filtered = players;
 
@@ -104,13 +70,8 @@ export function PlayerManagement() {
       );
     }
 
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((player) => player.level_validation_status === statusFilter);
-    }
-
     setFilteredPlayers(filtered);
-  }, [players, searchTerm, statusFilter]);
+  }, [players, searchTerm]);
 
   const loadAllPlayers = async () => {
     setLoadingPlayers(true);
@@ -124,67 +85,6 @@ export function PlayerManagement() {
     } finally {
       setLoadingPlayers(false);
     }
-  };
-
-  const handleApprove = async (playerId?: string) => {
-    const targetPlayer = playerId ? players.find(p => p.id === playerId) : selectedPlayer;
-    if (!targetPlayer) return;
-
-    setActionLoading(true);
-    try {
-      // For now, we'll use the existing approveLevelValidation function
-      // In a real implementation, you might want a different endpoint for direct approval
-      await approveLevelValidation(targetPlayer.id, notes || undefined);
-      setShowApproveModal(false);
-      setSelectedPlayer(null);
-      setNotes("");
-      await loadAllPlayers();
-    } catch (err: any) {
-      setError(err.message || t('failedToApproveValidation'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async (playerId?: string) => {
-    const targetPlayer = playerId ? players.find(p => p.id === playerId) : selectedPlayer;
-    if (!targetPlayer || !notes.trim()) return;
-
-    setActionLoading(true);
-    try {
-      await rejectLevelValidation(targetPlayer.id, notes);
-      setShowRejectModal(false);
-      setSelectedPlayer(null);
-      setNotes("");
-      await loadAllPlayers();
-    } catch (err: any) {
-      setError(err.message || t('failedToRejectValidation'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openApproveModal = (player: Player) => {
-    setSelectedPlayer(player);
-    setNotes("");
-    setShowApproveModal(true);
-  };
-
-  const openRejectModal = (player: Player) => {
-    setSelectedPlayer(player);
-    setNotes("");
-    setShowRejectModal(true);
-  };
-
-
-
-
-  const getLevelBadge = (level: string) => {
-    return (
-      <Badge variant="outline" className="bg-blue-50 text-blue-700">
-        Level {level}
-      </Badge>
-    );
   };
 
   const getPlayerName = (player: Player) => {
@@ -205,9 +105,6 @@ export function PlayerManagement() {
     return null; // Will redirect
   }
 
-  const pendingCount = players.filter(p => p.level_validation_status === "pending").length;
-  const approvedCount = players.filter(p => p.level_validation_status === "approved").length;
-  const rejectedCount = players.filter(p => p.level_validation_status === "rejected").length;
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -218,55 +115,20 @@ export function PlayerManagement() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-        <Card>
-          <CardContent className="p-2 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('total')}</p>
-                <p className="text-lg md:text-2xl font-bold">{players.length}</p>
-              </div>
-              <Users className="w-5 h-5 md:w-8 md:h-8 text-muted-foreground" />
+      {/* Stats Card */}
+      <Card>
+        <CardContent className="p-2 md:p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('total')}</p>
+              <p className="text-lg md:text-2xl font-bold">{players.length}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-2 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('pending')}</p>
-                <p className="text-lg md:text-2xl font-bold text-yellow-600">{pendingCount}</p>
-              </div>
-              <Clock className="w-5 h-5 md:w-8 md:h-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-2 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('approved')}</p>
-                <p className="text-lg md:text-2xl font-bold text-green-600">{approvedCount}</p>
-              </div>
-              <CheckCircle className="w-5 h-5 md:w-8 md:h-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-2 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('rejected')}</p>
-                <p className="text-lg md:text-2xl font-bold text-red-600">{rejectedCount}</p>
-              </div>
-              <XCircle className="w-5 h-5 md:w-8 md:h-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Users className="w-5 h-5 md:w-8 md:h-8 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Filters */}
+      {/* Search */}
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -277,18 +139,6 @@ export function PlayerManagement() {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32 sm:w-40">
-            <SelectValue placeholder={t('filterByStatus')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('allPlayers')}</SelectItem>
-            <SelectItem value="pending">{t('pending')}</SelectItem>
-            <SelectItem value="approved">{t('approved')}</SelectItem>
-            <SelectItem value="rejected">{t('rejected')}</SelectItem>
-            <SelectItem value="null">{t('noRequest')}</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Error Display */}
@@ -305,7 +155,7 @@ export function PlayerManagement() {
             <div>
               <CardTitle>{t('allPlayersTitle')}</CardTitle>
               <CardDescription>
-                {t('managePlayerLevelValidation')}
+                {t('manageAllPlayers')}
               </CardDescription>
             </div>
           </div>
@@ -320,10 +170,10 @@ export function PlayerManagement() {
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm || statusFilter !== "all" ? t('noMatchingPlayersFound') : t('noPlayersFound')}
+                {searchTerm ? t('noMatchingPlayersFound') : t('noPlayersFound')}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {searchTerm || statusFilter !== "all"
+                {searchTerm
                   ? t('tryAdjustingSearch')
                   : t('noPlayersRegisteredYet')
                 }
@@ -349,72 +199,8 @@ export function PlayerManagement() {
                     </div>
                   </CardHeader>
                   <CardFooter className="pt-0">
-                    <div className="flex items-center justify-between gap-2 w-full">
-                      <div className="flex items-center gap-2">
-                        {getLevelBadge(player.claimed_level)}
-                        {player.level_validation_status === "approved" && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        )}
-                        {player.level_validation_status === "pending" && (
-                          <Clock className="w-4 h-4 text-yellow-600" />
-                        )}
-                        {player.level_validation_status === "rejected" && (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        {player.level_validation_status === "none" && (
-                          <AlertCircle className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {player.level_validation_status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openApproveModal(player)}
-                              className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-1.5 text-xs"
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              <span className="sm:hidden">{t('approve')}</span>
-                              <span className="hidden sm:inline">{t('approve')}</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openRejectModal(player)}
-                              className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-1.5 text-xs"
-                            >
-                              <XCircle className="w-3 h-3 mr-1" />
-                              <span className="sm:hidden">{t('reject')}</span>
-                              <span className="hidden sm:inline">{t('reject')}</span>
-                            </Button>
-                          </>
-                        )}
-                        {player.level_validation_status === "rejected" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openApproveModal(player)}
-                            className="text-green-600 border-green-200 hover:bg-green-50 h-7 px-1.5 text-xs"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            <span className="sm:hidden">{t('approve')}</span>
-                            <span className="hidden sm:inline">{t('approve')}</span>
-                          </Button>
-                        )}
-                        {player.level_validation_status === "approved" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openRejectModal(player)}
-                            className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-1.5 text-xs"
-                          >
-                            <XCircle className="w-3 h-3 mr-1" />
-                            <span className="sm:hidden">{t('reject')}</span>
-                            <span className="hidden sm:inline">{t('reject')}</span>
-                          </Button>
-                        )}
-                      </div>
+                    <div className="text-sm text-muted-foreground">
+                      {t('joinedOn')}: {new Date(player.created_at).toLocaleDateString()}
                     </div>
                   </CardFooter>
                 </Card>
@@ -424,101 +210,6 @@ export function PlayerManagement() {
         </CardContent>
       </Card>
 
-      {/* Approve Modal */}
-      <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('approveLevelValidation')}</DialogTitle>
-            <DialogDescription>
-              {t('approveLevelValidationFor', { playerName: selectedPlayer && getPlayerName(selectedPlayer) })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">{t('playerDetails')}</h4>
-              <p><strong>{t('player')}:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
-              <p><strong>{t('email')}:</strong> {selectedPlayer?.email}</p>
-              <p><strong>{t('claimedLevel')}:</strong> {tCommon('level')} {selectedPlayer?.claimed_level}</p>
-            </div>
-            <div>
-              <Label htmlFor="approve-notes">{t('optionalNotes')}</Label>
-              <Textarea
-                id="approve-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t('addNotesAboutApproval')}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowApproveModal(false)}
-              disabled={actionLoading}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              onClick={() => handleApprove()}
-              disabled={actionLoading}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {actionLoading ? t('approving') : t('approveLevel')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Modal */}
-      <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('rejectLevelValidation')}</DialogTitle>
-            <DialogDescription>
-              {t('rejectLevelValidationFor', { playerName: selectedPlayer && getPlayerName(selectedPlayer) })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">{t('playerDetails')}</h4>
-              <p><strong>{t('player')}:</strong> {selectedPlayer && getPlayerName(selectedPlayer)}</p>
-              <p><strong>{t('email')}:</strong> {selectedPlayer?.email}</p>
-              <p><strong>{t('claimedLevel')}:</strong> {tCommon('level')} {selectedPlayer?.claimed_level}</p>
-            </div>
-            <div>
-              <Label htmlFor="reject-notes">{t('rejectionReason')} *</Label>
-              <Textarea
-                id="reject-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t('provideReasonForRejection')}
-                rows={3}
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {t('reasonShownToPlayer')}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowRejectModal(false)}
-              disabled={actionLoading}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              onClick={() => handleReject()}
-              disabled={actionLoading || !notes.trim()}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {actionLoading ? t('rejecting') : t('rejectLevel')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

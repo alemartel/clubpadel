@@ -12,11 +12,6 @@ type ServerUser = {
   last_name?: string;
   phone_number?: string;
   role: string;
-  claimed_level?: string;
-  level_validation_status: string;
-  level_validated_at?: string;
-  level_validated_by?: string;
-  level_validation_notes?: string;
   profile_picture_url?: string;
   created_at: string;
   updated_at: string;
@@ -27,7 +22,6 @@ type AuthContextType = {
   serverUser: ServerUser | null;
   loading: boolean;
   isAdmin: boolean;
-  hasValidatedLevel: boolean;
   canCreateTeams: boolean;
   databaseHealth: DatabaseHealthStatus;
   checkDatabaseHealth: () => Promise<void>;
@@ -38,7 +32,6 @@ const AuthContext = createContext<AuthContextType>({
   serverUser: null,
   loading: true,
   isAdmin: false,
-  hasValidatedLevel: false,
   canCreateTeams: false,
   databaseHealth: {
     isHealthy: false,
@@ -105,8 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isAdmin = serverUser?.role === "admin";
-  const hasValidatedLevel = serverUser?.level_validation_status === "approved";
-  const canCreateTeams = !isAdmin && hasValidatedLevel;
+  const canCreateTeams = !isAdmin;
 
   return (
     <AuthContext.Provider value={{ 
@@ -114,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       serverUser, 
       loading, 
       isAdmin, 
-      hasValidatedLevel, 
       canCreateTeams,
       databaseHealth,
       checkDatabaseHealth

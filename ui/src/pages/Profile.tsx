@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { api, ProfileUpdateData, getPlayerLevelStatus, updatePlayerLevel, updateProfilePicture, removeProfilePicture } from "@/lib/serverComm";
+import { api, ProfileUpdateData, updateProfilePicture, removeProfilePicture } from "@/lib/serverComm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LevelSelector } from "@/components/LevelSelector";
 import { UserAvatar } from "@/components/user-avatar";
 import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -53,27 +52,12 @@ export function Profile() {
     profile_picture_url: "",
   });
 
-  // Level validation state
-  const [levelStatus, setLevelStatus] = useState({
-    claimed_level: undefined as string | undefined,
-    level_validation_status: "none" as "none" | "pending" | "approved" | "rejected",
-    level_validated_at: undefined as string | undefined,
-    level_validation_notes: undefined as string | undefined,
-  });
 
   // Fetch user data from server on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const promises = [api.getCurrentUser()];
-        
-        // Only fetch level status for players (not admins)
-        if (!isAdmin) {
-          promises.push(getPlayerLevelStatus());
-        }
-        
-        const responses = await Promise.all(promises);
-        const userResponse = responses[0];
+        const userResponse = await api.getCurrentUser();
         
         setFormData({
           first_name: userResponse.user.first_name || "",
@@ -84,17 +68,6 @@ export function Profile() {
           email: userResponse.user.email || "",
           profile_picture_url: userResponse.user.profile_picture_url || "",
         });
-
-        // Only set level status for players
-        if (!isAdmin && responses[1]) {
-          const levelResponse = responses[1];
-          setLevelStatus({
-            claimed_level: levelResponse.claimed_level,
-            level_validation_status: levelResponse.level_validation_status,
-            level_validated_at: levelResponse.level_validated_at,
-            level_validation_notes: levelResponse.level_validation_notes,
-          });
-        }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
         setError("Failed to load profile data");
@@ -108,7 +81,7 @@ export function Profile() {
     } else {
       setInitialLoading(false);
     }
-  }, [firebaseUser, isAdmin]);
+  }, [firebaseUser]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -135,30 +108,6 @@ export function Profile() {
       setSuccess("Profile updated successfully!");
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLevelChange = async (level: string) => {
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      await updatePlayerLevel(level);
-      setSuccess("Level validation request submitted successfully!");
-      
-      // Refresh level status
-      const levelResponse = await getPlayerLevelStatus();
-      setLevelStatus({
-        claimed_level: levelResponse.claimed_level,
-        level_validation_status: levelResponse.level_validation_status,
-        level_validated_at: levelResponse.level_validated_at,
-        level_validation_notes: levelResponse.level_validation_notes,
-      });
-    } catch (err: any) {
-      setError(err.message || "Failed to update level");
     } finally {
       setLoading(false);
     }
@@ -505,18 +454,6 @@ export function Profile() {
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Only show level selector for players, not admins */}
-              {!isAdmin && (
-                <LevelSelector
-                  value={levelStatus.claimed_level}
-                  onChange={handleLevelChange}
-                  disabled={loading}
-                  validationStatus={levelStatus.level_validation_status}
-                  notes={levelStatus.level_validation_notes}
-                  validatedAt={levelStatus.level_validated_at}
-                />
-              )}
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3">

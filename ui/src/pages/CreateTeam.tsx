@@ -143,11 +143,7 @@ export function CreateTeam() {
 {t('teamInformation')}
           </CardTitle>
           <CardDescription>
-            {serverUser?.claimed_level && (
-              <span>
-{t('yourValidatedLevel', { level: serverUser.claimed_level })}
-              </span>
-            )}
+{t('createNewTeam')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -219,26 +215,11 @@ export function CreateTeam() {
               )}
             </div>
 
-            {selectedGroupId && (() => {
-              const selectedGroup = groups.find(g => g.id === selectedGroupId);
-              if (!selectedGroup) return null;
-              
-              const levelMismatch = serverUser?.claimed_level !== selectedGroup.level;
-              
-              return levelMismatch && (
-                <div className="p-3 border border-destructive/20 bg-destructive/10 rounded text-destructive text-sm">
-                  ⚠️ {t('levelMismatch', { level: serverUser?.claimed_level, groupLevel: selectedGroup.level })}
-                </div>
-              );
-            })()}
 
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                disabled={loading || !teamName.trim() || !selectedLeagueId || !selectedGroupId || (() => {
-                  const selectedGroup = groups.find(g => g.id === selectedGroupId);
-                  return selectedGroup && serverUser?.claimed_level !== selectedGroup.level;
-                })()}
+                disabled={loading || !teamName.trim() || !selectedLeagueId || !selectedGroupId}
                 className="flex-1"
               >
 {loading ? t('creatingTeam') : t('createTeam')}
