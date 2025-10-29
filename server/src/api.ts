@@ -209,13 +209,15 @@ protectedRoutes.put("/profile", async (c) => {
     const body = await c.req.json();
 
     // Validate input data
-    const { first_name, last_name, phone_number } = body;
+    const { first_name, last_name, phone_number, dni, tshirt_size } = body;
 
     // Only update provided fields
     const updateData: any = { updated_at: new Date() };
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
     if (phone_number !== undefined) updateData.phone_number = phone_number;
+    if (dni !== undefined) updateData.dni = dni;
+    if (tshirt_size !== undefined) updateData.tshirt_size = tshirt_size;
 
     // Update user in database
     const databaseUrl = getDatabaseUrl();

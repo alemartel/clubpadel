@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
-  GoogleAuthProvider,
   connectAuthEmulator,
 } from "firebase/auth";
 import firebaseConfig from "./firebase-config.json";
@@ -9,7 +8,6 @@ import firebaseConfig from "./firebase-config.json";
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 
 // Connect to Firebase Auth emulator only when explicitly enabled
 if (import.meta.env.VITE_FIREBASE_EMULATOR === "true") {

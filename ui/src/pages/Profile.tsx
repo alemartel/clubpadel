@@ -4,6 +4,7 @@ import { api, ProfileUpdateData, getPlayerLevelStatus, updatePlayerLevel, update
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -46,6 +47,8 @@ export function Profile() {
     first_name: "",
     last_name: "",
     phone_number: "",
+    dni: "",
+    tshirt_size: "",
     email: firebaseUser?.email || "",
     profile_picture_url: "",
   });
@@ -76,6 +79,8 @@ export function Profile() {
           first_name: userResponse.user.first_name || "",
           last_name: userResponse.user.last_name || "",
           phone_number: userResponse.user.phone_number || "",
+          dni: userResponse.user.dni || "",
+          tshirt_size: userResponse.user.tshirt_size || "",
           email: userResponse.user.email || "",
           profile_picture_url: userResponse.user.profile_picture_url || "",
         });
@@ -122,6 +127,8 @@ export function Profile() {
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone_number: formData.phone_number || undefined,
+        dni: formData.dni || undefined,
+        tshirt_size: formData.tshirt_size || undefined,
       };
 
       await api.updateUserProfile(updateData);
@@ -453,9 +460,50 @@ export function Profile() {
                   onChange={(e) =>
                     handleInputChange("phone_number", e.target.value)
                   }
-                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
                   placeholder={t('phoneNumberPlaceholder')}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dni"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {t('dni')}
+                </Label>
+                <Input
+                  id="dni"
+                  type="text"
+                  value={formData.dni}
+                  onChange={(e) =>
+                    handleInputChange("dni", e.target.value)
+                  }
+                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
+                  placeholder={t('dniPlaceholder')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="tshirt_size"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {t('tshirtSize')}
+                </Label>
+                <Select
+                  value={formData.tshirt_size || undefined}
+                  onValueChange={(value) => handleInputChange("tshirt_size", value)}
+                >
+                  <SelectTrigger className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800 w-full">
+                    <SelectValue placeholder={t('tshirtSizePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="S">S</SelectItem>
+                    <SelectItem value="M">M</SelectItem>
+                    <SelectItem value="L">L</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Only show level selector for players, not admins */}

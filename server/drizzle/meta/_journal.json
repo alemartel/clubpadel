@@ -43,6 +43,13 @@
       "when": 1757421820400,
       "tag": "0005_steady_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1761740522738,
+      "tag": "0006_parallel_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

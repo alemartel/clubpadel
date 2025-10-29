@@ -17,6 +17,8 @@ export const users = appSchema.table("users", {
   first_name: text("first_name"),
   last_name: text("last_name"),
   phone_number: text("phone_number"),
+  dni: text("dni"),
+  tshirt_size: text("tshirt_size"),
   role: userRoleEnum("role").default("player").notNull(),
   claimed_level: levelEnum("claimed_level"),
   level_validation_status: levelValidationStatusEnum("level_validation_status").default("none").notNull(),

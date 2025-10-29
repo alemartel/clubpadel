@@ -68,6 +68,8 @@ export interface ProfileUpdateData {
   first_name?: string;
   last_name?: string;
   phone_number?: string;
+  dni?: string;
+  tshirt_size?: string;
   profile_picture_url?: string;
 }
 
