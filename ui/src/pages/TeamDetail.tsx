@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock, AlertTriangle, Mars, Venus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
@@ -465,6 +465,15 @@ export function TeamDetail() {
                   {team.members.map(({ member, user }) => (
                     <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
+                        {user.gender && (
+                          <div className="flex-shrink-0">
+                            {user.gender === "male" ? (
+                              <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            ) : user.gender === "female" ? (
+                              <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                            ) : null}
+                          </div>
+                        )}
                         <div>
                           <div className="font-medium">
                             {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
