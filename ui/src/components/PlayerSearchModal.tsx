@@ -22,7 +22,7 @@ interface Player {
   };
 }
 
-interface FreePlayerMarketModalProps {
+interface PlayerSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teamId: string;
@@ -32,7 +32,7 @@ interface FreePlayerMarketModalProps {
   onMemberAdded?: () => void;
 }
 
-export function FreePlayerMarketModal({ 
+export function PlayerSearchModal({ 
   open, 
   onOpenChange, 
   teamId, 
@@ -40,7 +40,7 @@ export function FreePlayerMarketModal({
   level, 
   gender, 
   onMemberAdded 
-}: FreePlayerMarketModalProps) {
+}: PlayerSearchModalProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +81,8 @@ export function FreePlayerMarketModal({
         // Remove the player from the list and notify parent
         setPlayers(prev => prev.filter(p => p.user.id !== userId));
         onMemberAdded?.();
+        // Close the modal after successfully adding a player
+        onOpenChange(false);
       }
     } catch (err) {
       setError("Failed to add player to team");
@@ -92,12 +94,13 @@ export function FreePlayerMarketModal({
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
-    const name = player.user.display_name || 
-                 `${player.user.first_name || ''} ${player.user.last_name || ''}`.trim() || 
-                 player.user.email;
+    const firstName = (player.user.first_name || '').toLowerCase();
+    const lastName = (player.user.last_name || '').toLowerCase();
+    const fullName = `${firstName} ${lastName}`.trim();
     
-    return name.toLowerCase().includes(searchLower) || 
-           player.user.email.toLowerCase().includes(searchLower);
+    return firstName.includes(searchLower) || 
+           lastName.includes(searchLower) ||
+           fullName.includes(searchLower);
   });
 
 
@@ -106,11 +109,11 @@ export function FreePlayerMarketModal({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Free Player Market
+            <Search className="w-5 h-5" />
+            Player Search
           </DialogTitle>
           <DialogDescription className="text-left">
-            Available players for Level {level} • {gender}
+            Search players by first or last name to add to your team
           </DialogDescription>
         </DialogHeader>
 
@@ -124,7 +127,7 @@ export function FreePlayerMarketModal({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search players..."
+              placeholder="Search by first or last name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -143,7 +146,7 @@ export function FreePlayerMarketModal({
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
-                  {searchTerm ? "No players found matching your search" : "No available players"}
+                  {searchTerm ? "No players found matching your search" : "No available players found"}
                 </p>
               </div>
             ) : (
@@ -189,3 +192,4 @@ export function FreePlayerMarketModal({
     </Dialog>
   );
 }
+

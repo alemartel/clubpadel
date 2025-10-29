@@ -68,5 +68,9 @@
   "savingAvailability": "Saving...",
   "failedToLoadAvailability": "Failed to load current availability",
   "failedToSaveAvailability": "Failed to save availability",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "teamIncompleteMinPlayers": "Team is incomplete. Minimum 2 players required.",
+  "teamIncompleteMixedMissingBoth": "Team is incomplete. Mixed teams must have at least 1 masculine and 1 feminine player.",
+  "teamIncompleteMixedMissingMale": "Team is incomplete. Mixed teams must have at least 1 masculine player.",
+  "teamIncompleteMixedMissingFemale": "Team is incomplete. Mixed teams must have at least 1 feminine player."
 }

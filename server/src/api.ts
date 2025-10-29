@@ -1032,11 +1032,18 @@ protectedRoutes.get("/teams/:id", async (c) => {
       return c.json({ error: "You are not a member of this team" }, 403);
     }
 
-    // Get team members
+    // Get team members with user gender information
     const members = await db
       .select({
         member: team_members,
-        user: users,
+        user: {
+          id: users.id,
+          email: users.email,
+          first_name: users.first_name,
+          last_name: users.last_name,
+          display_name: users.display_name,
+          gender: users.gender,
+        },
       })
       .from(team_members)
       .innerJoin(users, eq(team_members.user_id, users.id))
@@ -1257,14 +1264,27 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       }
     }
 
-    // Check if user is already on another team (global check since teams may not have leagues)
-    const [existingMembership] = await db
-      .select()
+    // Check if user is already on another team with the same level AND gender combination
+    const existingMemberships = await db
+      .select({
+        team_id: teams.id,
+        team_level: teams.level,
+        team_gender: teams.gender,
+        team_name: teams.name,
+      })
       .from(team_members)
+      .innerJoin(teams, eq(team_members.team_id, teams.id))
       .where(eq(team_members.user_id, user_id));
 
-    if (existingMembership) {
-      return c.json({ error: "User is already on a team" }, 409);
+    // Check if user is already on a team with the same level and gender
+    const conflictingTeam = existingMemberships.find(
+      (membership) => membership.team_level === team.level && membership.team_gender === team.gender
+    );
+
+    if (conflictingTeam) {
+      return c.json({ 
+        error: `Player is already on a Level ${team.level} ${team.gender === 'male' ? 'masculine' : team.gender === 'female' ? 'feminine' : 'mixed'} team (${conflictingTeam.team_name})` 
+      }, 409);
     }
 
     // Add member to team
@@ -1487,12 +1507,43 @@ protectedRoutes.get("/players/free-market", async (c) => {
 
       excludedUserIds = leagueTeamMembers.map(m => m.user_id);
     } else {
-      // If no league_id, exclude all users who are on any team
-      const allTeamMembers = await db
-        .select({ user_id: team_members.user_id })
-        .from(team_members);
+      // If no league_id, exclude users who are on a team with the same level AND gender
+      // This allows players to be on teams with different level/gender combinations
+      if (level && gender) {
+        // Validate level and gender are valid enum values
+        const validLevels = ["1", "2", "3", "4"];
+        const validGenders = ["male", "female", "mixed"];
+        
+        if (validLevels.includes(level) && validGenders.includes(gender)) {
+          const conflictingTeamMembers = await db
+            .select({ user_id: team_members.user_id })
+            .from(team_members)
+            .innerJoin(teams, eq(team_members.team_id, teams.id))
+            .where(
+              and(
+                eq(teams.level, level as "1" | "2" | "3" | "4"),
+                eq(teams.gender, gender as "male" | "female" | "mixed")
+              )
+            );
 
-      excludedUserIds = allTeamMembers.map(m => m.user_id);
+          excludedUserIds = conflictingTeamMembers.map(m => m.user_id);
+        } else {
+          // Invalid level or gender, fall back to excluding all team members
+          const allTeamMembers = await db
+            .select({ user_id: team_members.user_id })
+            .from(team_members);
+
+          excludedUserIds = allTeamMembers.map(m => m.user_id);
+        }
+      } else {
+        // If level or gender not provided, fall back to excluding all team members
+        // (for backwards compatibility or edge cases)
+        const allTeamMembers = await db
+          .select({ user_id: team_members.user_id })
+          .from(team_members);
+
+        excludedUserIds = allTeamMembers.map(m => m.user_id);
+      }
     }
 
     // Build base query conditions

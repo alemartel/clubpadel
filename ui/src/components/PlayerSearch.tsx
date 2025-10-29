@@ -16,7 +16,7 @@ interface Player {
   };
 }
 
-interface FreePlayerMarketProps {
+interface PlayerSearchProps {
   teamId: string;
   leagueId: string | null;
   level?: string;
@@ -24,7 +24,7 @@ interface FreePlayerMarketProps {
   onMemberAdded?: () => void;
 }
 
-export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdded }: FreePlayerMarketProps) {
+export function PlayerSearch({ teamId, leagueId, level, gender, onMemberAdded }: PlayerSearchProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +78,13 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
-    const name = player.user.display_name || 
-                 `${player.user.first_name || ''} ${player.user.last_name || ''}`.trim() || 
-                 player.user.email;
+    const firstName = (player.user.first_name || '').toLowerCase();
+    const lastName = (player.user.last_name || '').toLowerCase();
+    const fullName = `${firstName} ${lastName}`.trim();
     
-    return name.toLowerCase().includes(searchLower) || 
-           player.user.email.toLowerCase().includes(searchLower);
+    return firstName.includes(searchLower) || 
+           lastName.includes(searchLower) ||
+           fullName.includes(searchLower);
   });
 
 
@@ -91,11 +92,11 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
     <Card className="h-fit">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          Free Player Market
+          <Search className="w-5 h-5" />
+          Player Search
         </CardTitle>
         <CardDescription>
-          Available players for Level {level} • {gender}
+          Search players to add to your team
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -108,7 +109,7 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
-            placeholder="Search players..."
+            placeholder="Search by first or last name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -126,7 +127,7 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
           <div className="text-center py-8 text-muted-foreground">
             <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">
-              {searchTerm ? "No players found matching your search" : "No available players"}
+              {searchTerm ? "No players found matching your search" : "No available players found"}
             </p>
           </div>
         ) : (
@@ -177,3 +178,4 @@ export function FreePlayerMarket({ teamId, leagueId, level, gender, onMemberAdde
     </Card>
   );
 }
+

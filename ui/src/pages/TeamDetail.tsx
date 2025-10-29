@@ -3,11 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
-import { FreePlayerMarketModal } from "../components/FreePlayerMarketModal";
+import { PlayerSearchModal } from "../components/PlayerSearchModal";
 import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -33,6 +33,7 @@ interface TeamWithDetails {
       first_name?: string;
       last_name?: string;
       display_name?: string;
+      gender?: string;
     };
   }>;
 }
@@ -150,6 +151,39 @@ export function TeamDetail() {
 
   const isTeamCreator = team && serverUser && team.team.created_by === serverUser.id;
   const isTeamMember = team && serverUser && team.members.some(member => member.user.id === serverUser.id);
+
+  // Check if team is incomplete
+  const isTeamIncomplete = team && (
+    team.members.length < 2 || // Minimum 2 players required
+    (team.team.gender === "mixed" && (
+      team.members.filter(m => m.user.gender === "male").length === 0 ||
+      team.members.filter(m => m.user.gender === "female").length === 0
+    ))
+  );
+
+  // Get incomplete team message
+  const getIncompleteTeamMessage = () => {
+    if (!team) return "";
+    
+    if (team.members.length < 2) {
+      return t('teamIncompleteMinPlayers');
+    }
+    
+    if (team.team.gender === "mixed") {
+      const maleCount = team.members.filter(m => m.user.gender === "male").length;
+      const femaleCount = team.members.filter(m => m.user.gender === "female").length;
+      
+      if (maleCount === 0 && femaleCount === 0) {
+        return t('teamIncompleteMixedMissingBoth');
+      } else if (maleCount === 0) {
+        return t('teamIncompleteMixedMissingMale');
+      } else if (femaleCount === 0) {
+        return t('teamIncompleteMixedMissingFemale');
+      }
+    }
+    
+    return "";
+  };
 
   if (loading) {
     return (
@@ -323,7 +357,7 @@ export function TeamDetail() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-{t('teamMembers')} ({team.members.length}/4)
+                  {t('teamMembers')} ({team.members.length}/4)
                 </CardTitle>
                 {isTeamCreator && (
                   <Button 
@@ -340,6 +374,16 @@ export function TeamDetail() {
               </div>
             </CardHeader>
             <CardContent>
+              {isTeamIncomplete && (
+                <div className="mb-4 p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      {getIncompleteTeamMessage()}
+                    </p>
+                  </div>
+                </div>
+              )}
               {team.members.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -378,9 +422,9 @@ export function TeamDetail() {
 
       </div>
 
-      {/* Free Player Market Modal */}
+      {/* Player Search Modal */}
       {isTeamCreator && (
-        <FreePlayerMarketModal
+        <PlayerSearchModal
           open={showPlayerMarketModal}
           onOpenChange={setShowPlayerMarketModal}
           teamId={team.team.id}
