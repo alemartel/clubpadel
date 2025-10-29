@@ -56,7 +56,7 @@ export function PlayerSearchModal({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.getFreePlayers(level, leagueId || null, gender);
+      const response = await api.searchPlayers(level, leagueId || null, gender);
       if (response.error) {
         setError(response.error);
       } else {

@@ -47,7 +47,7 @@ export function TeamDetail() {
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPlayerMarketModal, setShowPlayerMarketModal] = useState(false);
+  const [showPlayerSearchModal, setShowPlayerSearchModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [teamAvailability, setTeamAvailability] = useState<any[]>([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -434,7 +434,7 @@ export function TeamDetail() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setShowPlayerMarketModal(true)}
+                    onClick={() => setShowPlayerSearchModal(true)}
                     disabled={team.members.length >= 4}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -496,8 +496,8 @@ export function TeamDetail() {
       {/* Player Search Modal */}
       {isTeamCreator && (
         <PlayerSearchModal
-          open={showPlayerMarketModal}
-          onOpenChange={setShowPlayerMarketModal}
+          open={showPlayerSearchModal}
+          onOpenChange={setShowPlayerSearchModal}
           teamId={team.team.id}
           leagueId={team.team.league_id || null}
           level={team.team.level}

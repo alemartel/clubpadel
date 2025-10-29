@@ -348,13 +348,13 @@ export async function removeTeamMember(teamId: string, userId: string) {
   return response.json();
 }
 
-export async function getFreePlayers(level: string | undefined, leagueId: string | null | undefined, gender?: string) {
+export async function searchPlayers(level: string | undefined, leagueId: string | null | undefined, gender?: string) {
   const params = new URLSearchParams();
   if (leagueId) params.append("league_id", leagueId);
   if (level) params.append("level", level);
   if (gender) params.append("gender", gender);
 
-  const response = await fetchWithAuth(`/api/v1/protected/players/free-market?${params}`);
+  const response = await fetchWithAuth(`/api/v1/protected/players/search?${params}`);
   return response.json();
 }
 
@@ -442,7 +442,7 @@ export const api = {
   deleteTeam,
   addTeamMember,
   removeTeamMember,
-  getFreePlayers,
+  searchPlayers,
   getAdminTeamsByGroup,
   getAllPlayers,
   getTeamAvailability,

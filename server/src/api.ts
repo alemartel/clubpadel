@@ -1477,7 +1477,7 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
   }
 });
 
-protectedRoutes.get("/players/free-market", async (c) => {
+protectedRoutes.get("/players/search", async (c) => {
   try {
     const user = c.get("user");
     const { level, gender, league_id } = c.req.query();
@@ -1601,7 +1601,7 @@ protectedRoutes.get("/players/free-market", async (c) => {
 
     return c.json(responseData);
   } catch (error) {
-    console.error("Free market players error:", error);
+    console.error("Player search error:", error);
     return c.json({ error: "Failed to retrieve available players" }, 500);
   }
 });
