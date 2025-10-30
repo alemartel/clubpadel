@@ -25,6 +25,8 @@ export const teams = appSchema.table("teams", {
   // Unique constraint on team name within league (only applies when league_id is not null)
   // Note: This constraint will be NULL for teams without leagues, allowing global team name uniqueness
   leagueNameUnique: unique("teams_league_name_unique").on(table.league_id, table.name),
+  // Global unique constraint on team name regardless of league
+  nameUnique: unique("teams_name_unique").on(table.name),
 }));
 
 export const team_members = appSchema.table("team_members", {

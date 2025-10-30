@@ -58,6 +58,12 @@ function handleDatabaseError(error: any): { message: string; status: number } {
         status: 409,
       };
     }
+    if (error.constraint === "teams_name_unique") {
+      return {
+        message: "Team name must be unique",
+        status: 409,
+      };
+    }
     if (error.constraint === "team_members_team_user_unique") {
       return {
         message: "User is already a member of this team",
