@@ -1,11 +1,11 @@
 {
   "emulators": {
     "auth": {
-      "port": 5503
+      "port": 5603
     },
     "ui": {
       "enabled": true,
-      "port": 5504
+      "port": 5604
     }
   }
 }

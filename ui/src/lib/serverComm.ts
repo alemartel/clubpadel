@@ -219,6 +219,9 @@ export interface TeamMember {
   user_id: string;
   role: string;
   joined_at: string;
+  paid?: boolean;
+  paid_at?: string | null;
+  paid_amount?: number | null;
 }
 
 export interface NewTeamMember {
@@ -382,6 +385,25 @@ export async function clearGroupCalendar(groupId: string) {
   return response.json();
 }
 
+// Admin Teams (All) API
+export async function getAdminTeams(filters?: { gender?: string; level?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.gender) params.append("gender", filters.gender);
+  if (filters?.level) params.append("level", filters.level);
+  const qs = params.toString();
+  const response = await fetchWithAuth(`/api/v1/admin/teams${qs ? `?${qs}` : ""}`);
+  return response.json();
+}
+
+export async function updateMemberPaid(teamId: string, userId: string, payload: { paid: boolean; paid_at?: string; paid_amount?: number }) {
+  const response = await fetchWithAuth(`/api/v1/admin/teams/${teamId}/members/${userId}/paid`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
 export async function updateLeagueDates(leagueId: string, startDate: string, endDate: string) {
   const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/dates`, {
     method: "PUT",
@@ -451,4 +473,6 @@ export const api = {
   getGroupCalendar,
   clearGroupCalendar,
   updateLeagueDates,
+  getAdminTeams,
+  updateMemberPaid,
 };

@@ -85,6 +85,18 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
+                      tooltip="Teams"
+                      isActive={isActive("/admin/teams")}
+                      asChild
+                    >
+                      <Link to="/admin/teams" onClick={handleMenuClick}>
+                        <Users className="w-4 h-4" />
+                        <span>{t('teamManagement')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
                       tooltip="Player Management"
                       isActive={isActive("/admin/player-management")}
                       asChild

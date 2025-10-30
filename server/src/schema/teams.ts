@@ -6,6 +6,7 @@ import {
   unique,
   boolean,
   time,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { appSchema, users } from "./users";
 import { leagues, groups, levelEnum, genderEnum } from "./leagues";
@@ -32,6 +33,9 @@ export const team_members = appSchema.table("team_members", {
   user_id: text("user_id").notNull(), // Foreign key to users.id
   role: text("role").default("member").notNull(), // Future extensibility for captain/co-captain roles
   joined_at: timestamp("joined_at").defaultNow().notNull(),
+  paid: boolean("paid").default(false).notNull(),
+  paid_at: timestamp("paid_at"),
+  paid_amount: numeric("paid_amount", { precision: 10, scale: 2 }),
 }, (table) => ({
   // Unique constraint to prevent duplicate memberships
   teamUserUnique: unique("team_members_team_user_unique").on(table.team_id, table.user_id),

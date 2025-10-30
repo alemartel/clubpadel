@@ -260,5 +260,6 @@
   "profileIncompleteWarningDescriptionSingle": "Please complete your {{field}} in your profile.",
   "profileIncompleteWarningDescriptionMultiple": "Please complete the following in your profile: {{fields}}.",
   "and": "and",
-  "profileIncompleteUpdateButton": "Update Profile"
+  "profileIncompleteUpdateButton": "Update Profile",
+  "notPaid": "Not Paid"
 }

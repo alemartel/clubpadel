@@ -574,6 +574,117 @@ adminRoutes.post("/leagues/:leagueId/groups", async (c) => {
   }
 });
 
+// Admin: List all teams with members, filters by gender/level
+adminRoutes.get("/teams", async (c) => {
+  try {
+    const { gender, level } = c.req.query();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Build base team conditions
+    const teamConditions: any[] = [];
+    if (gender) {
+      teamConditions.push(eq(teams.gender, gender as any));
+    }
+    if (level) {
+      teamConditions.push(eq(teams.level, level as any));
+    }
+
+    // Fetch teams
+    const teamRows = await db
+      .select()
+      .from(teams)
+      .where(teamConditions.length ? and(...teamConditions) : undefined);
+
+    if (teamRows.length === 0) {
+      return c.json({ teams: [], total: 0 });
+    }
+
+    const teamIds = teamRows.map((t) => t.id);
+
+    // Fetch members with user info
+    const memberRows = await db
+      .select({
+        member: team_members,
+        user: users,
+      })
+      .from(team_members)
+      .innerJoin(users, eq(team_members.user_id, users.id))
+      .where(inArray(team_members.team_id, teamIds));
+
+    // Group members by team
+    const teamIdToMembers: Record<string, any[]> = {};
+    for (const row of memberRows) {
+      const list = teamIdToMembers[row.member.team_id] || [];
+      list.push({ member: row.member, user: row.user });
+      teamIdToMembers[row.member.team_id] = list;
+    }
+
+    // Shape response
+    const response = teamRows.map((t) => ({
+      team: t,
+      league: null,
+      group: null,
+      members: teamIdToMembers[t.id] || [],
+    }));
+
+    return c.json({ teams: response, total: response.length });
+  } catch (error) {
+    console.error("Admin list teams error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Admin: Update member paid status/date/amount
+adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
+  try {
+    const teamId = c.req.param("teamId");
+    const userId = c.req.param("userId");
+    const body = await c.req.json();
+    const { paid, paid_at, paid_amount } = body as { paid: boolean; paid_at?: string; paid_amount?: number };
+
+    if (typeof paid !== "boolean") {
+      return c.json({ error: "'paid' boolean is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Verify membership exists
+    const existing = await db
+      .select()
+      .from(team_members)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)));
+
+    if (existing.length === 0) {
+      return c.json({ error: "Team membership not found" }, 404);
+    }
+
+    // Compute update
+    const updateValues: any = { paid };
+    if (paid) {
+      updateValues.paid_at = paid_at ? new Date(paid_at) : new Date();
+      updateValues.paid_amount = typeof paid_amount === "number" ? paid_amount : 0;
+    } else {
+      updateValues.paid_at = null;
+      updateValues.paid_amount = null;
+    }
+
+    const updated = await db
+      .update(team_members)
+      .set(updateValues)
+      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)))
+      .returning();
+
+    return c.json({ member: updated[0] });
+  } catch (error) {
+    console.error("Admin update paid status error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
 adminRoutes.get("/leagues/:leagueId/groups", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");

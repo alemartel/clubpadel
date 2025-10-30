@@ -1,0 +1,411 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Users,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Calendar as CalendarIcon,
+  AlertTriangle,
+  Check,
+} from "lucide-react";
+import { api } from "@/lib/serverComm";
+import { useTranslation } from "@/hooks/useTranslation";
+import { Badge } from "@/components/ui/badge";
+import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+
+export function AdminAllTeams() {
+  const { t } = useTranslation("teams");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tNav } = useTranslation("navigation");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [gender, setGender] = useState<string>("all");
+  const [level, setLevel] = useState<string>("all");
+  const [teamNameQuery, setTeamNameQuery] = useState<string>("");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
+  const [paymentUserId, setPaymentUserId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentError, setPaymentError] = useState<string>("");
+  // Per-team warning expansion state
+  const [expandedWarnings, setExpandedWarnings] = useState<Record<string, boolean>>({});
+
+  const loadTeams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.getAdminTeams({
+        gender: gender === "all" ? undefined : gender,
+        level: level === "all" ? undefined : level,
+      });
+      if (response.error) {
+        setError(response.error);
+      } else {
+        setTeams(response.teams || []);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load teams");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gender, level]);
+
+  const handleMarkPaid = async (
+    teamId: string,
+    userId: string,
+    currentPaid: boolean,
+    desiredPaid: boolean
+  ) => {
+    if (!currentPaid && desiredPaid) {
+      // Going from unpaid to paid, open modal (as before)
+      setPaymentTeamId(teamId);
+      setPaymentUserId(userId);
+      setPaymentAmount("");
+      setPaymentError("");
+      setShowPaymentDialog(true);
+    } else if (currentPaid && !desiredPaid) {
+      // Going from paid to unpaid
+      try {
+        setError(null);
+        await api.updateMemberPaid(teamId, userId, { paid: false });
+        await loadTeams();
+      } catch (err: any) {
+        setError(err.message || "Failed to update payment status");
+      }
+    }
+  };
+
+  const handlePaymentDialogConfirm = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setPaymentError(t("amountPaid") + ": " + t("pleaseFillAllFields"));
+      return;
+    }
+    if (paymentTeamId && paymentUserId) {
+      try {
+        setError(null);
+        await api.updateMemberPaid(paymentTeamId, paymentUserId, { paid: true, paid_amount: amount });
+        setShowPaymentDialog(false);
+        setPaymentError("");
+        setPaymentAmount("");
+        await loadTeams();
+      } catch (err: any) {
+        setPaymentError(err.message || tCommon("error"));
+      }
+    }
+  };
+
+  // Helper: availability check logic
+  function getAvailabilityWarning(team: any) {
+    const days = team.availability || [];
+    if (!days.length) return true;
+    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const weekends = ['saturday', 'sunday'];
+    const availableWeekdays = days.filter((d: any) => weekdays.includes(d.day_of_week) && d.is_available);
+    const availableWeekends = days.filter((d: any) => weekends.includes(d.day_of_week) && d.is_available);
+    const hasMinWeekdays = availableWeekdays.length >= 3;
+    const hasLateWeekday = availableWeekdays.some((d: any) => {
+      if (!d.end_time) return false;
+      const [h] = d.end_time.split(':').map(Number);
+      return h >= 21;
+    });
+    const hasValidWeekend = availableWeekends.some((d: any) => {
+      if (!d.start_time || !d.end_time) return false;
+      const [sh] = d.start_time.split(':').map(Number);
+      const [eh] = d.end_time.split(':').map(Number);
+      return sh <= 9 && eh >= 12;
+    });
+    return !(hasMinWeekdays && (hasLateWeekday || hasValidWeekend));
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">{tNav('teamManagement')}</h1>
+        </div>
+      </div>
+
+      {/* Compact filters */}
+      <Card className="mb-6">
+        <CardHeader className="p-3 pt-2 pb-2">
+          {/* Compact filter row: icon and dropdowns inline */}
+          <div className="flex flex-row items-center gap-2">
+            <Filter className="w-5 h-5" />
+            <div className="min-w-[100px]">
+              <Label className="text-xs">
+                {t("teamName")}
+              </Label>
+              <Input
+                value={teamNameQuery}
+                onChange={(e) => setTeamNameQuery(e.target.value)}
+                placeholder={tCommon('name')}
+                aria-label={t("teamName")}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">
+                {t("gender")}
+              </Label>
+              <Select value={gender} onValueChange={setGender}>
+                <SelectTrigger aria-label={t("selectGender")}>
+                  <SelectValue placeholder={t("selectGender")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tCommon('all')}</SelectItem>
+                  <SelectItem value="male">{t("masculine")}</SelectItem>
+                  <SelectItem value="female">{t("femenine")}</SelectItem>
+                  <SelectItem value="mixed">{t("mixed")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">
+                {t("level")}
+              </Label>
+              <Select value={level} onValueChange={setLevel}>
+                <SelectTrigger aria-label={t("selectLevel")}>
+                  <SelectValue placeholder={t("selectLevel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tCommon('all')}</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        {/* No filter content – now included in header row above */}
+      </Card>
+
+      {error && (
+        <div className="mb-6 p-3 border border-destructive/20 bg-destructive/10 rounded-md">
+          <p className="text-destructive text-sm">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          Loading teams...
+        </div>
+      ) : teams.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          {t('noTeamsYet')}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {teams
+            .filter((item) =>
+              teamNameQuery.trim().length === 0
+                ? true
+                : (item.team?.name || "")
+                    .toLowerCase()
+                    .includes(teamNameQuery.trim().toLowerCase())
+            )
+            .map((item) => {
+            // Team incomplete/concern logic (mimic TeamDetail)
+            let teamWarningMsg = "";
+            const members = item.members || [];
+            const gender = item.team.gender;
+            const minPlayers = 2;
+            const maleCount = members.filter((m: any) => m.user.gender === "male").length;
+            const femaleCount = members.filter((m: any) => m.user.gender === "female").length;
+            if (members.length < minPlayers) {
+              teamWarningMsg = t("teamIncompleteMinPlayers");
+            } else if (gender === "mixed") {
+              if (maleCount === 0 && femaleCount === 0) {
+                teamWarningMsg = t("teamIncompleteMixedMissingBoth");
+              } else if (maleCount === 0) {
+                teamWarningMsg = t("teamIncompleteMixedMissingMale");
+              } else if (femaleCount === 0) {
+                teamWarningMsg = t("teamIncompleteMixedMissingFemale");
+              }
+            }
+
+            return (
+              <Card key={item.team.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="p-5">
+                  <CardTitle className="text-lg sm:text-xl flex items-center justify-between">
+                    <span>{item.team.name}</span>
+                    <span className="flex items-center gap-2">
+                      <Badge variant={getLevelBadgeVariant(item.team.level)}>
+                        {tCommon('level')} {item.team.level}
+                      </Badge>
+                      <Badge variant={getGenderBadgeVariant(item.team.gender)}>
+                        {item.team.gender === "male"
+                          ? t("masculine")
+                          : item.team.gender === "female"
+                          ? t("femenine")
+                          : t("mixed")}
+                      </Badge>
+                      {(teamWarningMsg || getAvailabilityWarning(item.team)) && (
+                        <button
+                          className={
+                            'transition-colors p-1 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-900/30 ' +
+                            (expandedWarnings[item.team.id] ? 'ring-2 ring-yellow-500' : '')
+                          }
+                          onClick={() => setExpandedWarnings(x => ({ ...x, [item.team.id]: !x[item.team.id] }))}
+                          title={t('availabilityWarningTitle')}
+                          aria-label={t('availabilityWarningTitle')}
+                          type="button"
+                        >
+                          <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                        </button>
+                      )}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  {/* warning panel (expanded when toggled via header icon) */}
+                  {expandedWarnings[item.team.id] && (teamWarningMsg || getAvailabilityWarning(item.team)) && (
+                    <div className="mb-4 space-y-2">
+                      {getAvailabilityWarning(item.team) && (
+                        <div className="p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <div className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">{t('availabilityWarningTitle')}</div>
+                            <div className="text-xs text-yellow-700 dark:text-yellow-300 whitespace-pre-line">{t('availabilityWarningDescription')}</div>
+                          </div>
+                        </div>
+                      )}
+                      {teamWarningMsg && (
+                        <div className="p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-yellow-800 dark:text-yellow-200">{teamWarningMsg}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {item.members.length === 0 ? (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Users className="w-4 h-4" /> No members
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {item.members.map(({ member, user }: any) => (
+                        <div key={member.id} className="p-3 border rounded-md">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">
+                                {user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                              </div>
+                              {/* <div className="text-xs text-muted-foreground">{user.email}</div> */}
+                            </div>
+                            <div className="flex flex-col items-end min-w-0">
+                              <div className="flex items-center gap-2">
+                                {member.paid ? (
+                                  <span className="inline-flex items-center gap-1 text-green-600 text-sm">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </span>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
+                                        <XCircle className="w-4 h-4" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                <Switch
+                                  checked={!!member.paid}
+                                  onCheckedChange={(checked) => {
+                                    handleMarkPaid(item.team.id, user.id, !!member.paid || false, checked);
+                                  }}
+                                  id={`switch-paid-${item.team.id}-${user.id}`}
+                                  aria-label={t('paid')}
+                                />
+                              </div>
+                              {member.paid && (
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 pl-7">
+                                  <span className="inline-flex items-center gap-1">
+                                    {member.paid_amount ?? 0}€
+                                  </span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <CalendarIcon className="w-3 h-3" />{member.paid_at ? new Date(member.paid_at).toLocaleDateString() : ""}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("markPaid")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              autoFocus
+              type="number"
+              min={0.01}
+              step="any"
+              className="input input-bordered w-full p-2 border rounded"
+              value={paymentAmount}
+              onChange={e => setPaymentAmount(e.target.value)}
+              placeholder={t("amountPaid")}
+            />
+            {paymentError && (
+              <div className="text-destructive text-xs">{paymentError}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <div className="flex w-full gap-6 justify-center mt-3">
+              <DialogClose asChild>
+                <button
+                  className="btn btn-outline flex items-center justify-center w-11 h-11 rounded border"
+                  type="button"
+                  title={tCommon("cancel")}
+                  aria-label={tCommon("cancel")}
+                >
+                  <XCircle className="w-5 h-5 text-red-600" />
+                </button>
+              </DialogClose>
+              <button
+                className="btn btn-primary flex items-center justify-center w-11 h-11 rounded border"
+                type="button"
+                onClick={handlePaymentDialogConfirm}
+                title={t("markPaid")}
+                aria-label={t("markPaid")}
+              >
+                <Check className="w-5 h-5 text-green-600" />
+              </button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

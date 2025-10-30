@@ -74,5 +74,10 @@
   "teamIncompleteMixedMissingMale": "Team is incomplete. Mixed teams must have at least 1 masculine player.",
   "teamIncompleteMixedMissingFemale": "Team is incomplete. Mixed teams must have at least 1 feminine player.",
   "availabilityWarningTitle": "Availability Requirements Not Met",
-  "availabilityWarningDescription": "Minimum requirement:\n- 3 weekdays,\n- Play at 21:00 on a weekday or play a weekend day from 9:00 to 12:00.\n\nIf you have any questions, please contact the administrator."
+  "availabilityWarningDescription": "Minimum requirement:\n- 3 weekdays,\n- Play at 21:00 on a weekday or play a weekend day from 9:00 to 12:00.\n\nIf you have any questions, please contact the administrator.",
+  "markPaid": "Mark Paid",
+  "markUnpaid": "Mark Unpaid",
+  "amountPaid": "Amount paid",
+  "adminTeamsPageTitle": "All Teams (Admin)",
+  "adminTeamsPageSubtitle": "View all teams, filter, and manage player payments."
 }

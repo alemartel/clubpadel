@@ -8,6 +8,7 @@ import { Home } from "@/pages/Home";
 import { Settings } from "@/pages/Settings";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
+import { AdminAllTeams } from "@/pages/AdminAllTeams";
 import { AdminGroups } from "@/pages/AdminGroups";
 import { AdminTeams } from "@/pages/AdminTeams";
 import { PlayerManagement } from "@/pages/PlayerManagement";
@@ -161,6 +162,14 @@ function AppContent() {
                     element={
                       <AdminRoute>
                         <AdminLeagues />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/teams"
+                    element={
+                      <AdminRoute>
+                        <AdminAllTeams />
                       </AdminRoute>
                     }
                   />
