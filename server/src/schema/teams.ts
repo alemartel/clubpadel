@@ -31,7 +31,6 @@ export const team_members = appSchema.table("team_members", {
   id: text("id").primaryKey(),
   team_id: text("team_id").notNull(), // Foreign key to teams.id
   user_id: text("user_id").notNull(), // Foreign key to users.id
-  role: text("role").default("member").notNull(), // Future extensibility for captain/co-captain roles
   joined_at: timestamp("joined_at").defaultNow().notNull(),
   paid: boolean("paid").default(false).notNull(),
   paid_at: timestamp("paid_at"),

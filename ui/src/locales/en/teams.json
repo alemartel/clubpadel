@@ -79,5 +79,6 @@
   "markUnpaid": "Mark Unpaid",
   "amountPaid": "Amount paid",
   "adminTeamsPageTitle": "All Teams (Admin)",
-  "adminTeamsPageSubtitle": "View all teams, filter, and manage player payments."
+  "adminTeamsPageSubtitle": "View all teams, filter, and manage player payments.",
+  "paid": "Paid"
 }

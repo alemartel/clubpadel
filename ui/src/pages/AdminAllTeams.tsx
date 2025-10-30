@@ -16,6 +16,7 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
   Check,
+  Pencil,
 } from "lucide-react";
 import { api } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -25,6 +26,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TeamDetail } from "./TeamDetail";
 
 export function AdminAllTeams() {
   const { t } = useTranslation("teams");
@@ -43,6 +45,7 @@ export function AdminAllTeams() {
   const [paymentError, setPaymentError] = useState<string>("");
   // Per-team warning expansion state
   const [expandedWarnings, setExpandedWarnings] = useState<Record<string, boolean>>({});
+  const [selectedEditTeamId, setSelectedEditTeamId] = useState<string | null>(null);
 
   const loadTeams = async () => {
     try {
@@ -275,6 +278,20 @@ export function AdminAllTeams() {
                           <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                         </button>
                       )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="transition-colors p-1 rounded-full hover:bg-accent border border-border ml-1"
+                            onClick={() => setSelectedEditTeamId(item.team.id)}
+                            title={tCommon('edit')}
+                            aria-label={tCommon('edit')}
+                            type="button"
+                          >
+                            <Pencil className="w-5 h-5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{tCommon('edit')}</TooltipContent>
+                      </Tooltip>
                     </span>
                   </CardTitle>
                 </CardHeader>
@@ -317,9 +334,14 @@ export function AdminAllTeams() {
                             <div className="flex flex-col items-end min-w-0">
                               <div className="flex items-center gap-2">
                                 {member.paid ? (
-                                  <span className="inline-flex items-center gap-1 text-green-600 text-sm">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                  </span>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">{t('paid')}</TooltipContent>
+                                  </Tooltip>
                                 ) : (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -404,6 +426,34 @@ export function AdminAllTeams() {
               </button>
             </div>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!selectedEditTeamId} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedEditTeamId(null);
+          loadTeams();
+        }
+      }}>
+        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">
+              {(() => {
+                const st = teams.find((it) => it.team?.id === selectedEditTeamId);
+                return st?.team?.name || tCommon('edit');
+              })()}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedEditTeamId && (
+            <TeamDetail
+              teamId={selectedEditTeamId}
+              embedded={true}
+              forceAdmin={true}
+              onClose={() => {
+                setSelectedEditTeamId(null);
+                loadTeams();
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

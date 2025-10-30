@@ -258,6 +258,23 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
           </div>
         )}
 
+        {/* Actions under warning */}
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            {t('cancel')}
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? t('savingAvailability') : t('saveAvailability')}
+          </Button>
+        </div>
+
         <div className="space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -367,22 +384,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
             })
           )}
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
-            {t('cancel')}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? t('savingAvailability') : t('saveAvailability')}
-          </Button>
-        </DialogFooter>
+        
       </DialogContent>
     </Dialog>
   );

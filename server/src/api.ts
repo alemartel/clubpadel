@@ -1028,8 +1028,8 @@ protectedRoutes.post("/teams", async (c) => {
         id: randomUUID(),
         team_id: teamId,
         user_id: user.id,
-        role: "captain",
-      });
+      })
+      .returning();
 
     return c.json({
       team: newTeam,
@@ -1405,7 +1405,6 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
         id: randomUUID(),
         team_id: teamId,
         user_id,
-        role: "member",
       })
       .returning();
 

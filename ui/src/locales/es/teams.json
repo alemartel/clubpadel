@@ -2,10 +2,10 @@
   "myTeams": "Mis Equipos",
   "createTeam": "Crear Equipo",
   "teamDetail": "Detalle del Equipo",
-  "teamInformation": "Información del Equipo",
-  "teamMembers": "Miembros del Equipo",
+  "teamInformation": "Información del equipo",
+  "teamMembers": "Miembros del equipo",
   "teamAvailability": "Disponibilidad del Equipo",
-  "leagueDetails": "Detalles de la Liga",
+  "leagueDetails": "Detalles de la liga",
   "noTeamsYet": "Aún no hay equipos",
   "createFirstTeam": "Crea tu primer equipo para comenzar a jugar en la liga.",
   "needValidatedLevel": "Necesitas un nivel validado para crear equipos. Actualiza tu perfil para validar tu nivel.",
@@ -32,8 +32,8 @@
   "failedToLoadTeamDetails": "Error al cargar los detalles del equipo",
   "createdOn": "Creado el {{date}}",
   "noTeamMembersYet": "Aún no hay miembros del equipo",
-  "addPlayers": "Agregar Jugadores",
-  "editAvailability": "Editar Disponibilidad",
+  "addPlayers": "Añadir jugador",
+  "editAvailability": "Editar disponibilidad",
   "loadingAvailability": "Cargando disponibilidad...",
   "noAvailabilitySet": "No hay disponibilidad configurada",
   "monday": "Lunes",
@@ -79,5 +79,6 @@
   "markUnpaid": "Marcar como No Pagado",
   "amountPaid": "Cantidad pagada",
   "adminTeamsPageTitle": "Equipos (Admin)",
-  "adminTeamsPageSubtitle": "Ver todos los equipos, filtrar y gestionar pagos de jugadores."
+  "adminTeamsPageSubtitle": "Ver todos los equipos, filtrar y gestionar pagos de jugadores.",
+  "paid": "Pagado"
 }

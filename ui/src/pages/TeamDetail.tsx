@@ -1,9 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+// DialogClose not needed; embedded header will be suppressed
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock, AlertTriangle, Mars, Venus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
@@ -38,10 +49,17 @@ interface TeamWithDetails {
   }>;
 }
 
-export function TeamDetail() {
-  const { id } = useParams<{ id: string }>();
+export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }: {
+  embedded?: boolean;
+  teamId?: string;
+  forceAdmin?: boolean;
+  onClose?: () => void;
+}) {
+  const params = useParams<{ id: string }>();
+  const id = propTeamId ?? params.id;
   const navigate = useNavigate();
-  const { serverUser, isAdmin } = useAuth();
+  const { serverUser, isAdmin: contextIsAdmin } = useAuth();
+  const isAdmin = !!forceAdmin || contextIsAdmin;
   const { t } = useTranslation('teams');
   const { t: tCommon } = useTranslation('common');
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
@@ -51,6 +69,11 @@ export function TeamDetail() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [teamAvailability, setTeamAvailability] = useState<any[]>([]);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [showAvailabilityWarnings, setShowAvailabilityWarnings] = useState(false);
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
+  const [pendingRemoveUserId, setPendingRemoveUserId] = useState<string | null>(null);
+  const [pendingRemoveUserName, setPendingRemoveUserName] = useState<string | null>(null);
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
@@ -242,7 +265,14 @@ export function TeamDetail() {
   const availabilityValidation = validateAvailability();
 
   if (loading) {
-    return (
+    return embedded ? (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>{t('loadingTeamDetails')}</p>
+        </div>
+      </div>
+    ) : (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
@@ -255,7 +285,16 @@ export function TeamDetail() {
   }
 
   if (error || !team) {
-    return (
+    return embedded ? (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">{error || t('teamNotFound')}</p>
+          {onClose && (
+            <Button onClick={onClose} variant="outline">{tCommon('back')}</Button>
+          )}
+        </div>
+      </div>
+    ) : (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
@@ -270,22 +309,24 @@ export function TeamDetail() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold">{team.team.name}</h1>
-          <p className="text-muted-foreground">
-            {team.league && team.group ? (
-              <>
-                {team.league.name} • {team.group.name}
-              </>
-            ) : null}
-          </p>
+    <div className={embedded ? "max-w-4xl mx-auto" : "container mx-auto p-6 max-w-4xl"}>
+      {embedded ? null : (
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl sm:text-4xl font-bold">{team.team.name}</h1>
+            <p className="text-muted-foreground">
+              {team.league && team.group ? (
+                <>
+                  {team.league.name} • {team.group.name}
+                </>
+              ) : null}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 border border-destructive/20 bg-destructive/10 rounded-md">
@@ -297,12 +338,6 @@ export function TeamDetail() {
         {/* Team Information */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
-{t('teamInformation')}
-              </CardTitle>
-            </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -358,11 +393,24 @@ export function TeamDetail() {
 
               {/* Team Availability */}
               <div className="mt-6">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-{t('teamAvailability')}
-                </h4>
-                {!availabilityValidation.meetsRequirements && teamAvailability.length > 0 && !availabilityLoading && (
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {t('teamAvailability')}
+                  </h4>
+                  {!availabilityValidation.meetsRequirements && teamAvailability.length > 0 && !availabilityLoading && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAvailabilityWarnings(v => !v)}
+                      className={`p-2 rounded-full hover:bg-muted relative ${showAvailabilityWarnings ? 'ring-2 ring-yellow-500' : ''}`}
+                      aria-label={showAvailabilityWarnings ? tCommon('hide') : tCommon('show')}
+                      title={showAvailabilityWarnings ? tCommon('hide') : tCommon('show')}
+                    >
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                    </button>
+                  )}
+                </div>
+                {!availabilityValidation.meetsRequirements && teamAvailability.length > 0 && !availabilityLoading && showAvailabilityWarnings && (
                   <div className="mb-4 p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -410,7 +458,7 @@ export function TeamDetail() {
                   </div>
                 )}
                 
-                {isTeamMember && (
+                {(isTeamMember || isAdmin) && (
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" onClick={() => setShowAvailabilityModal(true)}>
                       <Edit className="w-4 h-4 mr-2" />
@@ -430,22 +478,35 @@ export function TeamDetail() {
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   {t('teamMembers')} ({team.members.length}/4)
                 </CardTitle>
-                {isTeamCreator && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowPlayerSearchModal(true)}
-                    disabled={team.members.length >= 4}
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">{t('addPlayers')}</span>
-                    <span className="sm:hidden">{tCommon('add')}</span>
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {isTeamIncomplete && (
+                    <button
+                      type="button"
+                      onClick={() => setShowWarnings((v) => !v)}
+                      className={`p-2 rounded-full hover:bg-muted relative ${showWarnings ? 'ring-2 ring-yellow-500' : ''}`}
+                      aria-label={showWarnings ? tCommon('hide') : tCommon('show')}
+                      title={showWarnings ? tCommon('hide') : tCommon('show')}
+                    >
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                    </button>
+                  )}
+                  {(isTeamCreator || isAdmin) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowPlayerSearchModal(true)}
+                      disabled={team.members.length >= 4}
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      <span className="hidden sm:inline">{t('addPlayers')}</span>
+                      <span className="sm:hidden">{tCommon('add')}</span>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {isTeamIncomplete && (
+              {isTeamIncomplete && showWarnings && (
                 <div className="mb-4 p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -482,11 +543,20 @@ export function TeamDetail() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isTeamCreator && member.role !== "captain" && (
+                        {(isTeamCreator || isAdmin) && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemoveMember(user.id)}
+                            onClick={() => {
+                              if (isAdmin) {
+                                handleRemoveMember(user.id);
+                              } else {
+                                setPendingRemoveUserId(user.id);
+                                const name = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+                                setPendingRemoveUserName(name);
+                                setConfirmRemoveOpen(true);
+                              }
+                            }}
                           >
                             <UserMinus className="w-4 h-4" />
                           </Button>
@@ -503,7 +573,7 @@ export function TeamDetail() {
       </div>
 
       {/* Player Search Modal */}
-      {isTeamCreator && (
+      {(isTeamCreator || isAdmin) && (
         <PlayerSearchModal
           open={showPlayerSearchModal}
           onOpenChange={setShowPlayerSearchModal}
@@ -516,7 +586,7 @@ export function TeamDetail() {
       )}
 
       {/* Team Availability Modal */}
-      {isTeamMember && (
+      {(isTeamMember || isAdmin) && (
         <TeamAvailabilityModal
           open={showAvailabilityModal}
           onOpenChange={setShowAvailabilityModal}
@@ -525,6 +595,35 @@ export function TeamDetail() {
             loadTeamAvailability();
           }}
         />
+      )}
+
+      {/* Confirm Remove Member (Players only) */}
+      {!isAdmin && (
+        <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{tCommon('confirm')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingRemoveUserName ? `${pendingRemoveUserName}` : ''}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingRemoveUserId) {
+                    handleRemoveMember(pendingRemoveUserId);
+                  }
+                  setConfirmRemoveOpen(false);
+                  setPendingRemoveUserId(null);
+                  setPendingRemoveUserName(null);
+                }}
+              >
+                {tCommon('confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
