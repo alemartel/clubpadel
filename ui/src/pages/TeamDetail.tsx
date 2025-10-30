@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // DialogClose not needed; embedded header will be suppressed
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Trophy, Clock, AlertTriangle, Mars, Venus } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Clock, AlertTriangle, Mars, Venus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -316,7 +316,6 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl sm:text-4xl font-bold">{team.team.name}</h1>
             <p className="text-muted-foreground">
               {team.league && team.group ? (
                 <>
@@ -338,11 +337,11 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         {/* Team Information */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <div className="space-y-2 text-sm">
-                    <div className="font-medium">{team.team.name}</div>
+                <div className="md:col-span-2">
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-center">{team.team.name}</h4>
                     <div className="text-muted-foreground">
   {t('createdOn', { date: formatDate(team.team.created_at) })}
                     </div>
@@ -474,10 +473,10 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <h4 className="flex items-center gap-2 text-base sm:text-lg font-semibold">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   {t('teamMembers')} ({team.members.length}/4)
-                </CardTitle>
+                </h4>
                 <div className="flex items-center gap-2">
                   {isTeamIncomplete && (
                     <button
