@@ -34,7 +34,13 @@ export function Navbar() {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    if (isTeamDetailPage) {
+      navigate("/teams");
+    } else if (isProfilePage) {
+      navigate("/");
+    } else {
+      navigate(-1);
+    }
   };
 
   return (

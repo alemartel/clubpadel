@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   Check,
   Pencil,
+  Mars,
+  Venus,
 } from "lucide-react";
 import { api } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -27,6 +29,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TeamDetail } from "./TeamDetail";
+import { UserAvatar } from "@/components/user-avatar";
+import { ProfilePictureModal } from "@/components/ProfilePictureModal";
 
 export function AdminAllTeams() {
   const { t } = useTranslation("teams");
@@ -47,6 +51,12 @@ export function AdminAllTeams() {
   // Per-team warning expansion state
   const [expandedWarnings, setExpandedWarnings] = useState<Record<string, boolean>>({});
   const [selectedEditTeamId, setSelectedEditTeamId] = useState<string | null>(null);
+  const [selectedUserForPicture, setSelectedUserForPicture] = useState<{
+    imageUrl: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  } | null>(null);
 
   const loadTeams = async () => {
     try {
@@ -361,15 +371,111 @@ export function AdminAllTeams() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {item.members.map(({ member, user }: any) => (
-                        <div key={member.id} className="p-3 border rounded-md">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">
-                                {user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                      {item.members.map(({ member, user }: any) => {
+                        // Handle case where user might be null (data integrity issue)
+                        if (!user || !user.id) {
+                          return (
+                            <div key={member.id} className="p-3 border rounded-md border-destructive/50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <UserAvatar
+                                      user={{
+                                        photo_url: null,
+                                        profile_picture_url: null,
+                                        first_name: null,
+                                        last_name: null,
+                                        email: `User ${member.user_id}`,
+                                      }}
+                                      size="sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-muted-foreground">
+                                      {tCommon('unknownUser')} ({member.user_id.substring(0, 8)}...)
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">{tCommon('userNotFound') || 'User not found'}</div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    {member.paid ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
+                                            <CheckCircle2 className="w-4 h-4" />
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">{t('paid')}</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="inline-flex items-center gap-1 text-red-600 text-sm cursor-pointer">
+                                            <XCircle className="w-4 h-4" />
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              {/* <div className="text-xs text-muted-foreground">{user.email}</div> */}
                             </div>
+                          );
+                        }
+
+                        return (
+                          <div key={member.id} className="p-3 border rounded-md">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <UserAvatar
+                                    user={{
+                                      photo_url: null,
+                                      profile_picture_url: user.profile_picture_url,
+                                      first_name: user.first_name,
+                                      last_name: user.last_name,
+                                      email: user.email,
+                                    }}
+                                    size="sm"
+                                    className={user.profile_picture_url ? "cursor-pointer hover:opacity-80 transition-opacity" : undefined}
+                                    onClick={user.profile_picture_url ? () => {
+                                      setSelectedUserForPicture({
+                                        imageUrl: user.profile_picture_url,
+                                        firstName: user.first_name,
+                                        lastName: user.last_name,
+                                        email: user.email,
+                                      });
+                                    } : undefined}
+                                  />
+                                  {user.gender && (
+                                    <div className="flex-shrink-0">
+                                      {user.gender === "male" ? (
+                                        <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                      ) : user.gender === "female" ? (
+                                        <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                                      ) : null}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div 
+                                    className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
+                                    onClick={user.profile_picture_url ? () => {
+                                      setSelectedUserForPicture({
+                                        imageUrl: user.profile_picture_url,
+                                        firstName: user.first_name,
+                                        lastName: user.last_name,
+                                        email: user.email,
+                                      });
+                                    } : undefined}
+                                  >
+                                    {user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                                  </div>
+                                  {/* <div className="text-xs text-muted-foreground">{user.email}</div> */}
+                                </div>
+                              </div>
                             <div className="flex flex-col items-end min-w-0">
                               <div className="flex items-center gap-2">
                                 {member.paid ? (
@@ -413,7 +519,8 @@ export function AdminAllTeams() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -495,6 +602,20 @@ export function AdminAllTeams() {
           )}
         </DialogContent>
       </Dialog>
+      {selectedUserForPicture && (
+        <ProfilePictureModal
+          open={!!selectedUserForPicture}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedUserForPicture(null);
+            }
+          }}
+          imageUrl={selectedUserForPicture.imageUrl}
+          firstName={selectedUserForPicture.firstName}
+          lastName={selectedUserForPicture.lastName}
+          email={selectedUserForPicture.email}
+        />
+      )}
     </div>
   );
 }

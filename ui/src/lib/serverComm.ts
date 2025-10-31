@@ -443,19 +443,101 @@ export async function updateTeamAvailability(teamId: string, availability: any[]
 }
 
 export async function lookupTeamByPasscode(passcode: string) {
-  const response = await fetchWithAuth(`/api/v1/protected/teams/lookup?passcode=${encodeURIComponent(passcode)}`);
-  return response.json();
+  const token = await getAuthToken();
+  const headers = new Headers();
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/protected/teams/lookup?passcode=${encodeURIComponent(passcode)}`, {
+      method: 'GET',
+      headers,
+    });
+
+    // Read response as text first
+    const text = await response.text();
+    
+    // Try to parse as JSON
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (parseErr) {
+      // If not valid JSON, return the text as error
+      console.error('Failed to parse JSON response:', text);
+      return { error: text || `API request failed: ${response.statusText}` };
+    }
+
+    // If the response is not ok, check if we got an error message in the JSON
+    if (!response.ok) {
+      console.log(`[lookupTeamByPasscode] Error response: status=${response.status}, text="${text}", data=`, data);
+      // The backend returns { error: "..." } format
+      if (data && data.error) {
+        console.log(`[lookupTeamByPasscode] Error from backend: "${data.error}"`);
+        return { error: data.error };
+      }
+      // If no error in JSON, return a generic error
+      console.log(`[lookupTeamByPasscode] No error in JSON, returning text or statusText`);
+      return { error: text || `API request failed: ${response.statusText}` };
+    }
+
+    // Success response
+    return data;
+  } catch (err: any) {
+    // Network errors or other unexpected errors
+    console.error('lookupTeamByPasscode exception:', err);
+    return { error: err.message || 'Failed to lookup team' };
+  }
 }
 
 export async function joinTeam(passcode: string) {
-  const response = await fetchWithAuth(`/api/v1/protected/teams/join`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ passcode }),
+  const token = await getAuthToken();
+  const headers = new Headers({
+    'Content-Type': 'application/json',
   });
-  return response.json();
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/protected/teams/join`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ passcode }),
+    });
+
+    // Read response as text first
+    const text = await response.text();
+    
+    // Try to parse as JSON
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (parseErr) {
+      // If not valid JSON, return the text as error
+      console.error('Failed to parse JSON response:', text);
+      return { error: text || `API request failed: ${response.statusText}` };
+    }
+
+    // If the response is not ok, check if we got an error message in the JSON
+    if (!response.ok) {
+      // The backend returns { error: "..." } format
+      if (data && data.error) {
+        return { error: data.error };
+      }
+      // If no error in JSON, return a generic error
+      return { error: text || `API request failed: ${response.statusText}` };
+    }
+
+    // Success response
+    return data;
+  } catch (err: any) {
+    // Network errors or other unexpected errors
+    console.error('joinTeam exception:', err);
+    return { error: err.message || 'Failed to join team' };
+  }
 }
 
 export const api = {

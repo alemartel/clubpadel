@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useTranslation as useI18nTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -46,10 +47,11 @@ interface TeamWithDetails {
 }
 
 export function MyTeams() {
-  const { canCreateTeams } = useAuth();
+  const { canCreateTeams, refreshServerUser } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('teams');
   const { t: tCommon } = useTranslation('common');
+  const { i18n } = useI18nTranslation('teams');
   const [teams, setTeams] = useState<TeamWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,17 @@ export function MyTeams() {
   useEffect(() => {
     loadTeams();
   }, []);
+
+  // Handle AlertDialog close - reset state when user closes without confirming
+  const handleConfirmationDialogChange = (open: boolean) => {
+    setShowConfirmation(open);
+    if (!open && !joining) {
+      // User closed the dialog without joining - reset state
+      setPasscode("");
+      setLookedUpTeam(null);
+      setLookupError(null);
+    }
+  };
 
   const loadTeams = async () => {
     try {
@@ -88,6 +101,43 @@ export function MyTeams() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Helper function to translate backend error messages
+  const translateError = (errorMessage: string): string => {
+    // Map backend English error messages to translation keys
+    const errorMap: Record<string, string> = {
+      "Team is full": "teamFull",
+      "Admins cannot join teams": "adminsCannotJoin",
+      "You are already a member of this team": "alreadyMember",
+      "User not found": "userNotFound",
+      "Player must have a gender set in their profile": "genderRequired",
+      "Masculine teams can only contain male players": "masculineTeamOnly",
+      "Feminine teams can only contain female players": "feminineTeamOnly",
+      "Mixed teams must contain both masculine and feminine players": "mixedTeamRequirement",
+      "Passcode is required": "passcodeRequired",
+      "Invalid passcode": "invalidPasscode",
+    };
+
+    // Check for the dynamic "already on team" error message
+    const alreadyOnTeamMatch = errorMessage.match(/Player is already on a Level (\d+) (masculine|feminine|mixed) team \((.+)\)/);
+    if (alreadyOnTeamMatch) {
+      const [, level, gender, teamName] = alreadyOnTeamMatch;
+      const genderMap: Record<string, string> = {
+        "masculine": t('masculine'),
+        "feminine": t('femenine'),
+        "mixed": t('mixed'),
+      };
+      return t('alreadyOnTeam', { level, gender: genderMap[gender] || gender, teamName });
+    }
+
+    // Try to find a translation key for the error
+    if (errorMap[errorMessage]) {
+      return t(errorMap[errorMessage]);
+    }
+
+    // If no translation found, return the original error message
+    return errorMessage;
+  };
+
   const handleLookupTeam = async () => {
     if (!passcode.trim()) {
       setLookupError(t('invalidPasscode'));
@@ -100,15 +150,16 @@ export function MyTeams() {
       const response = await api.lookupTeamByPasscode(passcode.trim().toUpperCase());
       
       if (response.error) {
-        setLookupError(response.error);
+        setLookupError(translateError(response.error));
       } else {
         setLookedUpTeam(response.team);
         setShowJoinModal(false);
         setShowConfirmation(true);
       }
-    } catch (err) {
-      setLookupError(t('invalidPasscode'));
-      console.error("Error looking up team:", err);
+    } catch (err: any) {
+      // This should rarely happen since lookupTeamByPasscode returns {error} instead of throwing
+      console.error("Unexpected error looking up team:", err);
+      setLookupError(err?.message || t('invalidPasscode'));
     } finally {
       setLookingUp(false);
     }
@@ -122,26 +173,41 @@ export function MyTeams() {
       const response = await api.joinTeam(passcode.trim().toUpperCase());
       
       if (response.error) {
-        setLookupError(response.error);
+        setLookupError(translateError(response.error));
         setShowConfirmation(false);
         setShowJoinModal(true);
+        setJoining(false);
       } else {
-        // Success - reload teams and close modals
+        // Success - close all modals and reset state immediately
+        const teamId = response.team?.id;
         setShowConfirmation(false);
+        setShowJoinModal(false);
         setPasscode("");
         setLookedUpTeam(null);
-        await loadTeams();
-        // Optionally navigate to the team detail page
-        if (response.team?.id) {
-          navigate(`/teams/${response.team.id}`);
+        setLookupError(null);
+        setJoining(false);
+        
+        // Refresh server user data to ensure permissions are updated
+        try {
+          await refreshServerUser();
+          await loadTeams();
+        } catch (refreshErr) {
+          console.error("Error refreshing user data:", refreshErr);
+          // Continue with navigation even if refresh fails
+        }
+        
+        // Navigate immediately - React Router will handle the unmounting
+        if (teamId) {
+          navigate(`/teams/${teamId}`, { replace: false });
         }
       }
-    } catch (err) {
-      setLookupError(t('invalidPasscode'));
+    } catch (err: any) {
+      // This should rarely happen since joinTeam returns {error} instead of throwing
+      // But keep as fallback for unexpected errors
+      console.error("Unexpected error joining team:", err);
+      setLookupError(err?.message || t('invalidPasscode'));
       setShowConfirmation(false);
       setShowJoinModal(true);
-      console.error("Error joining team:", err);
-    } finally {
       setJoining(false);
     }
   };
@@ -336,21 +402,32 @@ export function MyTeams() {
       </Dialog>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+      <AlertDialog open={showConfirmation} onOpenChange={handleConfirmationDialogChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('joinConfirmationTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription asChild>
               {lookedUpTeam && (
                 <div className="space-y-3 mt-4">
-                  <p>{t('joinConfirmationMessage', { teamName: lookedUpTeam.name })}</p>
+                  <div>
+                    {(() => {
+                      const rawMessage = i18n.getResource(i18n.language, 'teams', 'joinConfirmationMessage');
+                      const parts = rawMessage.split('{{teamName}}');
+                      return (
+                        <>
+                          {parts[0]}
+                          <strong>{lookedUpTeam.name}</strong>
+                          {parts[1]}
+                        </>
+                      );
+                    })()}
+                  </div>
                   <div className="space-y-2 p-3 bg-muted rounded-md">
-                    <p className="font-medium">{t('teamDetails')}</p>
+                    <div className="font-medium">{t('teamDetails')}</div>
                     <div className="space-y-1 text-sm">
-                      <p><strong>{t('teamName')}:</strong> {lookedUpTeam.name}</p>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 justify-center">
                         <Badge variant={getLevelBadgeVariant(lookedUpTeam.level)}>
-                          Level {lookedUpTeam.level}
+                          {tCommon('level')} {lookedUpTeam.level}
                         </Badge>
                         <Badge variant={getGenderBadgeVariant(lookedUpTeam.gender)}>
                           {lookedUpTeam.gender === "male" ? t('masculine') : lookedUpTeam.gender === "female" ? t('femenine') : t('mixed')}

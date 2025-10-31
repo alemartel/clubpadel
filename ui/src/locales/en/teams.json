@@ -95,5 +95,15 @@
   "invalidPasscode": "Invalid passcode. Please try again.",
   "teamPasscode": "Team Passcode",
   "passcode": "Passcode",
-  "paymentStatus": "Payment status"
+  "paymentStatus": "Payment status",
+  "teamFull": "Team is full",
+  "adminsCannotJoin": "Admins cannot join teams",
+  "alreadyMember": "You are already a member of this team",
+  "userNotFound": "User not found",
+  "genderRequired": "Player must have a gender set in their profile",
+  "masculineTeamOnly": "Masculine teams can only contain male players",
+  "feminineTeamOnly": "Feminine teams can only contain female players",
+  "mixedTeamRequirement": "Mixed teams must contain both masculine and feminine players",
+  "passcodeRequired": "Passcode is required",
+  "alreadyOnTeam": "Player is already on a Level {{level}} {{gender}} team ({{teamName}})"
 }

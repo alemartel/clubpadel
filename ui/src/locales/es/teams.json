@@ -95,5 +95,15 @@
   "invalidPasscode": "Código inválido. Por favor intente de nuevo.",
   "teamPasscode": "Código del equipo",
   "passcode": "Código",
-  "paymentStatus": "Estado de pago"
+  "paymentStatus": "Estado de pago",
+  "teamFull": "El equipo está lleno",
+  "adminsCannotJoin": "Los administradores no pueden unirse a equipos",
+  "alreadyMember": "Ya eres miembro de este equipo",
+  "userNotFound": "Usuario no encontrado",
+  "genderRequired": "El jugador debe tener un género establecido en su perfil",
+  "masculineTeamOnly": "Los equipos masculinos solo pueden contener jugadores masculinos",
+  "feminineTeamOnly": "Los equipos femeninos solo pueden contener jugadoras femeninas",
+  "mixedTeamRequirement": "Los equipos mixtos deben contener jugadores masculinos y femeninos",
+  "passcodeRequired": "Se requiere código",
+  "alreadyOnTeam": "El jugador ya está en un equipo de Nivel {{level}} {{gender}} ({{teamName}})"
 }

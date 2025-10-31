@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // DialogClose not needed; embedded header will be suppressed
 import { Button } from "@/components/ui/button";
@@ -95,23 +95,12 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     return "/teams";
   };
 
-  useEffect(() => {
-    if (id) {
-      loadTeam();
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (team) {
-      loadTeamAvailability();
-    }
-  }, [team]);
-
-  const loadTeam = async () => {
+  const loadTeam = useCallback(async () => {
     if (!id) return;
     
     try {
       setLoading(true);
+      setError(null);
       const response = await api.getTeam(id);
       if (response.error) {
         setError(response.error);
@@ -124,7 +113,23 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, t]);
+
+  useEffect(() => {
+    if (id) {
+      // Reset state when id changes
+      setError(null);
+      setTeam(null);
+      setLoading(true);
+      loadTeam();
+    }
+  }, [id, loadTeam]);
+
+  useEffect(() => {
+    if (team) {
+      loadTeamAvailability();
+    }
+  }, [team]);
 
   const loadTeamAvailability = async () => {
     if (!team) return;
@@ -189,8 +194,8 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   const isTeamIncomplete = team && (
     team.members.length < 2 || // Minimum 2 players required
     (team.team.gender === "mixed" && (
-      team.members.filter(m => m.user.gender === "male").length === 0 ||
-      team.members.filter(m => m.user.gender === "female").length === 0
+      team.members.filter(m => m.user?.gender === "male").length === 0 ||
+      team.members.filter(m => m.user?.gender === "female").length === 0
     ))
   );
 
@@ -203,8 +208,8 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     }
     
     if (team.team.gender === "mixed") {
-      const maleCount = team.members.filter(m => m.user.gender === "male").length;
-      const femaleCount = team.members.filter(m => m.user.gender === "female").length;
+      const maleCount = team.members.filter(m => m.user?.gender === "male").length;
+      const femaleCount = team.members.filter(m => m.user?.gender === "female").length;
       
       if (maleCount === 0 && femaleCount === 0) {
         return t('teamIncompleteMixedMissingBoth');
@@ -548,56 +553,85 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {team.members.map(({ member, user }) => (
-                    <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <UserAvatar
-                            user={{
-                              photo_url: null,
-                              profile_picture_url: user.profile_picture_url,
-                              first_name: user.first_name,
-                              last_name: user.last_name,
-                              email: user.email,
-                            }}
-                            size="sm"
-                            className={user.profile_picture_url ? "cursor-pointer hover:opacity-80 transition-opacity" : undefined}
-                            onClick={user.profile_picture_url ? () => {
-                              setSelectedUserForPicture({
-                                imageUrl: user.profile_picture_url!,
-                                firstName: user.first_name,
-                                lastName: user.last_name,
-                                email: user.email,
-                              });
-                            } : undefined}
-                          />
-                          {user.gender && (
-                            <div className="flex-shrink-0">
-                              {user.gender === "male" ? (
-                                <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                              ) : user.gender === "female" ? (
-                                <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
-                              ) : null}
+                  {team.members.map(({ member, user }) => {
+                    // Handle case where user might be null (data integrity issue)
+                    if (!user || !user.id) {
+                      return (
+                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg border-destructive/50">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <UserAvatar
+                                user={{
+                                  photo_url: null,
+                                  profile_picture_url: null,
+                                  first_name: null,
+                                  last_name: null,
+                                  email: `User ${member.user_id}`,
+                                }}
+                                size="sm"
+                              />
                             </div>
-                          )}
-                        </div>
-                        <div>
-                          <div 
-                            className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
-                            onClick={user.profile_picture_url ? () => {
-                              setSelectedUserForPicture({
-                                imageUrl: user.profile_picture_url!,
-                                firstName: user.first_name,
-                                lastName: user.last_name,
-                                email: user.email,
-                              });
-                            } : undefined}
-                          >
-                            {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
+                            <div>
+                              <div className="font-medium text-muted-foreground">
+                                Unknown user ({member.user_id.substring(0, 8)}...)
+                              </div>
+                              <div className="text-sm text-muted-foreground">{tCommon('userNotFound') || 'User not found'}</div>
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">{user.email}</div>
                         </div>
-                      </div>
+                      );
+                    }
+                    
+                    return (
+                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <UserAvatar
+                              user={{
+                                photo_url: null,
+                                profile_picture_url: user.profile_picture_url,
+                                first_name: user.first_name,
+                                last_name: user.last_name,
+                                email: user.email,
+                              }}
+                              size="sm"
+                              className={user.profile_picture_url ? "cursor-pointer hover:opacity-80 transition-opacity" : undefined}
+                              onClick={user.profile_picture_url ? () => {
+                                setSelectedUserForPicture({
+                                  imageUrl: user.profile_picture_url!,
+                                  firstName: user.first_name,
+                                  lastName: user.last_name,
+                                  email: user.email,
+                                });
+                              } : undefined}
+                            />
+                            {user.gender && (
+                              <div className="flex-shrink-0">
+                                {user.gender === "male" ? (
+                                  <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                ) : user.gender === "female" ? (
+                                  <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div 
+                              className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
+                              onClick={user.profile_picture_url ? () => {
+                                setSelectedUserForPicture({
+                                  imageUrl: user.profile_picture_url!,
+                                  firstName: user.first_name,
+                                  lastName: user.last_name,
+                                  email: user.email,
+                                });
+                              } : undefined}
+                            >
+                              {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
+                            </div>
+                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                          </div>
+                        </div>
                       <div className="flex items-center gap-2">
                         {(isTeamCreator || isAdmin) && (
                           <Button
@@ -619,7 +653,8 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
