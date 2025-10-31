@@ -199,6 +199,7 @@ export interface Team {
   league_id?: string | null;
   group_id?: string | null;
   created_by: string;
+  passcode?: string;
   created_at: string;
   updated_at: string;
 }
@@ -441,6 +442,22 @@ export async function updateTeamAvailability(teamId: string, availability: any[]
   return response.json();
 }
 
+export async function lookupTeamByPasscode(passcode: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/lookup?passcode=${encodeURIComponent(passcode)}`);
+  return response.json();
+}
+
+export async function joinTeam(passcode: string) {
+  const response = await fetchWithAuth(`/api/v1/protected/teams/join`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ passcode }),
+  });
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -474,4 +491,6 @@ export const api = {
   updateLeagueDates,
   getAdminTeams,
   updateMemberPaid,
+  lookupTeamByPasscode,
+  joinTeam,
 };

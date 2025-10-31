@@ -78,5 +78,21 @@
   "markPaid": "Marcar como pagado",
   "markUnpaid": "Marcar como no pagado",
   "amountPaid": "Cantidad pagada",
-  "paid": "Pagado"
+  "paid": "Pagado",
+  "joinTeam": "Unirse a un equipo",
+  "joinTeamModalTitle": "Unirse a un equipo",
+  "enterPasscode": "Ingrese el código del equipo",
+  "passcodePlaceholder": "Código de 6 caracteres",
+  "lookup": "Buscar equipo",
+  "lookingUp": "Buscando...",
+  "joinConfirmationTitle": "Confirmar unirse al equipo",
+  "joinConfirmationMessage": "¿Está seguro de que desea unirse a {{teamName}}?",
+  "teamDetails": "Detalles del equipo",
+  "confirmJoin": "Confirmar unirse",
+  "join": "Unirse",
+  "joining": "Uniéndose...",
+  "joinTeamSuccess": "Te uniste exitosamente a {{teamName}}",
+  "invalidPasscode": "Código inválido. Por favor intente de nuevo.",
+  "teamPasscode": "Código del equipo",
+  "passcode": "Código"
 }

@@ -47,6 +47,10 @@ export function ProfileWarning({ serverUser, isAdmin }: ProfileWarningProps) {
   if (isFieldMissing(serverUser.gender)) {
     missingFields.push(t('profileMissingGender'));
   }
+  
+  if (isFieldMissing(serverUser.profile_picture_url)) {
+    missingFields.push(t('profileMissingProfilePicture'));
+  }
 
   // Don't show warning if all fields are present
   if (missingFields.length === 0) {

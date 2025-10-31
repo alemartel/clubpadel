@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { authMiddleware } from "./middleware/auth";
 import { adminMiddleware } from "./middleware/admin";
 import { getDatabase, testDatabaseConnection } from "./lib/db";
@@ -42,6 +42,41 @@ function createErrorResponse(message: string, status: number = 500, details?: st
   };
 }
 
+// Helper function to generate a random 6-character alphanumeric passcode
+function generatePasscode(): string {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let passcode = "";
+  const bytes = randomBytes(6);
+  for (let i = 0; i < 6; i++) {
+    passcode += charset[bytes[i] % 36];
+  }
+  return passcode;
+}
+
+// Helper function to generate a unique passcode (checks database for collisions)
+async function generateUniquePasscode(db: any): Promise<string> {
+  let passcode: string;
+  let attempts = 0;
+  const maxAttempts = 100;
+
+  do {
+    passcode = generatePasscode();
+    const [existing] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.passcode, passcode));
+    
+    if (!existing) {
+      return passcode;
+    }
+    
+    attempts++;
+    if (attempts > maxAttempts) {
+      throw new Error("Failed to generate unique passcode after 100 attempts");
+    }
+  } while (true);
+}
+
 // Helper function to handle database constraint errors
 function handleDatabaseError(error: any): { message: string; status: number } {
   if (error.code === "23505") {
@@ -67,6 +102,12 @@ function handleDatabaseError(error: any): { message: string; status: number } {
     if (error.constraint === "team_members_team_user_unique") {
       return {
         message: "User is already a member of this team",
+        status: 409,
+      };
+    }
+    if (error.constraint === "teams_passcode_unique") {
+      return {
+        message: "Passcode already exists. Please try again.",
         status: 409,
       };
     }
@@ -1012,6 +1053,9 @@ protectedRoutes.post("/teams", async (c) => {
       return c.json({ error: "Team name must be unique" }, 409);
     }
 
+    // Generate unique passcode
+    const teamPasscode = await generateUniquePasscode(db);
+
     // Create team without league_id and group_id
     const teamId = randomUUID();
     const [newTeam] = await db
@@ -1024,6 +1068,7 @@ protectedRoutes.post("/teams", async (c) => {
         league_id: null,
         group_id: null,
         created_by: user.id,
+        passcode: teamPasscode,
       })
       .returning();
 
@@ -1105,6 +1150,55 @@ protectedRoutes.get("/teams", async (c) => {
   }
 });
 
+// Lookup team by passcode (for confirmation before joining)
+// IMPORTANT: This must be registered BEFORE /teams/:id to avoid route conflicts
+protectedRoutes.get("/teams/lookup", async (c) => {
+  try {
+    const user = c.get("user");
+    const passcode = c.req.query("passcode");
+
+    if (!passcode) {
+      return c.json({ error: "Passcode is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Find team by passcode (case-insensitive, trimmed)
+    const normalizedPasscode = passcode.trim().toUpperCase();
+    console.log(`Looking up team with passcode: "${passcode}" (normalized: "${normalizedPasscode}")`);
+    
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.passcode, normalizedPasscode));
+
+    if (!team) {
+      console.error(`Team not found for passcode: "${normalizedPasscode}"`);
+      return c.json({ error: "Invalid passcode" }, 404);
+    }
+
+    // Validate if user can join (but don't join yet)
+    const validation = await validateTeamJoin(db, user, team);
+    if (!validation.valid) {
+      return c.json({ error: validation.error }, 400);
+    }
+
+    // Return team information for confirmation dialog
+    return c.json({
+      team: {
+        id: team.id,
+        name: team.name,
+        level: team.level,
+        gender: team.gender,
+      },
+    });
+  } catch (error) {
+    console.error("Team lookup error:", error);
+    return c.json({ error: "Failed to lookup team" }, 500);
+  }
+});
+
 protectedRoutes.get("/teams/:id", async (c) => {
   try {
     const user = c.get("user");
@@ -1160,15 +1254,26 @@ protectedRoutes.get("/teams/:id", async (c) => {
           last_name: users.last_name,
           display_name: users.display_name,
           gender: users.gender,
+          profile_picture_url: users.profile_picture_url,
         },
       })
       .from(team_members)
       .innerJoin(users, eq(team_members.user_id, users.id))
       .where(eq(team_members.team_id, teamId));
 
+    // Only include passcode if user is team creator or team member (not for arbitrary users)
+    const isTeamCreator = teamData.team.created_by === user.id;
+    const isTeamMember = !!membership;
+    const teamResponse = { ...teamData.team };
+    
+    if (!isTeamCreator && !isTeamMember && user.role !== "admin") {
+      // Remove passcode from response if user is neither creator nor member
+      delete teamResponse.passcode;
+    }
+
     return c.json({
       team: {
-        team: teamData.team,
+        team: teamResponse,
         league: teamData.league || null,
         group: teamData.group || null,
         members,
@@ -1588,6 +1693,166 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
     });
   } catch (error) {
     console.error("Update team availability error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Helper function to validate if a user can join a team (shared by lookup and join endpoints)
+async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid: boolean; error?: string }> {
+  // Check if user is an admin
+  if (user.role === "admin") {
+    return { valid: false, error: "Admins cannot join teams" };
+  }
+
+  // Check if team has fewer than 4 members
+  const existingMembers = await db
+    .select()
+    .from(team_members)
+    .where(eq(team_members.team_id, team.id));
+
+  if (existingMembers.length >= 4) {
+    return { valid: false, error: "Team is full" };
+  }
+
+  // Check if user is already a member of this team
+  const [membership] = await db
+    .select()
+    .from(team_members)
+    .where(and(eq(team_members.team_id, team.id), eq(team_members.user_id, user.id)));
+
+  if (membership) {
+    return { valid: false, error: "You are already a member of this team" };
+  }
+
+  // Get user details for gender validation
+  const [targetUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, user.id));
+
+  if (!targetUser) {
+    return { valid: false, error: "User not found" };
+  }
+
+  // Validate gender compatibility
+  if (!targetUser.gender) {
+    return { valid: false, error: "Player must have a gender set in their profile" };
+  }
+
+  if (team.gender === "male" && targetUser.gender !== "male") {
+    return { valid: false, error: "Masculine teams can only contain male players" };
+  }
+
+  if (team.gender === "female" && targetUser.gender !== "female") {
+    return { valid: false, error: "Feminine teams can only contain female players" };
+  }
+
+  // For mixed teams, validate both genders when reaching 4 members
+  if (team.gender === "mixed") {
+    if (existingMembers.length === 3) {
+      // Get genders of current members
+      const memberGenders = await db
+        .select({ gender: users.gender })
+        .from(users)
+        .innerJoin(team_members, eq(users.id, team_members.user_id))
+        .where(eq(team_members.team_id, team.id));
+
+      const maleCount = memberGenders.filter(m => m.gender === "male").length;
+      const femaleCount = memberGenders.filter(m => m.gender === "female").length;
+
+      // Calculate new counts after adding this player
+      const newMaleCount = targetUser.gender === "male" ? maleCount + 1 : maleCount;
+      const newFemaleCount = targetUser.gender === "female" ? femaleCount + 1 : femaleCount;
+
+      // Mixed teams must have at least one of each gender when full
+      if (newMaleCount === 0 || newFemaleCount === 0) {
+        return { valid: false, error: "Mixed teams must contain both masculine and feminine players" };
+      }
+    }
+  }
+
+  // Check if user is already on another team with the same level AND gender combination
+  const existingMemberships = await db
+    .select({
+      team_id: teams.id,
+      team_level: teams.level,
+      team_gender: teams.gender,
+      team_name: teams.name,
+    })
+    .from(team_members)
+    .innerJoin(teams, eq(team_members.team_id, teams.id))
+    .where(eq(team_members.user_id, user.id));
+
+  const conflictingTeam = existingMemberships.find(
+    (membership) => membership.team_level === team.level && membership.team_gender === team.gender
+  );
+
+  if (conflictingTeam) {
+    return { 
+      valid: false, 
+      error: `Player is already on a Level ${team.level} ${team.gender === 'male' ? 'masculine' : team.gender === 'female' ? 'feminine' : 'mixed'} team (${conflictingTeam.team_name})` 
+    };
+  }
+
+  return { valid: true };
+}
+
+// Join team by passcode
+protectedRoutes.post("/teams/join", async (c) => {
+  try {
+    const user = c.get("user");
+    const body = await c.req.json();
+    const { passcode } = body;
+
+    if (!passcode) {
+      return c.json({ error: "Passcode is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Find team by passcode (case-insensitive, trimmed)
+    const normalizedPasscode = passcode.trim().toUpperCase();
+    console.log(`Joining team with passcode: "${passcode}" (normalized: "${normalizedPasscode}")`);
+    
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.passcode, normalizedPasscode));
+
+    if (!team) {
+      console.error(`Team not found for passcode: "${normalizedPasscode}"`);
+      return c.json({ error: "Invalid passcode" }, 404);
+    }
+
+    // Re-validate if user can join
+    const validation = await validateTeamJoin(db, user, team);
+    if (!validation.valid) {
+      return c.json({ error: validation.error }, 400);
+    }
+
+    // Add user to team
+    const [newMember] = await db
+      .insert(team_members)
+      .values({
+        id: randomUUID(),
+        team_id: team.id,
+        user_id: user.id,
+      })
+      .returning();
+
+    return c.json({
+      team: {
+        id: team.id,
+        name: team.name,
+        level: team.level,
+        gender: team.gender,
+      },
+      message: `Successfully joined ${team.name}`,
+    });
+  } catch (error) {
+    console.error("Team join error:", error);
     const { message, status } = handleDatabaseError(error);
     return c.json({ error: message }, status as any);
   }

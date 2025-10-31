@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Clock, AlertTriangle, Mars, Venus } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Clock, AlertTriangle, Mars, Venus, Copy, Check } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,8 @@ import { api, type Team, type TeamMember } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
 import { PlayerSearchModal } from "../components/PlayerSearchModal";
 import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
+import { ProfilePictureModal } from "../components/ProfilePictureModal";
+import { UserAvatar } from "@/components/user-avatar";
 import { useTranslation } from "@/hooks/useTranslation";
 
 interface TeamWithDetails {
@@ -45,6 +47,7 @@ interface TeamWithDetails {
       last_name?: string;
       display_name?: string;
       gender?: string;
+      profile_picture_url?: string;
     };
   }>;
 }
@@ -74,6 +77,13 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
   const [pendingRemoveUserId, setPendingRemoveUserId] = useState<string | null>(null);
   const [pendingRemoveUserName, setPendingRemoveUserName] = useState<string | null>(null);
+  const [passcodeCopied, setPasscodeCopied] = useState(false);
+  const [selectedUserForPicture, setSelectedUserForPicture] = useState<{
+    imageUrl: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  } | null>(null);
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
@@ -345,6 +355,31 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     <div className="text-muted-foreground">
   {t('createdOn', { date: formatDate(team.team.created_at) })}
                     </div>
+                    {team.team.passcode && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <h5 className="text-sm font-medium">{t('teamPasscode')}</h5>
+                        <span className="text-sm font-mono tracking-widest">
+                          {team.team.passcode}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(team.team.passcode || '');
+                            setPasscodeCopied(true);
+                            setTimeout(() => setPasscodeCopied(false), 2000);
+                          }}
+                          className="p-1 h-6 w-6"
+                          title={passcodeCopied ? "Copied!" : "Copy passcode"}
+                        >
+                          {passcodeCopied ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -452,8 +487,15 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     )}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">
-{t('noAvailabilitySet')}
+                  <div className="p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          Please add your team availability
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -525,17 +567,48 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                   {team.members.map(({ member, user }) => (
                     <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
-                        {user.gender && (
-                          <div className="flex-shrink-0">
-                            {user.gender === "male" ? (
-                              <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            ) : user.gender === "female" ? (
-                              <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
-                            ) : null}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <UserAvatar
+                            user={{
+                              photo_url: null,
+                              profile_picture_url: user.profile_picture_url,
+                              first_name: user.first_name,
+                              last_name: user.last_name,
+                              email: user.email,
+                            }}
+                            size="sm"
+                            className={user.profile_picture_url ? "cursor-pointer hover:opacity-80 transition-opacity" : undefined}
+                            onClick={user.profile_picture_url ? () => {
+                              setSelectedUserForPicture({
+                                imageUrl: user.profile_picture_url!,
+                                firstName: user.first_name,
+                                lastName: user.last_name,
+                                email: user.email,
+                              });
+                            } : undefined}
+                          />
+                          {user.gender && (
+                            <div className="flex-shrink-0">
+                              {user.gender === "male" ? (
+                                <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                              ) : user.gender === "female" ? (
+                                <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
                         <div>
-                          <div className="font-medium">
+                          <div 
+                            className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
+                            onClick={user.profile_picture_url ? () => {
+                              setSelectedUserForPicture({
+                                imageUrl: user.profile_picture_url!,
+                                firstName: user.first_name,
+                                lastName: user.last_name,
+                                email: user.email,
+                              });
+                            } : undefined}
+                          >
                             {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
                           </div>
                           <div className="text-sm text-muted-foreground">{user.email}</div>
@@ -623,6 +696,22 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {/* Profile Picture Modal */}
+      {selectedUserForPicture && (
+        <ProfilePictureModal
+          open={!!selectedUserForPicture}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedUserForPicture(null);
+            }
+          }}
+          imageUrl={selectedUserForPicture.imageUrl}
+          firstName={selectedUserForPicture.firstName}
+          lastName={selectedUserForPicture.lastName}
+          email={selectedUserForPicture.email}
+        />
       )}
     </div>
   );

@@ -78,5 +78,21 @@
   "markPaid": "Mark Paid",
   "markUnpaid": "Mark Unpaid",
   "amountPaid": "Amount paid",
-  "paid": "Paid"
+  "paid": "Paid",
+  "joinTeam": "Join a Team",
+  "joinTeamModalTitle": "Join a Team",
+  "enterPasscode": "Enter Team Passcode",
+  "passcodePlaceholder": "6-character passcode",
+  "lookup": "Lookup Team",
+  "lookingUp": "Looking up...",
+  "joinConfirmationTitle": "Confirm Join Team",
+  "joinConfirmationMessage": "Are you sure you want to join {{teamName}}?",
+  "teamDetails": "Team Details",
+  "confirmJoin": "Confirm Join",
+  "join": "Join",
+  "joining": "Joining...",
+  "joinTeamSuccess": "Successfully joined {{teamName}}",
+  "invalidPasscode": "Invalid passcode. Please try again.",
+  "teamPasscode": "Team Passcode",
+  "passcode": "Passcode"
 }

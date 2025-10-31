@@ -19,6 +19,7 @@ export const teams = appSchema.table("teams", {
   league_id: text("league_id"), // Foreign key to leagues.id (nullable)
   group_id: text("group_id"), // Foreign key to groups.id (nullable)
   created_by: text("created_by").notNull(), // Foreign key to users.id
+  passcode: text("passcode").notNull(), // Unique passcode for joining the team
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
@@ -27,6 +28,8 @@ export const teams = appSchema.table("teams", {
   leagueNameUnique: unique("teams_league_name_unique").on(table.league_id, table.name),
   // Global unique constraint on team name regardless of league
   nameUnique: unique("teams_name_unique").on(table.name),
+  // Unique constraint on passcode
+  passcodeUnique: unique("teams_passcode_unique").on(table.passcode),
 }));
 
 export const team_members = appSchema.table("team_members", {

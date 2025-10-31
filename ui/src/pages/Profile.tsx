@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
+import { ProfilePictureModal } from "@/components/ProfilePictureModal";
 import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { uploadWidgetConfig } from "@/lib/cloudinary";
@@ -39,6 +40,7 @@ export function Profile() {
   const [pictureError, setPictureError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [showPictureModal, setShowPictureModal] = useState(false);
   const uploadWidgetRef = useRef<any>(null);
 
   // Form state - we'll fetch user data from server
@@ -261,7 +263,8 @@ export function Profile() {
                       email: formData.email,
                     }}
                     size="lg"
-                    className="border-2 border-border"
+                    className={formData.profile_picture_url ? "border-2 border-border cursor-pointer hover:opacity-80 transition-opacity" : "border-2 border-border"}
+                    onClick={formData.profile_picture_url ? () => setShowPictureModal(true) : undefined}
                   />
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{t('profilePicture')}</h4>
@@ -581,6 +584,16 @@ export function Profile() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Profile Picture Modal */}
+        <ProfilePictureModal
+          open={showPictureModal}
+          onOpenChange={setShowPictureModal}
+          imageUrl={formData.profile_picture_url}
+          firstName={formData.first_name}
+          lastName={formData.last_name}
+          email={formData.email}
+        />
       </div>
     </div>
   );
