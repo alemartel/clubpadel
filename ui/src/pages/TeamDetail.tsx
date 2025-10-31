@@ -283,7 +283,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         </div>
       </div>
     ) : (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -305,7 +305,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         </div>
       </div>
     ) : (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-destructive mb-4">{error || t('teamNotFound')}</p>
@@ -319,23 +319,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   }
 
   return (
-    <div className={embedded ? "max-w-4xl mx-auto" : "container mx-auto p-6 max-w-4xl"}>
-      {embedded ? null : (
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(getBackUrl())}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex-1">
-            <p className="text-muted-foreground">
-              {team.league && team.group ? (
-                <>
-                  {team.league.name} • {team.group.name}
-                </>
-              ) : null}
-            </p>
-          </div>
-        </div>
-      )}
+    <div className={embedded ? "max-w-4xl mx-auto" : "container mx-auto p-4 max-w-4xl"}>
 
       {error && (
         <div className="mb-6 p-4 border border-destructive/20 bg-destructive/10 rounded-md">
@@ -352,7 +336,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                 <div className="md:col-span-2">
                   <div className="space-y-2">
                     <h4 className="font-medium text-center">{team.team.name}</h4>
-                    <div className="text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
   {t('createdOn', { date: formatDate(team.team.created_at) })}
                     </div>
                     {team.team.passcode && (

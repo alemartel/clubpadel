@@ -94,5 +94,6 @@
   "joinTeamSuccess": "Successfully joined {{teamName}}",
   "invalidPasscode": "Invalid passcode. Please try again.",
   "teamPasscode": "Team Passcode",
-  "passcode": "Passcode"
+  "passcode": "Passcode",
+  "paymentStatus": "Payment status"
 }

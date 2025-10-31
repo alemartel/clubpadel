@@ -37,6 +37,7 @@ export function AdminAllTeams() {
   const [teams, setTeams] = useState<any[]>([]);
   const [gender, setGender] = useState<string>("all");
   const [level, setLevel] = useState<string>("all");
+  const [paidStatus, setPaidStatus] = useState<string>("all");
   const [teamNameQuery, setTeamNameQuery] = useState<string>("");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
@@ -199,6 +200,21 @@ export function AdminAllTeams() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label className="text-xs">
+                {t("paymentStatus")}
+              </Label>
+              <Select value={paidStatus} onValueChange={setPaidStatus}>
+                <SelectTrigger aria-label={t("paymentStatus")}>
+                  <SelectValue placeholder={t("paymentStatus")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tCommon('all')}</SelectItem>
+                  <SelectItem value="paid">{t('paid')}</SelectItem>
+                  <SelectItem value="notPaid">{tCommon('notPaid')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         {/* No filter content – now included in header row above */}
@@ -221,13 +237,36 @@ export function AdminAllTeams() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {teams
-            .filter((item) =>
-              teamNameQuery.trim().length === 0
-                ? true
-                : (item.team?.name || "")
-                    .toLowerCase()
-                    .includes(teamNameQuery.trim().toLowerCase())
-            )
+            .filter((item) => {
+              // Team name filter
+              if (teamNameQuery.trim().length > 0) {
+                const matchesName = (item.team?.name || "")
+                  .toLowerCase()
+                  .includes(teamNameQuery.trim().toLowerCase());
+                if (!matchesName) return false;
+              }
+
+              // Paid status filter
+              if (paidStatus !== "all") {
+                const members = item.members || [];
+                if (members.length === 0) {
+                  // Teams with no members are considered "notPaid"
+                  return paidStatus === "notPaid";
+                }
+                
+                const allMembersPaid = members.every((m: any) => m.member?.paid === true);
+                
+                if (paidStatus === "paid") {
+                  // Paid teams: all members must be paid
+                  return allMembersPaid;
+                } else if (paidStatus === "notPaid") {
+                  // Not paid teams: at least one member is not paid
+                  return !allMembersPaid;
+                }
+              }
+
+              return true;
+            })
             .map((item) => {
             // Team incomplete/concern logic (mimic TeamDetail)
             let teamWarningMsg = "";

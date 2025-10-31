@@ -1,19 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserAvatar } from "@/components/user-avatar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export function Navbar() {
   const { user, serverUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation('common');
+
+  // Check if we're on a team detail page or profile page
+  const isTeamDetailPage = location.pathname.match(/^\/teams\/[^\/]+$/);
+  const isProfilePage = location.pathname === "/profile";
 
   const handleProfileClick = () => {
     navigate("/profile");
@@ -28,13 +33,23 @@ export function Navbar() {
     }
   };
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
     <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b border-transparent shrink-0 bg-background/60 backdrop-blur-sm">
       <div className="flex items-center">
         <SidebarTrigger className="size-8">
           <Menu className="w-5 h-5" />
         </SidebarTrigger>
-        <span className="font-semibold ml-3">Club Padel</span>
+        {(isTeamDetailPage || isProfilePage) ? (
+          <Button variant="ghost" size="sm" onClick={handleBack} className="ml-3 h-8">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        ) : (
+          <span className="font-semibold ml-3">Club Padel</span>
+        )}
       </div>
       <div className="flex items-center gap-3 ml-auto">
         <LanguageSwitcher />
