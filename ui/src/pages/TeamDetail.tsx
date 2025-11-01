@@ -195,7 +195,6 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 
 
 
-  const isTeamCreator = team && serverUser && team.team.created_by === serverUser.id;
   const isTeamMember = team && serverUser && team.members.some(member => member.user.id === serverUser.id);
 
   // Check if team is incomplete
@@ -528,7 +527,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                       <AlertTriangle className="w-5 h-5 text-yellow-600" />
                     </button>
                   )}
-                  {(isTeamCreator || isAdmin) && (
+                  {isAdmin && (
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -672,7 +671,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
       </div>
 
       {/* Player Search Modal */}
-      {(isTeamCreator || isAdmin) && (
+      {isAdmin && (
         <PlayerSearchModal
           open={showPlayerSearchModal}
           onOpenChange={setShowPlayerSearchModal}

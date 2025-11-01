@@ -1328,7 +1328,7 @@ protectedRoutes.put("/teams/:id", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists and user is the creator
+    // Check if team exists
     const [team] = await db
       .select()
       .from(teams)
@@ -1338,8 +1338,16 @@ protectedRoutes.put("/teams/:id", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    if (team.created_by !== user.id) {
-      return c.json({ error: "Only the team creator can update team details" }, 403);
+    // Check if user is a team member or admin
+    if (user.role !== "admin") {
+      const [membership] = await db
+        .select()
+        .from(team_members)
+        .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
+
+      if (!membership) {
+        return c.json({ error: "Only team members or admins can update team details" }, 403);
+      }
     }
 
     // Check if new name is unique (globally if no league, within league if league exists)
@@ -1393,7 +1401,7 @@ protectedRoutes.delete("/teams/:id", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists and user is the creator
+    // Check if team exists
     const [team] = await db
       .select()
       .from(teams)
@@ -1403,8 +1411,9 @@ protectedRoutes.delete("/teams/:id", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    if (team.created_by !== user.id) {
-      return c.json({ error: "Only the team creator can delete the team" }, 403);
+    // Only admin can delete teams
+    if (user.role !== "admin") {
+      return c.json({ error: "Only admins can delete teams" }, 403);
     }
 
     // Delete team (cascade will handle team_members)
@@ -1435,7 +1444,7 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists and user is the creator
+    // Check if team exists
     const [team] = await db
       .select()
       .from(teams)
@@ -1445,8 +1454,9 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    if (team.created_by !== user.id) {
-      return c.json({ error: "Only the team creator can add members" }, 403);
+    // Only admin can add members (other way is using passcode)
+    if (user.role !== "admin") {
+      return c.json({ error: "Only admins can add members" }, 403);
     }
 
     // Check if team has fewer than 4 members

@@ -98,7 +98,7 @@
   "invalidPasscode": "Código inválido. Por favor intente de nuevo.",
   "teamPasscode": "Código del equipo",
   "passcode": "Código",
-  "paymentStatus": "Estado de pago",
+  "paymentStatus": "Pago",
   "teamFull": "El equipo está lleno",
   "adminsCannotJoin": "Los administradores no pueden unirse a equipos",
   "alreadyMember": "Ya eres miembro de este equipo",

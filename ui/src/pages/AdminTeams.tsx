@@ -316,13 +316,6 @@ export function AdminTeams() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4" />
-                        <span>{t('createdBy')} {teamData.creator.display_name || 
-                          `${teamData.creator.first_name || ''} ${teamData.creator.last_name || ''}`.trim() || 
-                          teamData.creator.email}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4" />
                         <span>{teamData.member_count} {teamData.member_count !== 1 ? tCommon('members') : tCommon('member')}</span>
                       </div>
                     </div>
