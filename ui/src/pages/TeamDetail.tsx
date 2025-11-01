@@ -149,13 +149,21 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   const handleRemoveMember = async (userId: string) => {
     if (!id) return;
     
+    // Check if user is removing themselves
+    const isRemovingSelf = serverUser?.id === userId;
+    
     try {
       const response = await api.removeTeamMember(id, userId);
       if (response.error) {
         setError(response.error);
       } else {
-        // Reload team to get updated member list
-        await loadTeam();
+        // If user removed themselves, redirect to My Teams page
+        if (isRemovingSelf) {
+          navigate('/teams');
+        } else {
+          // Reload team to get updated member list
+          await loadTeam();
+        }
       }
     } catch (err) {
       setError(t('failedToRemoveMember'));
@@ -633,7 +641,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                           </div>
                         </div>
                       <div className="flex items-center gap-2">
-                        {(isTeamCreator || isAdmin) && (
+                        {(isTeamMember || isAdmin) && (
                           <Button
                             variant="ghost"
                             size="sm"

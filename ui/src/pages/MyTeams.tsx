@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Calendar, Trophy, LogIn } from "lucide-react";
+import { Users, Plus, Calendar, Trophy, LogIn, XIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Team } from "@/lib/serverComm";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
@@ -68,6 +68,16 @@ export function MyTeams() {
   useEffect(() => {
     loadTeams();
   }, []);
+
+  // Cleanup: Close all modals if component unmounts during join operation
+  useEffect(() => {
+    return () => {
+      // Force close modals on unmount to prevent overlay from blocking navigation
+      setShowConfirmation(false);
+      setShowJoinModal(false);
+    };
+  }, []);
+
 
   // Handle AlertDialog close - reset state when user closes without confirming
   const handleConfirmationDialogChange = (open: boolean) => {
@@ -174,41 +184,46 @@ export function MyTeams() {
       
       if (response.error) {
         setLookupError(translateError(response.error));
-        setShowConfirmation(false);
-        setShowJoinModal(true);
         setJoining(false);
+        // Close confirmation and reopen join modal
+        setShowConfirmation(false);
+        // Wait for confirmation modal to close before opening join modal
+        setTimeout(() => {
+          setShowJoinModal(true);
+        }, 250);
       } else {
-        // Success - close all modals and reset state immediately
-        const teamId = response.team?.id;
+        // Success - close all modals first
         setShowConfirmation(false);
-        setShowJoinModal(false);
-        setPasscode("");
-        setLookedUpTeam(null);
-        setLookupError(null);
         setJoining(false);
         
-        // Refresh server user data to ensure permissions are updated
-        try {
-          await refreshServerUser();
-          await loadTeams();
-        } catch (refreshErr) {
-          console.error("Error refreshing user data:", refreshErr);
-          // Continue with navigation even if refresh fails
-        }
-        
-        // Navigate immediately - React Router will handle the unmounting
-        if (teamId) {
-          navigate(`/teams/${teamId}`, { replace: false });
-        }
+        // Wait for modals to close before resetting state and refreshing
+        setTimeout(async () => {
+          setShowJoinModal(false);
+          setPasscode("");
+          setLookedUpTeam(null);
+          setLookupError(null);
+          
+          // Refresh server user data to ensure permissions are updated
+          try {
+            await refreshServerUser();
+            await loadTeams();
+          } catch (refreshErr) {
+            console.error("Error refreshing user data:", refreshErr);
+            // Continue even if refresh fails
+          }
+        }, 250);
       }
     } catch (err: any) {
       // This should rarely happen since joinTeam returns {error} instead of throwing
       // But keep as fallback for unexpected errors
       console.error("Unexpected error joining team:", err);
       setLookupError(err?.message || t('invalidPasscode'));
-      setShowConfirmation(false);
-      setShowJoinModal(true);
       setJoining(false);
+      setShowConfirmation(false);
+      // Wait for confirmation modal to close before opening join modal
+      setTimeout(() => {
+        setShowJoinModal(true);
+      }, 250);
     }
   };
 
@@ -219,11 +234,23 @@ export function MyTeams() {
     setLookedUpTeam(null);
   };
 
-  const handleCloseJoinModal = () => {
-    setShowJoinModal(false);
-    setPasscode("");
-    setLookupError(null);
-    setLookedUpTeam(null);
+  const handleCloseJoinModal = (open?: boolean) => {
+    // If called from Dialog's onOpenChange, open will be false when closing
+    // If called manually (button click), open will be undefined
+    // Only close if explicitly closing (open === false) or called without parameter
+    if (open === false || open === undefined) {
+      setShowJoinModal(false);
+      setPasscode("");
+      setLookupError(null);
+      setLookedUpTeam(null);
+      setShowConfirmation(false); // Also ensure confirmation dialog is closed
+    }
+    // If open === true, that means Dialog is trying to open, so don't do anything
+  };
+
+  const handleCancelJoinModal = () => {
+    // Direct handler for cancel button - always close
+    handleCloseJoinModal();
   };
 
 
@@ -391,7 +418,7 @@ export function MyTeams() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseJoinModal}>
+            <Button variant="outline" onClick={handleCancelJoinModal}>
               {t('cancel')}
             </Button>
             <Button onClick={handleLookupTeam} disabled={lookingUp || !passcode.trim()}>
@@ -403,7 +430,16 @@ export function MyTeams() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmation} onOpenChange={handleConfirmationDialogChange}>
-        <AlertDialogContent>
+        <AlertDialogContent className="relative">
+          <button
+            onClick={() => handleConfirmationDialogChange(false)}
+            disabled={joining}
+            className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none z-10"
+            aria-label="Close"
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">Close</span>
+          </button>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('joinConfirmationTitle')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -423,7 +459,7 @@ export function MyTeams() {
                     })()}
                   </div>
                   <div className="space-y-2 p-3 bg-muted rounded-md">
-                    <div className="font-medium">{t('teamDetails')}</div>
+                    <div className="font-medium text-center">{t('teamDetails')}</div>
                     <div className="space-y-1 text-sm">
                       <div className="flex gap-2 justify-center">
                         <Badge variant={getLevelBadgeVariant(lookedUpTeam.level)}>

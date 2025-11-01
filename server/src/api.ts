@@ -1576,13 +1576,21 @@ protectedRoutes.delete("/teams/:id/members/:userId", async (c) => {
     }
 
     // Admins can remove any member
-    // Otherwise, check if user is team creator or the member being removed
     const isAdmin = user.role === "admin";
-    if (!isAdmin && team.created_by !== user.id && userId !== user.id) {
-      return c.json({ error: "You can only remove yourself or be the team creator" }, 403);
+    
+    // Check if the user requesting removal is a member of the team (unless admin)
+    if (!isAdmin) {
+      const [requesterMembership] = await db
+        .select()
+        .from(team_members)
+        .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
+
+      if (!requesterMembership) {
+        return c.json({ error: "You must be a member of the team to remove members" }, 403);
+      }
     }
 
-    // Check if membership exists
+    // Check if membership exists for the user being removed
     const [membership] = await db
       .select()
       .from(team_members)
