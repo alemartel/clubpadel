@@ -74,6 +74,16 @@ export interface ProfileUpdateData {
   profile_picture_url?: string;
 }
 
+export interface TeamChangeNotification {
+  id: string;
+  player_name: string;
+  action: "joined" | "removed";
+  team_name: string;
+  date: string;
+  read: boolean;
+  read_at: string | null;
+}
+
 export async function updateUserProfile(data: ProfileUpdateData) {
   const response = await fetchWithAuth("/api/v1/protected/profile", {
     method: "PUT",
@@ -540,6 +550,23 @@ export async function joinTeam(passcode: string) {
   }
 }
 
+export async function getTeamChangeNotifications(filter?: "read" | "unread" | "all") {
+  const filterParam = filter || "unread";
+  const response = await fetchWithAuth(`/api/v1/admin/team-change-notifications?filter=${filterParam}`);
+  const data = await response.json();
+  return data;
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/team-change-notifications/${notificationId}/read`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -575,4 +602,6 @@ export const api = {
   updateMemberPaid,
   lookupTeamByPasscode,
   joinTeam,
+  getTeamChangeNotifications,
+  markNotificationAsRead,
 };

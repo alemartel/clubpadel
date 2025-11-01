@@ -1,4 +1,4 @@
-import { Home, Settings, Calendar, Shield, Users } from "lucide-react";
+import { Home, Settings, Calendar, Shield, Users, LayoutDashboard } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -104,6 +104,18 @@ export function AppSidebar() {
                       <Link to="/admin/player-management" onClick={handleMenuClick}>
                         <Shield className="w-4 h-4" />
                         <span>{t('playerManagement')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Control Panel"
+                      isActive={isActive("/admin/control-panel")}
+                      asChild
+                    >
+                      <Link to="/admin/control-panel" onClick={handleMenuClick}>
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span>{t('controlPanel')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

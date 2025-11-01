@@ -21,9 +21,11 @@ import {
   teams,
   team_members,
   team_availability,
+  team_change_notifications,
   type NewTeam,
   type NewTeamMember,
   type NewTeamAvailability,
+  type NewTeamChangeNotification,
 } from "./schema/teams";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator";
@@ -1092,6 +1094,16 @@ protectedRoutes.post("/teams", async (c) => {
       })
       .returning();
 
+    // Create notification for team creation (creator joins the team they created)
+    await db.insert(team_change_notifications).values({
+      id: randomUUID(),
+      user_id: user.id, // The player who created the team (and joined it)
+      team_id: teamId,
+      action: "joined",
+      created_at: new Date(),
+      read: false,
+    });
+
     return c.json({
       team: newTeam,
       message: "Team created successfully",
@@ -1534,6 +1546,16 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       })
       .returning();
 
+    // Create notification for team member addition
+    await db.insert(team_change_notifications).values({
+      id: randomUUID(),
+      user_id: user_id, // The player who was added to the team, not the team creator/admin who performed the action
+      team_id: teamId,
+      action: "joined",
+      created_at: new Date(),
+      read: false,
+    });
+
     return c.json({
       member: newMember,
       message: "Member added to team successfully",
@@ -1592,6 +1614,16 @@ protectedRoutes.delete("/teams/:id/members/:userId", async (c) => {
     await db
       .delete(team_members)
       .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)));
+
+    // Create notification for team member removal
+    await db.insert(team_change_notifications).values({
+      id: randomUUID(),
+      user_id: userId, // The player who was removed from the team, not the person/admin who performed the removal
+      team_id: teamId,
+      action: "removed",
+      created_at: new Date(),
+      read: false,
+    });
 
     return c.json({
       message: "Member removed from team successfully",
@@ -1864,6 +1896,16 @@ protectedRoutes.post("/teams/join", async (c) => {
         user_id: user.id,
       })
       .returning();
+
+    // Create notification for team member addition via passcode join
+    await db.insert(team_change_notifications).values({
+      id: randomUUID(),
+      user_id: user.id, // The player who joined via passcode
+      team_id: team.id,
+      action: "joined",
+      created_at: new Date(),
+      read: false,
+    });
 
     return c.json({
       team: {
@@ -2180,6 +2222,109 @@ adminRoutes.put("/leagues/:id/dates", async (c) => {
   } catch (error) {
     console.error("League dates update error:", error);
     return c.json(createErrorResponse("Failed to update league dates", 500), 500);
+  }
+});
+
+// Admin: Get team change notifications
+adminRoutes.get("/team-change-notifications", async (c) => {
+  try {
+    const filter = c.req.query("filter") || "unread";
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Build base query with joins
+    let baseQuery = db
+      .select({
+        id: team_change_notifications.id,
+        player_name: sql<string>`COALESCE(
+          ${users.display_name},
+          NULLIF(TRIM(COALESCE(${users.first_name}, '') || ' ' || COALESCE(${users.last_name}, '')), ''),
+          ${users.email}
+        )`,
+        action: team_change_notifications.action,
+        team_name: teams.name,
+        date: team_change_notifications.created_at,
+        read: team_change_notifications.read,
+        read_at: team_change_notifications.read_at,
+      })
+      .from(team_change_notifications)
+      .innerJoin(users, eq(team_change_notifications.user_id, users.id))
+      .innerJoin(teams, eq(team_change_notifications.team_id, teams.id));
+
+    // Apply filter
+    if (filter === "read") {
+      baseQuery = baseQuery.where(eq(team_change_notifications.read, true));
+    } else if (filter === "unread") {
+      baseQuery = baseQuery.where(eq(team_change_notifications.read, false));
+    }
+    // If filter === "all", no additional WHERE clause
+
+    // Order by date descending (newest first)
+    const notifications = await baseQuery.orderBy(desc(team_change_notifications.created_at));
+
+    return c.json({
+      notifications: notifications.map(n => ({
+        id: n.id,
+        player_name: n.player_name,
+        action: n.action,
+        team_name: n.team_name,
+        date: n.date.toISOString(),
+        read: n.read,
+        read_at: n.read_at ? n.read_at.toISOString() : null,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Get team change notifications error:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+      detail: error?.detail,
+    });
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Admin: Mark notification as read
+adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
+  try {
+    const notificationId = c.req.param("id");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check if notification exists
+    const [notification] = await db
+      .select()
+      .from(team_change_notifications)
+      .where(eq(team_change_notifications.id, notificationId));
+
+    if (!notification) {
+      return c.json({ error: "Notification not found" }, 404);
+    }
+
+    // Update notification to read
+    const [updated] = await db
+      .update(team_change_notifications)
+      .set({
+        read: true,
+        read_at: new Date(),
+      })
+      .where(eq(team_change_notifications.id, notificationId))
+      .returning();
+
+    return c.json({
+      notification: {
+        id: updated.id,
+        read: updated.read,
+        read_at: updated.read_at ? updated.read_at.toISOString() : null,
+      },
+      message: "Notification marked as read",
+    });
+  } catch (error) {
+    console.error("Mark notification as read error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
   }
 });
 

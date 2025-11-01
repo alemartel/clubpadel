@@ -31,5 +31,18 @@
   "noPlayersRegistered": "Aún no se han registrado jugadores",
   "loadingPlayers": "Cargando jugadores...",
   "playersOf": "de",
-  "players": "jugadores"
+  "players": "jugadores",
+  "controlPanel": "Panel de control",
+  "player": "Jugador",
+  "action": "Acción",
+  "team": "Equipo",
+  "date": "Fecha",
+  "joined": "Se unió",
+  "removed": "Se retiró",
+  "markAsRead": "Marcar como leído",
+  "noNotifications": "No se encontraron notificaciones",
+  "filterAll": "Todas",
+  "filterRead": "Leídas",
+  "filterUnread": "No leídas",
+  "actions": "Acciones"
 }

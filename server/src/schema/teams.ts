@@ -59,6 +59,16 @@ export const team_availability = appSchema.table("team_availability", {
   teamDayUnique: unique("team_availability_team_day_unique").on(table.team_id, table.day_of_week),
 }));
 
+export const team_change_notifications = appSchema.table("team_change_notifications", {
+  id: text("id").primaryKey(),
+  user_id: text("user_id").notNull(), // Foreign key to users.id - The player who joined or left
+  team_id: text("team_id").notNull(), // Foreign key to teams.id
+  action: text("action").notNull(), // "joined" or "removed"
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  read: boolean("read").default(false).notNull(),
+  read_at: timestamp("read_at"),
+});
+
 // Export types
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
@@ -66,3 +76,5 @@ export type TeamMember = typeof team_members.$inferSelect;
 export type NewTeamMember = typeof team_members.$inferInsert;
 export type TeamAvailability = typeof team_availability.$inferSelect;
 export type NewTeamAvailability = typeof team_availability.$inferInsert;
+export type TeamChangeNotification = typeof team_change_notifications.$inferSelect;
+export type NewTeamChangeNotification = typeof team_change_notifications.$inferInsert;

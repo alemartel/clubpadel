@@ -13,5 +13,6 @@
   "navigation": "Navigation",
   "admin": "Admin",
   "checkingAdminAccess": "Checking admin access...",
-  "adminAccessRequired": "Admin access required"
+  "adminAccessRequired": "Admin access required",
+  "controlPanel": "Control panel"
 }

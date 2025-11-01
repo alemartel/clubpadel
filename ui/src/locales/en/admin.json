@@ -31,5 +31,18 @@
   "noPlayersRegistered": "No players have been registered yet",
   "loadingPlayers": "Loading players...",
   "playersOf": "of",
-  "players": "players"
+  "players": "players",
+  "controlPanel": "Control panel",
+  "player": "Player",
+  "action": "Action",
+  "team": "Team",
+  "date": "Date",
+  "joined": "Joined",
+  "removed": "Removed",
+  "markAsRead": "Mark as read",
+  "noNotifications": "No notifications found",
+  "filterAll": "All",
+  "filterRead": "Read",
+  "filterUnread": "Unread",
+  "actions": "Actions"
 }

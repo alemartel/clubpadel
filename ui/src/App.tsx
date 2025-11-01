@@ -12,6 +12,7 @@ import { AdminAllTeams } from "@/pages/AdminAllTeams";
 import { AdminGroups } from "@/pages/AdminGroups";
 import { AdminTeams } from "@/pages/AdminTeams";
 import { PlayerManagement } from "@/pages/PlayerManagement";
+import { ControlPanel } from "@/pages/ControlPanel";
 import { MyTeams } from "./pages/MyTeams";
 import { CreateTeam } from "./pages/CreateTeam";
 import { TeamDetail } from "./pages/TeamDetail";
@@ -194,6 +195,14 @@ function AppContent() {
                     element={
                       <AdminRoute>
                         <PlayerManagement />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/control-panel"
+                    element={
+                      <AdminRoute>
+                        <ControlPanel />
                       </AdminRoute>
                     }
                   />
