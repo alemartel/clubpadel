@@ -18,16 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface TeamWithDetails {
   team: Team;
@@ -77,6 +67,7 @@ export function MyTeams() {
       setShowJoinModal(false);
     };
   }, []);
+
 
 
   // Handle AlertDialog close - reset state when user closes without confirming
@@ -390,7 +381,7 @@ export function MyTeams() {
 
       {/* Join Team Modal */}
       <Dialog open={showJoinModal} onOpenChange={handleCloseJoinModal}>
-        <DialogContent>
+        <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>{t('joinTeamModalTitle')}</DialogTitle>
             <DialogDescription>
@@ -430,22 +421,11 @@ export function MyTeams() {
       </Dialog>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmation} onOpenChange={handleConfirmationDialogChange}>
-        <AlertDialogContent>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => handleConfirmationDialogChange(false)}
-              disabled={joining}
-              className="rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
-              aria-label="Close"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </button>
-          </div>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('joinConfirmationTitle')}</AlertDialogTitle>
-            <AlertDialogDescription asChild>
+      <Dialog open={showConfirmation} onOpenChange={handleConfirmationDialogChange}>
+        <DialogContent showCloseButton={false} className="z-[60]">
+          <DialogHeader>
+            <DialogTitle>{t('joinConfirmationTitle')}</DialogTitle>
+            <DialogDescription asChild>
               {lookedUpTeam && (
                 <div className="space-y-3 mt-4">
                   <div>
@@ -476,18 +456,18 @@ export function MyTeams() {
                   </div>
                 </div>
               )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={joining}>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleConfirmationDialogChange(false)} disabled={joining}>
               {t('cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmJoin} disabled={joining}>
+            </Button>
+            <Button onClick={handleConfirmJoin} disabled={joining}>
               {joining ? t('joining') : t('confirmJoin')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
