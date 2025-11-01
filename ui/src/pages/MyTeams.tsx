@@ -84,6 +84,7 @@ export function MyTeams() {
     setShowConfirmation(open);
     if (!open && !joining) {
       // User closed the dialog without joining - reset state
+      // Keep join modal open so user can try again
       setPasscode("");
       setLookedUpTeam(null);
       setLookupError(null);
@@ -163,7 +164,7 @@ export function MyTeams() {
         setLookupError(translateError(response.error));
       } else {
         setLookedUpTeam(response.team);
-        setShowJoinModal(false);
+        // Keep join modal open and show confirmation modal on top
         setShowConfirmation(true);
       }
     } catch (err: any) {
@@ -185,20 +186,17 @@ export function MyTeams() {
       if (response.error) {
         setLookupError(translateError(response.error));
         setJoining(false);
-        // Close confirmation and reopen join modal
+        // Close confirmation modal but keep join modal open
         setShowConfirmation(false);
-        // Wait for confirmation modal to close before opening join modal
-        setTimeout(() => {
-          setShowJoinModal(true);
-        }, 250);
+        // Join modal is already open, just clear the error
       } else {
         // Success - close all modals first
         setShowConfirmation(false);
+        setShowJoinModal(false);
         setJoining(false);
         
         // Wait for modals to close before resetting state and refreshing
         setTimeout(async () => {
-          setShowJoinModal(false);
           setPasscode("");
           setLookedUpTeam(null);
           setLookupError(null);
@@ -220,10 +218,7 @@ export function MyTeams() {
       setLookupError(err?.message || t('invalidPasscode'));
       setJoining(false);
       setShowConfirmation(false);
-      // Wait for confirmation modal to close before opening join modal
-      setTimeout(() => {
-        setShowJoinModal(true);
-      }, 250);
+      // Join modal should already be open or we'll reopen it
     }
   };
 
@@ -239,11 +234,17 @@ export function MyTeams() {
     // If called manually (button click), open will be undefined
     // Only close if explicitly closing (open === false) or called without parameter
     if (open === false || open === undefined) {
-      setShowJoinModal(false);
-      setPasscode("");
-      setLookupError(null);
-      setLookedUpTeam(null);
-      setShowConfirmation(false); // Also ensure confirmation dialog is closed
+      // If confirmation is open, don't reset state (user might just be closing join modal)
+      // Otherwise, reset everything
+      if (!showConfirmation) {
+        setShowJoinModal(false);
+        setPasscode("");
+        setLookupError(null);
+        setLookedUpTeam(null);
+      } else {
+        // Confirmation is open, just close the join modal without resetting lookedUpTeam
+        setShowJoinModal(false);
+      }
     }
     // If open === true, that means Dialog is trying to open, so don't do anything
   };
@@ -430,16 +431,18 @@ export function MyTeams() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmation} onOpenChange={handleConfirmationDialogChange}>
-        <AlertDialogContent className="relative">
-          <button
-            onClick={() => handleConfirmationDialogChange(false)}
-            disabled={joining}
-            className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none z-10"
-            aria-label="Close"
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
-          </button>
+        <AlertDialogContent>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => handleConfirmationDialogChange(false)}
+              disabled={joining}
+              className="rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+              aria-label="Close"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </div>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('joinConfirmationTitle')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
