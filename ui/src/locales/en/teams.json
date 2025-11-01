@@ -86,7 +86,7 @@
   "joinTeamModalTitle": "Join a team",
   "enterPasscode": "Enter team passcode",
   "passcodePlaceholder": "6-character passcode",
-  "lookup": "Lookup team",
+  "lookup": "Search team",
   "lookingUp": "Looking up...",
   "joinConfirmationTitle": "Confirm join team",
   "joinConfirmationMessage": "Are you sure you want to join {{teamName}}?",

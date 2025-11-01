@@ -76,7 +76,7 @@ export function MyTeams() {
     if (!open && !joining) {
       // User closed the dialog without joining - reset state
       // Keep join modal open so user can try again
-      setPasscode("");
+      // Keep passcode so user doesn't have to re-enter it
       setLookedUpTeam(null);
       setLookupError(null);
     }
