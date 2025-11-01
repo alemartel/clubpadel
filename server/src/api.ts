@@ -1164,13 +1164,10 @@ protectedRoutes.get("/teams", async (c) => {
 // IMPORTANT: This must be registered BEFORE /teams/:id to avoid route conflicts
 protectedRoutes.get("/teams/lookup", async (c) => {
   try {
-    console.log(`[LOOKUP] Request received for /teams/lookup`);
     const user = c.get("user");
     const passcode = c.req.query("passcode");
-    console.log(`[LOOKUP] Passcode from query: "${passcode}"`);
 
     if (!passcode) {
-      console.log(`[LOOKUP] No passcode provided`);
       return c.json({ error: "Passcode is required" }, 400);
     }
 
@@ -1179,7 +1176,6 @@ protectedRoutes.get("/teams/lookup", async (c) => {
 
     // Find team by passcode (case-insensitive, trimmed)
     const normalizedPasscode = passcode.trim().toUpperCase();
-    console.log(`[LOOKUP] Looking up team with passcode: "${passcode}" (normalized: "${normalizedPasscode}")`);
     
     const [team] = await db
       .select()
@@ -1187,20 +1183,14 @@ protectedRoutes.get("/teams/lookup", async (c) => {
       .where(eq(teams.passcode, normalizedPasscode));
 
     if (!team) {
-      console.error(`[LOOKUP] Team not found for passcode: "${normalizedPasscode}"`);
       return c.json({ error: "Invalid passcode" }, 404);
     }
-    
-    console.log(`[LOOKUP] Team found: "${team.name}" (${team.id})`);
 
     // Validate if user can join (but don't join yet)
-    console.log(`[LOOKUP] Validating join for user ${user.email} (${user.id}) to team "${team.name}" (${team.id})`);
     const validation = await validateTeamJoin(db, user, team);
     if (!validation.valid) {
-      console.log(`[LOOKUP] Validation failed: ${validation.error}`);
       return c.json({ error: validation.error }, 400);
     }
-    console.log(`[LOOKUP] Validation passed for user ${user.email}`);
 
     // Return team information for confirmation dialog
     return c.json({
@@ -1280,13 +1270,11 @@ protectedRoutes.get("/teams/:id", async (c) => {
       .leftJoin(users, eq(team_members.user_id, users.id))
       .where(eq(team_members.team_id, teamId));
     
-    // Log all members found (including any with missing users)
-    console.log(`[GET /teams/:id] Team ${teamId}: Found ${members.length} members`);
-    members.forEach((m, idx) => {
-      if (!m.user || !m.user.id) {
-        console.warn(`[GET /teams/:id] Member ${idx + 1} has missing user: member.user_id=${m.member.user_id}`);
-      }
-    });
+    // Check for members with missing users (data integrity issue)
+    const membersWithMissingUsers = members.filter(m => !m.user || !m.user.id);
+    if (membersWithMissingUsers.length > 0) {
+      console.warn(`[GET /teams/:id] Team ${teamId}: Found ${membersWithMissingUsers.length} members with missing user records`);
+    }
 
     // Only include passcode if user is team creator or team member (not for arbitrary users)
     const isTeamCreator = teamData.team.created_by === user.id;
@@ -1737,11 +1725,8 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
 
 // Helper function to validate if a user can join a team (shared by lookup and join endpoints)
 async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid: boolean; error?: string }> {
-  console.log(`[validateTeamJoin] Starting validation for user ${user.email} (${user.id}) joining team "${team.name}" (${team.id})`);
-  
   // Check if user is an admin
   if (user.role === "admin") {
-    console.log(`[validateTeamJoin] User is an admin - cannot join teams`);
     return { valid: false, error: "Admins cannot join teams" };
   }
 
@@ -1752,7 +1737,6 @@ async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid:
     .where(and(eq(team_members.team_id, team.id), eq(team_members.user_id, user.id)));
 
   if (membership) {
-    console.log(`[validateTeamJoin] User is already a member of this team`);
     return { valid: false, error: "You are already a member of this team" };
   }
 
@@ -1762,17 +1746,9 @@ async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid:
     .from(team_members)
     .where(eq(team_members.team_id, team.id));
 
-  console.log(`[validateTeamJoin] Team ${team.id} (${team.name}): Found ${existingMembers.length} existing members`);
-  if (existingMembers.length > 0) {
-    console.log(`[validateTeamJoin] Members:`, JSON.stringify(existingMembers.map(m => ({ id: m.id, user_id: m.user_id }))));
-  }
-
   if (existingMembers.length >= 4) {
-    console.log(`[validateTeamJoin] Team is full: ${existingMembers.length}/4 members`);
     return { valid: false, error: `Team is full (${existingMembers.length}/4 members)` };
   }
-  
-  console.log(`[validateTeamJoin] Team has ${existingMembers.length} members, can add more`);
 
   // Get user details for gender validation
   const [targetUser] = await db
@@ -1863,7 +1839,6 @@ protectedRoutes.post("/teams/join", async (c) => {
 
     // Find team by passcode (case-insensitive, trimmed)
     const normalizedPasscode = passcode.trim().toUpperCase();
-    console.log(`Joining team with passcode: "${passcode}" (normalized: "${normalizedPasscode}")`);
     
     const [team] = await db
       .select()
@@ -1871,7 +1846,6 @@ protectedRoutes.post("/teams/join", async (c) => {
       .where(eq(teams.passcode, normalizedPasscode));
 
     if (!team) {
-      console.error(`Team not found for passcode: "${normalizedPasscode}"`);
       return c.json({ error: "Invalid passcode" }, 404);
     }
 

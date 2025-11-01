@@ -175,18 +175,6 @@ export function PlayerSearchModal({
               </div>
             )}
           </div>
-
-          <div className="pt-2 border-t">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={loadPlayers}
-              disabled={loading}
-              className="w-full"
-            >
-              Refresh Players
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

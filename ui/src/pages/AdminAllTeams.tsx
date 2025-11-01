@@ -39,7 +39,6 @@ export function AdminAllTeams() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teams, setTeams] = useState<any[]>([]);
-  const [gender, setGender] = useState<string>("all");
   const [level, setLevel] = useState<string>("all");
   const [paidStatus, setPaidStatus] = useState<string>("all");
   const [teamNameQuery, setTeamNameQuery] = useState<string>("");
@@ -63,7 +62,6 @@ export function AdminAllTeams() {
       setLoading(true);
       setError(null);
       const response = await api.getAdminTeams({
-        gender: gender === "all" ? undefined : gender,
         level: level === "all" ? undefined : level,
       });
       if (response.error) {
@@ -81,7 +79,7 @@ export function AdminAllTeams() {
   useEffect(() => {
     loadTeams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender, level]);
+  }, [level]);
 
   const handleMarkPaid = async (
     teamId: string,
@@ -152,7 +150,7 @@ export function AdminAllTeams() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{tNav('teamManagement')}</h1>
@@ -176,22 +174,6 @@ export function AdminAllTeams() {
                 aria-label={t("teamName")}
                 className="h-8 text-sm"
               />
-            </div>
-            <div>
-              <Label className="text-xs">
-                {t("gender")}
-              </Label>
-              <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger aria-label={t("selectGender")}>
-                  <SelectValue placeholder={t("selectGender")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="male">{t("masculine")}</SelectItem>
-                  <SelectItem value="female">{t("femenine")}</SelectItem>
-                  <SelectItem value="mixed">{t("mixed")}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <Label className="text-xs">
@@ -240,14 +222,10 @@ export function AdminAllTeams() {
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           Loading teams...
         </div>
-      ) : teams.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {t('noTeamsYet')}
-        </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {teams
-            .filter((item) => {
+        <>
+          {(() => {
+            const filteredTeams = teams.filter((item) => {
               // Team name filter
               if (teamNameQuery.trim().length > 0) {
                 const matchesName = (item.team?.name || "")
@@ -276,8 +254,22 @@ export function AdminAllTeams() {
               }
 
               return true;
-            })
-            .map((item) => {
+            });
+
+            if (filteredTeams.length === 0) {
+              return (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">{t('noTeamsFound') || 'No teams found'}</h3>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredTeams.map((item) => {
             // Team incomplete/concern logic (mimic TeamDetail)
             let teamWarningMsg = "";
             const members = item.members || [];
@@ -525,9 +517,12 @@ export function AdminAllTeams() {
                   )}
                 </CardContent>
               </Card>
+                );
+              })}
+              </div>
             );
-          })}
-        </div>
+          })()}
+        </>
       )}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
