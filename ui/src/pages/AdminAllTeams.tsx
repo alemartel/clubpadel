@@ -292,7 +292,7 @@ export function AdminAllTeams() {
             return (
               <Card key={item.team.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="p-5">
-                  <CardTitle className="text-lg sm:text-xl flex items-center justify-between">
+                  <CardTitle className="text-lg md:text-lg flex flex-row md:flex-col md:items-start items-center justify-between md:gap-2">
                     <span>{item.team.name}</span>
                     <span className="flex items-center gap-2">
                       <Badge variant={getLevelBadgeVariant(item.team.level)}>
@@ -575,7 +575,7 @@ export function AdminAllTeams() {
           loadTeams();
         }
       }}>
-        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-2 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
           <DialogHeader>
             <DialogTitle className="sr-only">
               {(() => {

@@ -43,7 +43,6 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="Home"
                   isActive={isActive("/")}
                   asChild
                 >
@@ -57,7 +56,6 @@ export function AppSidebar() {
               {!isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    tooltip="My Teams"
                     isActive={isActive("/teams")}
                     asChild
                   >
@@ -73,7 +71,6 @@ export function AppSidebar() {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="League Management"
                       isActive={isActive("/admin/leagues")}
                       asChild
                     >
@@ -85,7 +82,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="Teams"
                       isActive={isActive("/admin/teams")}
                       asChild
                     >
@@ -97,7 +93,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="Player Management"
                       isActive={isActive("/admin/player-management")}
                       asChild
                     >
@@ -109,7 +104,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="Control Panel"
                       isActive={isActive("/admin/control-panel")}
                       asChild
                     >
@@ -121,7 +115,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="Settings"
                       isActive={isActive("/settings")}
                       asChild
                     >

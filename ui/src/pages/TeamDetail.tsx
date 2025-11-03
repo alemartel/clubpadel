@@ -376,6 +376,27 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                         </Button>
                       </div>
                     )}
+                    <div className="flex items-center gap-2 mt-3">
+                      {team.team.league_id && team.group ? (
+                        <>
+                          <Badge variant={getLevelBadgeVariant(team.group.level)}>
+                            Level {team.group.level}
+                          </Badge>
+                          <Badge variant={getGenderBadgeVariant(team.group.gender)}>
+                            {team.group.gender === "male" ? t('masculine') : team.group.gender === "female" ? t('femenine') : t('mixed')}
+                          </Badge>
+                        </>
+                      ) : (
+                        <>
+                          <Badge variant={getLevelBadgeVariant(team.team.level)}>
+                            Level {team.team.level}
+                          </Badge>
+                          <Badge variant={getGenderBadgeVariant(team.team.gender)}>
+                            {team.team.gender === "male" ? t('masculine') : team.team.gender === "female" ? t('femenine') : t('mixed')}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -395,28 +416,11 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     ) : (
                       <div className="font-medium text-muted-foreground">{t('noLeague')}</div>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
-                      {team.team.league_id && team.group ? (
-                        <>
-                          <span className="text-sm">{team.group.name}</span>
-                          <Badge variant={getLevelBadgeVariant(team.group.level)}>
-                            Level {team.group.level}
-                          </Badge>
-                          <Badge variant={getGenderBadgeVariant(team.group.gender)}>
-                            {team.group.gender === "male" ? t('masculine') : team.group.gender === "female" ? t('femenine') : t('mixed')}
-                          </Badge>
-                        </>
-                      ) : (
-                        <>
-                          <Badge variant={getLevelBadgeVariant(team.team.level)}>
-                            Level {team.team.level}
-                          </Badge>
-                          <Badge variant={getGenderBadgeVariant(team.team.gender)}>
-                            {team.team.gender === "male" ? t('masculine') : team.team.gender === "female" ? t('femenine') : t('mixed')}
-                          </Badge>
-                        </>
-                      )}
-                    </div>
+                    {team.team.league_id && team.group && (
+                      <div className="text-sm mt-2">
+                        {team.group.name}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
