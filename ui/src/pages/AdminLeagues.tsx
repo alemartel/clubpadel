@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import {
   api,
@@ -87,6 +87,7 @@ export function AdminLeagues() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showRemoveTeamConfirm, setShowRemoveTeamConfirm] = useState(false);
   const [pendingRemoveTeam, setPendingRemoveTeam] = useState<{ leagueId: string; teamId: string } | null>(null);
+  const editLeagueNameInputRef = useRef<HTMLInputElement>(null);
 
   // Validation errors
   const [leagueErrors, setLeagueErrors] = useState<any[]>([]);
@@ -115,6 +116,20 @@ export function AdminLeagues() {
       });
     }
   }, [leagues, expandedLeagues]);
+
+  // Prevent text selection when edit dialog opens
+  useEffect(() => {
+    if (editingLeague && editLeagueNameInputRef.current) {
+      // Small delay to ensure input is rendered and prevent auto-selection
+      setTimeout(() => {
+        if (editLeagueNameInputRef.current) {
+          // Move cursor to end instead of selecting all text
+          const length = editLeagueNameInputRef.current.value.length;
+          editLeagueNameInputRef.current.setSelectionRange(length, length);
+        }
+      }, 150);
+    }
+  }, [editingLeague]);
 
   const loadLeagues = async () => {
     setLeaguesLoading(true);
@@ -165,10 +180,7 @@ export function AdminLeagues() {
     const updateData: UpdateLeague = {};
     if (leagueForm.name !== editingLeague.name)
       updateData.name = leagueForm.name;
-    if (leagueForm.level !== editingLeague.level)
-      updateData.level = leagueForm.level;
-    if (leagueForm.gender !== editingLeague.gender)
-      updateData.gender = leagueForm.gender;
+    // Level and gender cannot be edited for existing leagues
     if (leagueForm.start_date !== editingLeague.start_date)
       updateData.start_date = leagueForm.start_date;
     if (leagueForm.end_date !== editingLeague.end_date)
@@ -217,6 +229,12 @@ export function AdminLeagues() {
       end_date: league.end_date,
     });
     setLeagueErrors([]);
+    // Prevent text selection by deselecting after a short delay
+    setTimeout(() => {
+      if (window.getSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+    }, 0);
   };
 
   const loadLeagueTeams = async (leagueId: string) => {
@@ -288,21 +306,26 @@ export function AdminLeagues() {
 
     try {
       await api.addTeamToLeague(selectedLeagueForAdd.id, teamId);
-      toast.success(t('teamAdded') || "Team added to league successfully");
+      toast.success(t('teamAdded') || "Team added to league");
+      
       // Refresh teams for this league
       const response = await api.getAdminTeamsByLeague(selectedLeagueForAdd.id);
       setLeagueTeamsMap(prev => ({ ...prev, [selectedLeagueForAdd.id]: response.teams || [] }));
-      // Remove team from available list
-      setAvailableTeams(prev => prev.filter(t => t.id !== teamId));
-      // Refresh available teams list
+      
+      // Refresh available teams list (exclude teams already in this league)
       const availableResponse = await api.getAdminTeams({
         level: selectedLeagueForAdd.level,
         gender: selectedLeagueForAdd.gender,
       });
       const teamsInThisLeague = (response.teams || []).map((t: any) => t.team.id);
-      setAvailableTeams((availableResponse.teams || []).filter((team: any) => 
-        !teamsInThisLeague.includes(team.id)
-      ));
+      const teamData = availableResponse.teams || [];
+      setAvailableTeams(teamData.filter((team: any) => {
+        const teamIdToCheck = team.team?.id || team.id;
+        return !teamsInThisLeague.includes(teamIdToCheck);
+      }));
+      
+      // Clear search term to show all available teams
+      setSearchTerm("");
     } catch (error: any) {
       console.error("Failed to add team:", error);
       toast.error(error.error || t('failedToAddTeam') || "Failed to add team to league");
@@ -644,69 +667,46 @@ export function AdminLeagues() {
           <DialogHeader>
             <DialogTitle>{t('editLeague')}</DialogTitle>
             <DialogDescription>{t('updateLeagueDetails')}</DialogDescription>
+            {/* Level and Gender are not editable - display as read-only badges */}
+            {editingLeague && (
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <Badge variant={getLevelBadgeVariant(editingLeague.level)}>
+                  {tCommon('level')} {editingLeague.level}
+                </Badge>
+                <Badge variant={getGenderBadgeVariant(editingLeague.gender)}>
+                  {editingLeague.gender === 'male' ? tTeams('masculine') : editingLeague.gender === 'female' ? tTeams('femenine') : tTeams('mixed')}
+                </Badge>
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="edit-league-name">{t('leagueName')}</Label>
               <Input
+                ref={editLeagueNameInputRef}
                 id="edit-league-name"
                 value={leagueForm.name}
                 onChange={(e) =>
                   setLeagueForm({ ...leagueForm, name: e.target.value })
                 }
+                onFocus={(e) => {
+                  // Move cursor to end instead of selecting all text
+                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
+                onMouseDown={(e) => {
+                  // Prevent text selection on mouse down
+                  if (e.detail > 1) {
+                    e.preventDefault();
+                  }
+                }}
                 className={
                   hasFieldError(leagueErrors, "name") ? "border-red-500" : ""
                 }
+                autoFocus={false}
               />
               {getFieldError(leagueErrors, "name") && (
                 <p className="text-sm text-red-500 mt-1">
                   {getFieldError(leagueErrors, "name")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-league-level">{t('leagueLevel') || "Level"}</Label>
-              <Select
-                value={leagueForm.level}
-                onValueChange={(value) =>
-                  setLeagueForm({ ...leagueForm, level: value as "2" | "3" | "4" })
-                }
-              >
-                <SelectTrigger className={hasFieldError(leagueErrors, "level") ? "border-red-500" : ""}>
-                  <SelectValue placeholder={t('selectLevel') || "Select level"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">{tCommon('level2')}</SelectItem>
-                  <SelectItem value="3">{tCommon('level3')}</SelectItem>
-                  <SelectItem value="4">{tCommon('level4')}</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(leagueErrors, "level") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(leagueErrors, "level")}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="edit-league-gender">{t('leagueGender') || "Gender"}</Label>
-              <Select
-                value={leagueForm.gender}
-                onValueChange={(value) =>
-                  setLeagueForm({ ...leagueForm, gender: value as "male" | "female" | "mixed" })
-                }
-              >
-                <SelectTrigger className={hasFieldError(leagueErrors, "gender") ? "border-red-500" : ""}>
-                  <SelectValue placeholder={t('selectGender') || "Select gender"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">{tTeams('masculine')}</SelectItem>
-                  <SelectItem value="female">{tTeams('femenine')}</SelectItem>
-                  <SelectItem value="mixed">{tTeams('mixed')}</SelectItem>
-                </SelectContent>
-              </Select>
-              {getFieldError(leagueErrors, "gender") && (
-                <p className="text-sm text-red-500 mt-1">
-                  {getFieldError(leagueErrors, "gender")}
                 </p>
               )}
             </div>
