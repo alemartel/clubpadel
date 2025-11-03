@@ -261,6 +261,7 @@
   "profileIncompleteWarningDescriptionSingle": "Por favor completa tu {{field}} en tu perfil.",
   "profileIncompleteWarningDescriptionMultiple": "Por favor completa lo siguiente en tu perfil: {{fields}}.",
   "and": "y",
+  "missing": "no tiene",
   "profileIncompleteUpdateButton": "Actualizar perfil",
   "notPaid": "No Pagado"
 }

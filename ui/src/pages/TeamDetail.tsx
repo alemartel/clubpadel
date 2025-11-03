@@ -631,7 +631,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                       <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                          Please add your team availability
+                          {t('pleaseAddTeamAvailability')}
                         </p>
                       </div>
                     </div>

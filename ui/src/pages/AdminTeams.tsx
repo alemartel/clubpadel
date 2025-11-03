@@ -348,8 +348,8 @@ export function AdminTeams() {
             const members = item.members || [];
             const gender = item.team.gender;
             const minPlayers = 2;
-            const maleCount = members.filter((m: any) => m.user.gender === "male").length;
-            const femaleCount = members.filter((m: any) => m.user.gender === "female").length;
+            const maleCount = members.filter((m: any) => m.user?.gender === "male").length;
+            const femaleCount = members.filter((m: any) => m.user?.gender === "female").length;
             if (members.length < minPlayers) {
               teamWarningMsg = t("teamIncompleteMinPlayers");
             } else if (gender === "mixed") {
@@ -361,6 +361,42 @@ export function AdminTeams() {
                 teamWarningMsg = t("teamIncompleteMixedMissingFemale");
               }
             }
+
+            // Check for missing profile data for all members
+            const isFieldMissing = (field: string | undefined | null): boolean => {
+              if (!field) return true;
+              return field.trim().length === 0;
+            };
+
+            const memberProfileWarnings: Array<{ playerName: string; missingFields: string[] }> = [];
+            members.forEach(({ member, user }: any) => {
+              if (!user || !user.id) return;
+              
+              const missingProfileData: string[] = [];
+              if (isFieldMissing(user.profile_picture_url)) {
+                missingProfileData.push(tCommon('profileMissingProfilePicture'));
+              }
+              if (isFieldMissing(user.phone_number)) {
+                missingProfileData.push(tCommon('profileMissingPhoneNumber'));
+              }
+              if (isFieldMissing(user.dni)) {
+                missingProfileData.push(tCommon('profileMissingDNI'));
+              }
+              if (isFieldMissing(user.tshirt_size)) {
+                missingProfileData.push(tCommon('profileMissingTshirtSize'));
+              }
+              if (isFieldMissing(user.gender)) {
+                missingProfileData.push(tCommon('profileMissingGender'));
+              }
+
+              if (missingProfileData.length > 0) {
+                const playerName = user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email;
+                memberProfileWarnings.push({ playerName, missingFields: missingProfileData });
+              }
+            });
+            
+            // Check if we should show the warning toggle button
+            const hasWarnings = teamWarningMsg || getAvailabilityWarning(item.team) || memberProfileWarnings.length > 0;
 
             return (
               <Card key={item.team.id} className="hover:shadow-md transition-shadow">
@@ -378,7 +414,7 @@ export function AdminTeams() {
                           ? t("femenine")
                           : t("mixed")}
                       </Badge>
-                      {(teamWarningMsg || getAvailabilityWarning(item.team)) && (
+                      {hasWarnings && (
                         <button
                           className={
                             'transition-colors p-1 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-900/30 ' +
@@ -411,15 +447,12 @@ export function AdminTeams() {
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
                   {/* warning panel (expanded when toggled via header icon) */}
-                  {expandedWarnings[item.team.id] && (teamWarningMsg || getAvailabilityWarning(item.team)) && (
+                  {expandedWarnings[item.team.id] && hasWarnings && (
                     <div className="mb-4 space-y-2">
                       {getAvailabilityWarning(item.team) && (
                         <div className="p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md flex items-start gap-2">
                           <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <div className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">{t('availabilityWarningTitle')}</div>
-                            <div className="text-xs text-yellow-700 dark:text-yellow-300 whitespace-pre-line">{t('availabilityWarningDescription')}</div>
-                          </div>
+                          <div className="text-sm text-yellow-800 dark:text-yellow-200">{t('availabilityWarningTitle')}</div>
                         </div>
                       )}
                       {teamWarningMsg && (
@@ -428,6 +461,14 @@ export function AdminTeams() {
                           <div className="text-sm text-yellow-800 dark:text-yellow-200">{teamWarningMsg}</div>
                         </div>
                       )}
+                      {memberProfileWarnings.map((warning, idx) => (
+                        <div key={idx} className="p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                            {warning.playerName} {tCommon('missing')}: {warning.missingFields.join(", ")}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {item.members.length === 0 ? (

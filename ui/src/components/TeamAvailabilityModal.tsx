@@ -154,9 +154,41 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
     ));
   };
 
+  // Validate that start time is not greater than end time for available days
+  const validateTimeRanges = () => {
+    const invalidDays: Array<{ day: string; dayName: string }> = [];
+    availability.forEach(day => {
+      if (day.is_available && day.start_time && day.end_time) {
+        const startTime = parseTime(day.start_time);
+        const endTime = parseTime(day.end_time);
+        const startMinutes = parseInt(startTime.hours) * 60 + parseInt(startTime.minutes);
+        const endMinutes = parseInt(endTime.hours) * 60 + parseInt(endTime.minutes);
+        
+        if (startMinutes > endMinutes) {
+          const dayInfo = DAYS_OF_WEEK.find(d => d.key === day.day_of_week);
+          invalidDays.push({ 
+            day: day.day_of_week, 
+            dayName: dayInfo ? t(dayInfo.translationKey) : day.day_of_week 
+          });
+        }
+      }
+    });
+    return invalidDays;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
+
+    // Validate that start time is not greater than end time for available days
+    const invalidDays = validateTimeRanges();
+
+    if (invalidDays.length > 0) {
+      const dayNames = invalidDays.map(d => d.dayName).join(', ');
+      setError(`${t('startTimeGreaterThanEndTime') || 'Start time cannot be greater than end time for'}: ${dayNames}`);
+      setSaving(false);
+      return;
+    }
 
     try {
       await api.updateTeamAvailability(teamId, availability);
@@ -222,6 +254,8 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
   };
   
   const validation = validateAvailability();
+  const invalidTimeRanges = validateTimeRanges();
+  const hasInvalidTimeRanges = invalidTimeRanges.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -239,6 +273,22 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
             <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {hasInvalidTimeRanges && (
+          <div className="bg-red-50 dark:bg-red-900/10 border border-red-500/50 rounded-md p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium mb-1">
+                  {t('invalidTimeRange') || 'Invalid time range'}
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  {t('startTimeGreaterThanEndTime') || 'Start time cannot be greater than end time for'}: {invalidTimeRanges.map(d => d.dayName).join(', ')}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -269,7 +319,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || hasInvalidTimeRanges}
           >
             {saving ? t('savingAvailability') : t('saveAvailability')}
           </Button>

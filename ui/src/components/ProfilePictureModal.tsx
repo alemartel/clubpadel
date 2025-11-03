@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
 
@@ -36,9 +38,13 @@ export function ProfilePictureModal({
     return null;
   }
 
+  const displayName = `${firstName || ""} ${lastName || ""}`.trim() || email || "Profile picture";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
+        <DialogTitle className="sr-only">{displayName}</DialogTitle>
+        <DialogDescription className="sr-only">Profile picture for {displayName}</DialogDescription>
         <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
           {imageError ? (
             <UserAvatar
