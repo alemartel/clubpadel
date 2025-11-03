@@ -808,8 +808,45 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
       .innerJoin(users, eq(teams.created_by, users.id))
       .where(eq(teams.league_id, leagueId));
 
+    if (leagueTeams.length === 0) {
+      return c.json({
+        teams: [],
+        message: "Teams retrieved successfully",
+      });
+    }
+
+    const teamIds = leagueTeams.map((t) => t.team.id);
+
+    // Fetch members with user info
+    // Use leftJoin to include all members even if user doesn't exist (data integrity issue)
+    const memberRows = await db
+      .select({
+        member: team_members,
+        user: users,
+      })
+      .from(team_members)
+      .leftJoin(users, eq(team_members.user_id, users.id))
+      .where(inArray(team_members.team_id, teamIds));
+
+    // Group members by team
+    const teamIdToMembers: Record<string, any[]> = {};
+    for (const row of memberRows) {
+      const list = teamIdToMembers[row.member.team_id] || [];
+      list.push({ member: row.member, user: row.user });
+      teamIdToMembers[row.member.team_id] = list;
+    }
+
+    // Shape response with members
+    const response = leagueTeams.map((t) => ({
+      team: t.team,
+      league: t.league,
+      creator: t.creator,
+      member_count: t.member_count,
+      members: teamIdToMembers[t.team.id] || [],
+    }));
+
     return c.json({
-      teams: leagueTeams,
+      teams: response,
       message: "Teams retrieved successfully",
     });
   } catch (error) {

@@ -89,6 +89,10 @@
   "markUnpaid": "Mark unpaid",
   "amountPaid": "Amount paid",
   "paid": "Paid",
+  "memberMarkedPaid": "Member marked as paid",
+  "noMembers": "No members in this team",
+  "memberMarkedUnpaid": "Member marked as unpaid",
+  "failedToUpdatePayment": "Failed to update payment status",
   "joinTeam": "Join a team",
   "joinTeamModalTitle": "Join a team",
   "enterPasscode": "Enter team passcode",
@@ -120,5 +124,7 @@
   "deleteTeamConfirmation": "Are you sure you want to delete \"{{teamName}}\"? This action cannot be undone.",
   "teamDeleted": "Team deleted",
   "failedToDeleteTeam": "Failed to delete team",
-  "failedToUpdateTeamName": "Failed to update team name"
+  "failedToUpdateTeamName": "Failed to update team name",
+  "paymentDetails": "Payment Details",
+  "paidDate": "Paid Date"
 }

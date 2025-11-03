@@ -119,7 +119,7 @@
   "noAvailableTeams": "No hay equipos disponibles que coincidan con el nivel y género de esta liga",
   "teamAdded": "Equipo añadido a la liga",
   "failedToAddTeam": "Error al añadir el equipo a la liga",
-  "removeTeam": "Eliminar Equipo",
+  "removeTeam": "Eliminar equipo",
   "removeTeamConfirm": "¿Estás seguro de que quieres eliminar este equipo de la liga?",
   "teamRemoved": "Equipo eliminado de la liga",
   "failedToRemoveTeam": "Error al eliminar el equipo de la liga",

@@ -89,6 +89,10 @@
   "markUnpaid": "Marcar como no pagado",
   "amountPaid": "Cantidad pagada",
   "paid": "Pagado",
+  "memberMarkedPaid": "Miembro marcado como pagado",
+  "memberMarkedUnpaid": "Miembro marcado como no pagado",
+  "failedToUpdatePayment": "Error al actualizar el estado de pago",
+  "noMembers": "No hay miembros en este equipo",
   "joinTeam": "Unirse a un equipo",
   "joinTeamModalTitle": "Unirse a un equipo",
   "enterPasscode": "Ingrese el código del equipo",
@@ -120,5 +124,7 @@
   "deleteTeamConfirmation": "¿Estás seguro de que quieres eliminar \"{{teamName}}\"? Esta acción no se puede deshacer.",
   "teamDeleted": "Equipo eliminado",
   "failedToDeleteTeam": "Error al eliminar el equipo",
-  "failedToUpdateTeamName": "Error al actualizar el nombre del equipo"
+  "failedToUpdateTeamName": "Error al actualizar el nombre del equipo",
+  "paymentDetails": "Detalles del pago",
+  "paidDate": "Fecha de pago"
 }

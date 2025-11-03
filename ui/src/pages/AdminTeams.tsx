@@ -11,11 +11,7 @@ import {
 import {
   Users,
   Filter,
-  CheckCircle2,
-  XCircle,
-  Calendar as CalendarIcon,
   AlertTriangle,
-  Check,
   Pencil,
   Mars,
   Venus,
@@ -25,16 +21,15 @@ import { api, type NewTeam } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { TeamDetail } from "./TeamDetail";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfilePictureModal } from "@/components/ProfilePictureModal";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export function AdminTeams() {
   const { isAdmin } = useAuth();
@@ -45,13 +40,7 @@ export function AdminTeams() {
   const [error, setError] = useState<string | null>(null);
   const [teams, setTeams] = useState<any[]>([]);
   const [level, setLevel] = useState<string>("all");
-  const [paidStatus, setPaidStatus] = useState<string>("all");
   const [teamNameQuery, setTeamNameQuery] = useState<string>("");
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
-  const [paymentUserId, setPaymentUserId] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<string>("");
-  const [paymentError, setPaymentError] = useState<string>("");
   // Per-team warning expansion state
   const [expandedWarnings, setExpandedWarnings] = useState<Record<string, boolean>>({});
   const [selectedEditTeamId, setSelectedEditTeamId] = useState<string | null>(null);
@@ -145,50 +134,6 @@ export function AdminTeams() {
     }
   };
 
-  const handleMarkPaid = async (
-    teamId: string,
-    userId: string,
-    currentPaid: boolean,
-    desiredPaid: boolean
-  ) => {
-    if (!currentPaid && desiredPaid) {
-      // Going from unpaid to paid, open modal (as before)
-      setPaymentTeamId(teamId);
-      setPaymentUserId(userId);
-      setPaymentAmount("");
-      setPaymentError("");
-      setShowPaymentDialog(true);
-    } else if (currentPaid && !desiredPaid) {
-      // Going from paid to unpaid
-      try {
-        setError(null);
-        await api.updateMemberPaid(teamId, userId, { paid: false });
-        await loadTeams();
-      } catch (err: any) {
-        setError(err.message || "Failed to update payment status");
-      }
-    }
-  };
-
-  const handlePaymentDialogConfirm = async () => {
-    const amount = parseFloat(paymentAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setPaymentError(t("amountPaid") + ": " + t("pleaseFillAllFields"));
-      return;
-    }
-    if (paymentTeamId && paymentUserId) {
-      try {
-        setError(null);
-        await api.updateMemberPaid(paymentTeamId, paymentUserId, { paid: true, paid_amount: amount });
-        setShowPaymentDialog(false);
-        setPaymentError("");
-        setPaymentAmount("");
-        await loadTeams();
-      } catch (err: any) {
-        setPaymentError(err.message || tCommon("error"));
-      }
-    }
-  };
 
   // Helper: availability check logic
   function getAvailabilityWarning(team: any) {
@@ -264,21 +209,6 @@ export function AdminTeams() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">
-                {t("paymentStatus")}
-              </Label>
-              <Select value={paidStatus} onValueChange={setPaidStatus}>
-                <SelectTrigger aria-label={t("paymentStatus")}>
-                  <SelectValue placeholder={t("paymentStatus")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tCommon('all')}</SelectItem>
-                  <SelectItem value="paid">{t('paid')}</SelectItem>
-                  <SelectItem value="notPaid">{tCommon('notPaid')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardHeader>
         {/* No filter content – now included in header row above */}
@@ -306,24 +236,6 @@ export function AdminTeams() {
                 if (!matchesName) return false;
               }
 
-              // Paid status filter
-              if (paidStatus !== "all") {
-                const members = item.members || [];
-                if (members.length === 0) {
-                  // Teams with no members are considered "notPaid"
-                  return paidStatus === "notPaid";
-                }
-                
-                const allMembersPaid = members.every((m: any) => m.member?.paid === true);
-                
-                if (paidStatus === "paid") {
-                  // Paid teams: all members must be paid
-                  return allMembersPaid;
-                } else if (paidStatus === "notPaid") {
-                  // Not paid teams: at least one member is not paid
-                  return !allMembersPaid;
-                }
-              }
 
               return true;
             });
@@ -502,29 +414,6 @@ export function AdminTeams() {
                                     <div className="text-sm text-muted-foreground">{tCommon('userNotFound') || 'User not found'}</div>
                                   </div>
                                 </div>
-                                <div className="flex flex-col items-end min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    {member.paid ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">{t('paid')}</TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="inline-flex items-center gap-1 text-red-600 text-sm cursor-pointer">
-                                            <XCircle className="w-4 h-4" />
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                  </div>
-                                </div>
                               </div>
                             </div>
                           );
@@ -581,47 +470,6 @@ export function AdminTeams() {
                                   {/* <div className="text-xs text-muted-foreground">{user.email}</div> */}
                                 </div>
                               </div>
-                            <div className="flex flex-col items-end min-w-0">
-                              <div className="flex items-center gap-2">
-                                {member.paid ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                        <CheckCircle2 className="w-4 h-4" />
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">{t('paid')}</TooltipContent>
-                                  </Tooltip>
-                                ) : (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
-                                        <XCircle className="w-4 h-4" />
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                <Switch
-                                  checked={!!member.paid}
-                                  onCheckedChange={(checked) => {
-                                    handleMarkPaid(item.team.id, user.id, !!member.paid || false, checked);
-                                  }}
-                                  id={`switch-paid-${item.team.id}-${user.id}`}
-                                  aria-label={t('paid')}
-                                />
-                              </div>
-                              {member.paid && (
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 pl-7">
-                                  <span className="inline-flex items-center gap-1">
-                                    {member.paid_amount ?? 0}€
-                                  </span>
-                                  <span className="inline-flex items-center gap-1">
-                                    <CalendarIcon className="w-3 h-3" />{member.paid_at ? new Date(member.paid_at).toLocaleDateString() : ""}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
                           </div>
                         </div>
                         );
@@ -637,51 +485,6 @@ export function AdminTeams() {
           })()}
         </>
       )}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("markPaid")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <input
-              autoFocus
-              type="number"
-              min={0.01}
-              step="any"
-              className="input input-bordered w-full p-2 border rounded"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              placeholder={t("amountPaid")}
-            />
-            {paymentError && (
-              <div className="text-destructive text-xs">{paymentError}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <div className="flex w-full gap-6 justify-center mt-3">
-              <DialogClose asChild>
-                <button
-                  className="btn btn-outline flex items-center justify-center w-11 h-11 rounded border"
-                  type="button"
-                  title={tCommon("cancel")}
-                  aria-label={tCommon("cancel")}
-                >
-                  <XCircle className="w-5 h-5 text-red-600" />
-                </button>
-              </DialogClose>
-              <button
-                className="btn btn-primary flex items-center justify-center w-11 h-11 rounded border"
-                type="button"
-                onClick={handlePaymentDialogConfirm}
-                title={t("markPaid")}
-                aria-label={t("markPaid")}
-              >
-                <Check className="w-5 h-5 text-green-600" />
-              </button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog open={!!selectedEditTeamId} onOpenChange={(open) => {
         if (!open) {
           setSelectedEditTeamId(null);
