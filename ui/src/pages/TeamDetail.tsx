@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Clock, AlertTriangle, Mars, Venus, Copy, Check } from "lucide-react";
+import { ArrowLeft, Users, Edit, UserPlus, UserMinus, Calendar, Clock, AlertTriangle, Mars, Venus, Copy, Check, Trash2, Save, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,9 @@ import { TeamAvailabilityModal } from "../components/TeamAvailabilityModal";
 import { ProfilePictureModal } from "../components/ProfilePictureModal";
 import { UserAvatar } from "@/components/user-avatar";
 import { useTranslation } from "@/hooks/useTranslation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface TeamWithDetails {
   team: Team;
@@ -84,6 +87,11 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     lastName?: string;
     email: string;
   } | null>(null);
+  const [isEditingTeamName, setIsEditingTeamName] = useState(false);
+  const [editedTeamName, setEditedTeamName] = useState("");
+  const [isSavingTeamName, setIsSavingTeamName] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false);
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
@@ -168,6 +176,83 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     } catch (err) {
       setError(t('failedToRemoveMember'));
       console.error("Error removing member:", err);
+    }
+  };
+
+  // Team name editing handlers (admin only)
+  const handleEditTeamName = () => {
+    if (!team || !isAdmin) return;
+    setEditedTeamName(team.team.name);
+    setIsEditingTeamName(true);
+  };
+
+  const handleCancelEditTeamName = () => {
+    setIsEditingTeamName(false);
+    setEditedTeamName("");
+  };
+
+  const handleSaveTeamName = async () => {
+    if (!id || !team || !isAdmin) return;
+    
+    const trimmedName = editedTeamName.trim();
+    if (!trimmedName) {
+      setError(tCommon('name') + " " + tCommon('required'));
+      return;
+    }
+
+    if (trimmedName === team.team.name) {
+      // No change, just cancel
+      handleCancelEditTeamName();
+      return;
+    }
+
+    try {
+      setIsSavingTeamName(true);
+      setError(null);
+      const response = await api.updateTeam(id, { name: trimmedName });
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
+        setIsEditingTeamName(false);
+        setEditedTeamName("");
+        await loadTeam(); // Reload to get updated team data
+      }
+    } catch (err: any) {
+      setError(err.message || t('failedToUpdateTeamName') || 'Failed to update team name');
+      console.error("Error updating team name:", err);
+    } finally {
+      setIsSavingTeamName(false);
+    }
+  };
+
+  // Delete team handler (admin only)
+  const handleDeleteTeam = async () => {
+    if (!id || !isAdmin) return;
+    
+    try {
+      setIsDeletingTeam(true);
+      setError(null);
+      const response = await api.deleteTeam(id);
+      
+      if (response.error) {
+        setError(response.error);
+        setShowDeleteConfirm(false);
+      } else {
+        // Successfully deleted
+        toast.success(t('teamDeleted'));
+        if (embedded && onClose) {
+          onClose();
+        } else {
+          navigate(getBackUrl());
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || t('failedToDeleteTeam') || 'Failed to delete team');
+      console.error("Error deleting team:", err);
+    } finally {
+      setIsDeletingTeam(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -347,7 +432,61 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <div className="space-y-2">
-                    <h4 className="font-medium text-center">{team.team.name}</h4>
+                    <div className="flex items-center justify-center gap-2">
+                      {isEditingTeamName && isAdmin ? (
+                        <div className="flex items-center gap-2 flex-1 max-w-md">
+                          <Input
+                            value={editedTeamName}
+                            onChange={(e) => setEditedTeamName(e.target.value)}
+                            className="flex-1"
+                            autoFocus
+                            disabled={isSavingTeamName}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveTeamName}
+                            disabled={isSavingTeamName || !editedTeamName.trim()}
+                          >
+                            <Save className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEditTeamName}
+                            disabled={isSavingTeamName}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="font-medium text-center">{team.team.name}</h4>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleEditTeamName}
+                              className="h-6 w-6 p-0"
+                              title={tCommon('edit')}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowDeleteConfirm(true)}
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              title={t('deleteTeam')}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                     <div className="text-sm text-muted-foreground">
   {t('createdOn', { date: formatDate(team.team.created_at) })}
                     </div>
@@ -722,6 +861,30 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                 }}
               >
                 {tCommon('confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Delete Team Confirmation (Admin only) */}
+      {isAdmin && (
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('deleteTeam')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {team?.team.name ? t('deleteTeamConfirmation', { teamName: team.team.name }) : t('deleteTeamConfirmation')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingTeam}>{tCommon('cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteTeam}
+                disabled={isDeletingTeam}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeletingTeam ? tCommon('deleting') : tCommon('delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

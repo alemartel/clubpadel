@@ -133,7 +133,7 @@ export function AdminTeams() {
         setCreateTeamGender("");
         setShowCreateTeamModal(false);
         // Show success toast
-        toast.success("Team created");
+        toast.success(t('teamCreated'));
         // Refresh teams list
         loadTeams();
       }

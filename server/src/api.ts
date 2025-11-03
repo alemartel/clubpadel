@@ -1347,16 +1347,9 @@ protectedRoutes.put("/teams/:id", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    // Check if user is a team member or admin
+    // Only admins can update team name
     if (user.role !== "admin") {
-      const [membership] = await db
-        .select()
-        .from(team_members)
-        .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, user.id)));
-
-      if (!membership) {
-        return c.json({ error: "Only team members or admins can update team details" }, 403);
-      }
+      return c.json({ error: "Only admins can update team name" }, 403);
     }
 
     // Check if new name is unique (globally if no league, within league if league exists)

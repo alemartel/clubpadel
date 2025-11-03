@@ -29,6 +29,7 @@
   "failedToLoadLeagues": "Failed to load leagues",
   "failedToLoadGroups": "Failed to load groups",
   "failedToCreateTeam": "Failed to create team",
+  "teamCreated": "Team created",
   "pleaseFillAllFields": "Please fill in all fields",
   "loadingTeamDetails": "Loading team details...",
   "teamNotFound": "Team not found",
@@ -108,5 +109,10 @@
   "feminineTeamOnly": "Feminine teams can only contain female players",
   "mixedTeamRequirement": "Mixed teams must contain both masculine and feminine players",
   "passcodeRequired": "Passcode is required",
-  "alreadyOnTeam": "Player is already on a Level {{level}} {{gender}} team ({{teamName}})"
+  "alreadyOnTeam": "Player is already on a Level {{level}} {{gender}} team ({{teamName}})",
+  "deleteTeam": "Delete Team",
+  "deleteTeamConfirmation": "Are you sure you want to delete \"{{teamName}}\"? This action cannot be undone.",
+  "teamDeleted": "Team deleted",
+  "failedToDeleteTeam": "Failed to delete team",
+  "failedToUpdateTeamName": "Failed to update team name"
 }

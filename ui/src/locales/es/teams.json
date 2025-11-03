@@ -29,6 +29,7 @@
   "failedToLoadLeagues": "Error al cargar las ligas",
   "failedToLoadGroups": "Error al cargar los grupos",
   "failedToCreateTeam": "Error al crear el equipo",
+  "teamCreated": "Equipo creado",
   "pleaseFillAllFields": "Por favor completa todos los campos",
   "loadingTeamDetails": "Cargando detalles del equipo...",
   "teamNotFound": "Equipo no encontrado",
@@ -108,5 +109,10 @@
   "feminineTeamOnly": "Los equipos femeninos solo pueden contener jugadoras femeninas",
   "mixedTeamRequirement": "Los equipos mixtos deben contener jugadores masculinos y femeninos",
   "passcodeRequired": "Se requiere código",
-  "alreadyOnTeam": "El jugador ya está en un equipo de Nivel {{level}} {{gender}} ({{teamName}})"
+  "alreadyOnTeam": "El jugador ya está en un equipo de Nivel {{level}} {{gender}} ({{teamName}})",
+  "deleteTeam": "Eliminar equipo",
+  "deleteTeamConfirmation": "¿Estás seguro de que quieres eliminar \"{{teamName}}\"? Esta acción no se puede deshacer.",
+  "teamDeleted": "Equipo eliminado",
+  "failedToDeleteTeam": "Error al eliminar el equipo",
+  "failedToUpdateTeamName": "Error al actualizar el nombre del equipo"
 }
