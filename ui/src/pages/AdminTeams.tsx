@@ -36,7 +36,7 @@ import { TeamDetail } from "./TeamDetail";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfilePictureModal } from "@/components/ProfilePictureModal";
 
-export function AdminAllTeams() {
+export function AdminTeams() {
   const { isAdmin } = useAuth();
   const { t } = useTranslation("teams");
   const { t: tCommon } = useTranslation("common");
@@ -764,3 +764,4 @@ export function AdminAllTeams() {
     </div>
   );
 }
+

@@ -28,7 +28,7 @@ interface Player {
   updated_at: string;
 }
 
-export function PlayerManagement() {
+export function AdminPlayers() {
   const { isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('players');
@@ -213,3 +213,4 @@ export function PlayerManagement() {
     </div>
   );
 }
+

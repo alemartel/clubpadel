@@ -8,8 +8,8 @@ import { Home } from "@/pages/Home";
 import { Settings } from "@/pages/Settings";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
-import { AdminAllTeams } from "@/pages/AdminAllTeams";
-import { PlayerManagement } from "@/pages/PlayerManagement";
+import { AdminTeams } from "@/pages/AdminTeams";
+import { AdminPlayers } from "@/pages/AdminPlayers";
 import { ControlPanel } from "@/pages/ControlPanel";
 import { MyTeams } from "./pages/MyTeams";
 import { CreateTeam } from "./pages/CreateTeam";
@@ -169,7 +169,7 @@ function AppContent() {
                     path="/admin/teams"
                     element={
                       <AdminRoute>
-                        <AdminAllTeams />
+                        <AdminTeams />
                       </AdminRoute>
                     }
                   />
@@ -177,7 +177,7 @@ function AppContent() {
                     path="/admin/player-management"
                     element={
                       <AdminRoute>
-                        <PlayerManagement />
+                        <AdminPlayers />
                       </AdminRoute>
                     }
                   />

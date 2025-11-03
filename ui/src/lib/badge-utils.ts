@@ -1,6 +1,6 @@
 /**
  * Badge utility functions for consistent badge variant mapping
- * Used across MyTeams and AdminAllTeams components
+ * Used across MyTeams and AdminTeams components
  */
 
 export const getLevelBadgeVariant = (level: string): "default" | "secondary" | "destructive" | "outline" => {
