@@ -7,4 +7,4 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "player"]);
 export const genderEnum = pgEnum("gender", ["male", "female", "mixed"]);
 
 // Define level enum
-export const levelEnum = pgEnum("level", ["1", "2", "3", "4"]);
+export const levelEnum = pgEnum("level", ["2", "3", "4"]);

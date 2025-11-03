@@ -27,12 +27,6 @@ interface TeamWithDetails {
     start_date: string;
     end_date: string;
   } | null;
-  group: {
-    id: string;
-    name: string;
-    level: string;
-    gender: string;
-  } | null;
   member_count: number;
 }
 
@@ -322,32 +316,14 @@ export function MyTeams() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {teamData.group ? (
-                    <>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Trophy className="w-4 h-4" />
-                        <span>{teamData.group.name}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getLevelBadgeVariant(teamData.group.level)}>
-                          Level {teamData.group.level}
-                        </Badge>
-                        <Badge variant={getGenderBadgeVariant(teamData.group.gender)}>
-                          {teamData.group.gender === "male" ? t('masculine') : teamData.group.gender === "female" ? t('femenine') : t('mixed')}
-                        </Badge>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getLevelBadgeVariant(teamData.team.level)}>
-                        Level {teamData.team.level}
-                      </Badge>
-                      <Badge variant={getGenderBadgeVariant(teamData.team.gender)}>
-                        {teamData.team.gender === "male" ? t('masculine') : teamData.team.gender === "female" ? t('femenine') : t('mixed')}
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getLevelBadgeVariant(teamData.team.level)}>
+                      Level {teamData.team.level}
+                    </Badge>
+                    <Badge variant={getGenderBadgeVariant(teamData.team.gender)}>
+                      {teamData.team.gender === "male" ? t('masculine') : teamData.team.gender === "female" ? t('femenine') : t('mixed')}
+                    </Badge>
+                  </div>
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />

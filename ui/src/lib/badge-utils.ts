@@ -5,7 +5,6 @@
 
 export const getLevelBadgeVariant = (level: string): "default" | "secondary" | "destructive" | "outline" => {
   switch (level) {
-    case "1": return "outline";
     case "2": return "outline";
     case "3": return "outline";
     case "4": return "outline";

@@ -19,6 +19,7 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  locale,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -35,9 +36,15 @@ function Calendar({
         className
       )}
       captionLayout={captionLayout}
+      locale={locale}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+        formatMonthDropdown: (date) => {
+          // Use locale if provided, otherwise default
+          if (locale && locale.localize && locale.localize.month) {
+            return locale.localize.month(date.getMonth(), { width: 'short' });
+          }
+          return date.toLocaleString("default", { month: "short" });
+        },
         ...formatters,
       }}
       classNames={{

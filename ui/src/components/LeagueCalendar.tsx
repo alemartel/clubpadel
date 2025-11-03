@@ -5,28 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Users, RefreshCw, Loader2 } from "lucide-react";
 import { api, type MatchWithTeams } from "@/lib/serverComm";
 
-interface GroupCalendarProps {
-  groupId: string;
+interface LeagueCalendarProps {
+  leagueId: string;
   loading?: boolean;
 }
 
-export function GroupCalendar({ groupId, loading: externalLoading = false }: GroupCalendarProps) {
+export function LeagueCalendar({ leagueId, loading: externalLoading = false }: LeagueCalendarProps) {
   const [matches, setMatches] = useState<MatchWithTeams[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (groupId) {
+    if (leagueId) {
       loadCalendar();
     }
-  }, [groupId]);
+  }, [leagueId]);
 
 
   const loadCalendar = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.getGroupCalendar(groupId);
+      const response = await api.getLeagueCalendar(leagueId);
       
       if (response.error) {
         setError(response.error);
@@ -84,9 +84,14 @@ export function GroupCalendar({ groupId, loading: externalLoading = false }: Gro
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-destructive mb-4">{error}</p>
-        <Button onClick={loadCalendar} variant="outline">
+      <div className="p-4 text-center text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+        <p>{error}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadCalendar}
+          className="mt-3"
+        >
           <RefreshCw className="w-4 h-4 mr-2" />
           Try Again
         </Button>
@@ -96,10 +101,10 @@ export function GroupCalendar({ groupId, loading: externalLoading = false }: Gro
 
   if (matches.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="p-8 text-center text-muted-foreground">
         <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>No calendar generated yet</p>
-        <p className="text-sm">Generate a calendar to see match schedules</p>
+        <p>No matches scheduled yet.</p>
+        <p className="text-sm mt-2">Generate a calendar to create match schedules.</p>
       </div>
     );
   }
@@ -107,44 +112,46 @@ export function GroupCalendar({ groupId, loading: externalLoading = false }: Gro
   return (
     <div className="space-y-6">
       {weeks.map((week) => (
-            <div key={week} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">Week {week}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  {matchesByWeek[week].length} match{matchesByWeek[week].length !== 1 ? 'es' : ''}
-                </span>
-              </div>
-              
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {matchesByWeek[week].map((matchData) => (
-                  <Card key={matchData.match.id} className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(matchData.match.match_date)}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span>{formatTime(matchData.match.match_time)}</span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <div className="flex-1">
-                            <div className="font-medium">{matchData.home_team.name}</div>
-                            <div className="text-sm text-muted-foreground">vs</div>
-                            <div className="font-medium">{matchData.away_team.name}</div>
-                          </div>
-                        </div>
+        <Card key={week}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Week {week}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {matchesByWeek[week].map((matchData) => (
+                <div
+                  key={matchData.match.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex-1">
+                        <div className="font-medium">{matchData.home_team.name}</div>
+                        <div className="text-sm text-muted-foreground">vs</div>
+                        <div className="font-medium">{matchData.away_team.name}</div>
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {formatDate(matchData.match.match_date)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {formatTime(matchData.match.match_time)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { teams, team_availability } from "../schema/teams";
-import { groups, leagues, matches as matchesTable, type NewMatch } from "../schema/leagues";
+import { leagues, matches as matchesTable, type NewMatch } from "../schema/leagues";
 import type { DatabaseConnection } from "./db";
 
 // Constants for calendar generation
@@ -23,7 +23,6 @@ export interface TeamAvailability {
 export interface GeneratedMatch {
   id: string;
   league_id: string;
-  group_id: string;
   home_team_id: string;
   away_team_id: string;
   match_date: Date;
@@ -48,19 +47,19 @@ export class CalendarGenerator {
   }
 
   async generateCalendar(
-    groupId: string,
+    leagueId: string,
     startDate: Date
   ): Promise<CalendarGenerationResult> {
-    console.log(`Starting calendar generation for group: ${groupId}, startDate: ${startDate}`);
+    console.log(`Starting calendar generation for league: ${leagueId}, startDate: ${startDate}`);
     
     try {
       // 1. Input Validation
       console.log("Step 1: Validating inputs");
-      await this.validateInputs(groupId, startDate);
+      await this.validateInputs(leagueId, startDate);
 
       // 2. Get teams and their availability
       console.log("Step 2: Getting team availability");
-      const teamAvailability = await this.getTeamAvailability(groupId);
+      const teamAvailability = await this.getTeamAvailability(leagueId);
       
       // 3. Generate team pairs (round-robin)
       console.log("Step 3: Generating team pairs");
@@ -108,15 +107,15 @@ export class CalendarGenerator {
     }
   }
 
-  private async validateInputs(groupId: string, startDate: Date): Promise<void> {
-    // Check if group exists
-    const [group] = await this.db
+  private async validateInputs(leagueId: string, startDate: Date): Promise<void> {
+    // Check if league exists
+    const [league] = await this.db
       .select()
-      .from(groups)
-      .where(eq(groups.id, groupId));
+      .from(leagues)
+      .where(eq(leagues.id, leagueId));
 
-    if (!group) {
-      throw new Error("Group not found");
+    if (!league) {
+      throw new Error("League not found");
     }
 
     // Check if start date is in the future
@@ -124,18 +123,18 @@ export class CalendarGenerator {
       throw new Error("Start date must be in the future");
     }
 
-    // Get teams in the group
-    const groupTeams = await this.db
+    // Get teams in the league
+    const leagueTeams = await this.db
       .select()
       .from(teams)
-      .where(eq(teams.group_id, groupId));
+      .where(eq(teams.league_id, leagueId));
 
-    if (groupTeams.length < MIN_TEAMS_REQUIRED) {
-      throw new Error(`Group must have at least ${MIN_TEAMS_REQUIRED} teams to generate calendar`);
+    if (leagueTeams.length < MIN_TEAMS_REQUIRED) {
+      throw new Error(`League must have at least ${MIN_TEAMS_REQUIRED} teams to generate calendar`);
     }
 
     // Check if teams have availability data
-    const teamAvailability = await this.getTeamAvailability(groupId);
+    const teamAvailability = await this.getTeamAvailability(leagueId);
     const teamsWithoutAvailability = teamAvailability.filter(team => 
       !team.availability || team.availability.length === 0
     );
@@ -146,8 +145,8 @@ export class CalendarGenerator {
     }
   }
 
-  private async getTeamAvailability(groupId: string): Promise<TeamAvailability[]> {
-    console.log(`Getting team availability for group: ${groupId}`);
+  private async getTeamAvailability(leagueId: string): Promise<TeamAvailability[]> {
+    console.log(`Getting team availability for league: ${leagueId}`);
     
     // Get teams with their availability
     const teamsWithAvailability = await this.db
@@ -161,7 +160,7 @@ export class CalendarGenerator {
       })
       .from(teams)
       .leftJoin(team_availability, eq(teams.id, team_availability.team_id))
-      .where(eq(teams.group_id, groupId));
+      .where(eq(teams.league_id, leagueId));
 
     console.log(`Found ${teamsWithAvailability.length} team availability records`);
 
@@ -260,7 +259,6 @@ export class CalendarGenerator {
         const match: GeneratedMatch = {
           id: randomUUID(),
           league_id: "", // Will be set by saveMatches method
-          group_id: "", // Will be set by saveMatches method
           home_team_id: homeTeamId,
           away_team_id: awayTeamId,
           match_date: matchDate,
@@ -502,13 +500,11 @@ export class CalendarGenerator {
 
   async saveMatches(
     matches: GeneratedMatch[],
-    leagueId: string,
-    groupId: string
+    leagueId: string
   ): Promise<void> {
     const matchRecords: NewMatch[] = matches.map(match => ({
       id: match.id,
       league_id: leagueId,
-      group_id: groupId,
       home_team_id: match.home_team_id,
       away_team_id: match.away_team_id,
       match_date: match.match_date,

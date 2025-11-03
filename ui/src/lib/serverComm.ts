@@ -119,6 +119,8 @@ export async function removeProfilePicture() {
 export interface League {
   id: string;
   name: string;
+  level: "2" | "3" | "4";
+  gender: "male" | "female" | "mixed";
   start_date: string;
   end_date: string;
   created_by: string;
@@ -128,12 +130,16 @@ export interface League {
 
 export interface NewLeague {
   name: string;
+  level: "2" | "3" | "4";
+  gender: "male" | "female" | "mixed";
   start_date: string;
   end_date: string;
 }
 
 export interface UpdateLeague {
   name?: string;
+  level?: "2" | "3" | "4";
+  gender?: "male" | "female" | "mixed";
   start_date?: string;
   end_date?: string;
 }
@@ -177,29 +183,6 @@ export async function deleteLeague(id: string) {
   return response.json();
 }
 
-// Group Management API
-export interface Group {
-  id: string;
-  league_id: string;
-  name: string;
-  level: "1" | "2" | "3" | "4";
-  gender: "male" | "female" | "mixed";
-  created_at: string;
-  updated_at: string;
-}
-
-export interface NewGroup {
-  name: string;
-  level: "1" | "2" | "3" | "4";
-  gender: "male" | "female" | "mixed";
-}
-
-export interface UpdateGroup {
-  name?: string;
-  level?: "1" | "2" | "3" | "4";
-  gender?: "male" | "female" | "mixed";
-}
-
 // Team interfaces
 export interface Team {
   id: string;
@@ -207,7 +190,6 @@ export interface Team {
   level: string;
   gender: string;
   league_id?: string | null;
-  group_id?: string | null;
   created_by: string;
   passcode?: string;
   created_at: string;
@@ -242,7 +224,6 @@ export interface NewTeamMember {
 export interface Match {
   id: string;
   league_id: string;
-  group_id: string;
   home_team_id: string;
   away_team_id: string;
   match_date: string;
@@ -262,45 +243,6 @@ export interface MatchWithTeams {
     id: string;
     name: string;
   };
-}
-
-export async function getGroups(leagueId: string) {
-  const response = await fetchWithAuth(
-    `/api/v1/leagues/${leagueId}/groups`
-  );
-  return response.json();
-}
-
-export async function createGroup(leagueId: string, data: NewGroup) {
-  const response = await fetchWithAuth(
-    `/api/v1/admin/leagues/${leagueId}/groups`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    }
-  );
-  return response.json();
-}
-
-export async function updateGroup(id: string, data: UpdateGroup) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-}
-
-export async function deleteGroup(id: string) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${id}`, {
-    method: "DELETE",
-  });
-  return response.json();
 }
 
 // Team management functions
@@ -372,8 +314,8 @@ export async function searchPlayers(level: string | undefined, leagueId: string 
 }
 
 // Calendar API functions
-export async function generateGroupCalendar(groupId: string, startDate: string) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/generate-calendar`, {
+export async function generateLeagueCalendar(leagueId: string, startDate: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/generate-calendar`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -383,13 +325,13 @@ export async function generateGroupCalendar(groupId: string, startDate: string) 
   return response.json();
 }
 
-export async function getGroupCalendar(groupId: string) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/calendar`);
+export async function getLeagueCalendar(leagueId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/calendar`);
   return response.json();
 }
 
-export async function clearGroupCalendar(groupId: string) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/calendar`, {
+export async function clearLeagueCalendar(leagueId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/calendar`, {
     method: "DELETE",
   });
   return response.json();
@@ -425,8 +367,26 @@ export async function updateLeagueDates(leagueId: string, startDate: string, end
   return response.json();
 }
 
-export async function getAdminTeamsByGroup(groupId: string) {
-  const response = await fetchWithAuth(`/api/v1/admin/groups/${groupId}/teams`);
+export async function getAdminTeamsByLeague(leagueId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/teams`);
+  return response.json();
+}
+
+export async function addTeamToLeague(leagueId: string, teamId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/teams`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ team_id: teamId }),
+  });
+  return response.json();
+}
+
+export async function removeTeamFromLeague(leagueId: string, teamId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/teams/${teamId}`, {
+    method: "DELETE",
+  });
   return response.json();
 }
 
@@ -576,11 +536,6 @@ export const api = {
   createLeague,
   updateLeague,
   deleteLeague,
-  // Group management
-  getGroups,
-  createGroup,
-  updateGroup,
-  deleteGroup,
   // Team management
   createTeam,
   getMyTeams,
@@ -590,13 +545,15 @@ export const api = {
   addTeamMember,
   removeTeamMember,
   searchPlayers,
-  getAdminTeamsByGroup,
+  getAdminTeamsByLeague,
+  addTeamToLeague,
+  removeTeamFromLeague,
   getAllPlayers,
   getTeamAvailability,
   updateTeamAvailability,
-  generateGroupCalendar,
-  getGroupCalendar,
-  clearGroupCalendar,
+  generateLeagueCalendar,
+  getLeagueCalendar,
+  clearLeagueCalendar,
   updateLeagueDates,
   getAdminTeams,
   updateMemberPaid,

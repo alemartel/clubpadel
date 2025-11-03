@@ -9,15 +9,14 @@ import {
   numeric,
 } from "drizzle-orm/pg-core";
 import { appSchema, users } from "./users";
-import { leagues, groups, levelEnum, genderEnum } from "./leagues";
+import { leagues, levelEnum, genderEnum } from "./leagues";
 
 export const teams = appSchema.table("teams", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  level: levelEnum("level").notNull(), // Team level (1, 2, 3, 4)
+  level: levelEnum("level").notNull(), // Team level (2, 3, 4)
   gender: genderEnum("gender").notNull(), // Team gender (male, female, mixed)
   league_id: text("league_id"), // Foreign key to leagues.id (nullable)
-  group_id: text("group_id"), // Foreign key to groups.id (nullable)
   created_by: text("created_by").notNull(), // Foreign key to users.id
   passcode: text("passcode").notNull(), // Unique passcode for joining the team
   created_at: timestamp("created_at").defaultNow().notNull(),

@@ -98,7 +98,7 @@
   "confirmJoin": "Confirmar unirse",
   "join": "Unirse",
   "joining": "Uniéndose...",
-  "joinTeamSuccess": "Te uniste exitosamente a {{teamName}}",
+  "joinTeamSuccess": "Te uniste a {{teamName}}",
   "invalidPasscode": "Código inválido. Por favor intente de nuevo.",
   "teamPasscode": "Código del equipo",
   "passcode": "Código",

@@ -89,11 +89,11 @@ export function validateGroup(data: {
   }
 
   // Level validation
-  const validLevels = ["1", "2", "3", "4"];
+  const validLevels = ["2", "3", "4"];
   if (!data.level) {
     errors.push({ field: "level", message: "Level is required" });
   } else if (!validLevels.includes(data.level)) {
-    errors.push({ field: "level", message: "Level must be 1, 2, 3, or 4" });
+    errors.push({ field: "level", message: "Level must be 2, 3, or 4" });
   }
 
   // Gender validation

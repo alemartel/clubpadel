@@ -11,10 +11,8 @@ import * as schema from "./schema/users";
 import { users, levelEnum } from "./schema/users";
 import {
   leagues,
-  groups,
   matches,
   type NewLeague,
-  type NewGroup,
   type NewMatch,
 } from "./schema/leagues";
 import {
@@ -42,6 +40,27 @@ function createErrorResponse(message: string, status: number = 500, details?: st
     ...(details && { details }),
     timestamp: new Date().toISOString(),
   };
+}
+
+// Helper function to calculate league status
+function getLeagueStatus(league: { start_date: Date | null; end_date: Date | null }): "not_started" | "in_progress" | "completed" {
+  const now = new Date();
+  
+  // If no dates set, consider as not started
+  if (!league.start_date || !league.end_date) {
+    return "not_started";
+  }
+  
+  const startDate = new Date(league.start_date);
+  const endDate = new Date(league.end_date);
+  
+  if (startDate > now) {
+    return "not_started";
+  }
+  if (startDate <= now && endDate >= now) {
+    return "in_progress";
+  }
+  return "completed";
 }
 
 // Helper function to generate a random 6-character alphanumeric passcode
@@ -83,12 +102,6 @@ async function generateUniquePasscode(db: any): Promise<string> {
 function handleDatabaseError(error: any): { message: string; status: number } {
   if (error.code === "23505") {
     // Unique constraint violation
-    if (error.constraint === "groups_league_id_name_unique") {
-      return {
-        message: "Group name must be unique within the league",
-        status: 409,
-      };
-    }
     if (error.constraint === "teams_league_name_unique") {
       return {
         message: "Team name must be unique within the league",
@@ -378,18 +391,28 @@ adminRoutes.post("/leagues", async (c) => {
     const adminUser = c.get("adminUser");
     const body = await c.req.json();
 
-    const { name, start_date, end_date } = body;
+    const { name, start_date, end_date, level, gender } = body;
 
     // Validate required fields
-    if (!name || !start_date || !end_date) {
+    if (!name || !start_date || !end_date || !level || !gender) {
       return c.json(
-        { error: "Missing required fields: name, start_date, end_date" },
+        { error: "Missing required fields: name, start_date, end_date, level, gender" },
         400
       );
     }
 
     // Sanitize text inputs
     const sanitizedName = sanitizeText(name);
+
+    // Validate level is one of: "2", "3", "4"
+    if (!["2", "3", "4"].includes(level)) {
+      return c.json({ error: "Level must be 2, 3, or 4" }, 400);
+    }
+
+    // Validate gender is one of: "male", "female", "mixed"
+    if (!["male", "female", "mixed"].includes(gender)) {
+      return c.json({ error: "Gender must be male, female, or mixed" }, 400);
+    }
 
     // Validate date logic
     const startDate = new Date(start_date);
@@ -405,6 +428,8 @@ adminRoutes.post("/leagues", async (c) => {
     const newLeague: NewLeague = {
       id: leagueId,
       name: sanitizedName,
+      level: level as any,
+      gender: gender as any,
       start_date: startDate,
       end_date: endDate,
       created_by: adminUser.id,
@@ -463,13 +488,8 @@ adminRoutes.get("/leagues/:id", async (c) => {
       return c.json({ error: "League not found" }, 404);
     }
 
-    const leagueGroups = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.league_id, leagueId));
-
     return c.json({
-      league: { ...league, groups: leagueGroups },
+      league: league,
       message: "League retrieved successfully",
     });
   } catch (error) {
@@ -483,7 +503,7 @@ adminRoutes.put("/leagues/:id", async (c) => {
     const leagueId = c.req.param("id");
     const body = await c.req.json();
 
-    const { name, start_date, end_date } = body;
+    const { name, start_date, end_date, level, gender } = body;
 
     // Validate date logic if dates are provided
     if (start_date && end_date) {
@@ -495,10 +515,22 @@ adminRoutes.put("/leagues/:id", async (c) => {
       }
     }
 
+    // Validate level if provided
+    if (level !== undefined && !["2", "3", "4"].includes(level)) {
+      return c.json({ error: "Level must be 2, 3, or 4" }, 400);
+    }
+
+    // Validate gender if provided
+    if (gender !== undefined && !["male", "female", "mixed"].includes(gender)) {
+      return c.json({ error: "Gender must be male, female, or mixed" }, 400);
+    }
+
     const updateData: any = { updated_at: new Date() };
     if (name !== undefined) updateData.name = sanitizeText(name);
     if (start_date !== undefined) updateData.start_date = new Date(start_date);
     if (end_date !== undefined) updateData.end_date = new Date(end_date);
+    if (level !== undefined) updateData.level = level as any;
+    if (gender !== undefined) updateData.gender = gender as any;
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
@@ -544,82 +576,6 @@ adminRoutes.delete("/leagues/:id", async (c) => {
   } catch (error) {
     console.error("League deletion error:", error);
     return c.json({ error: "Failed to delete league" }, 500);
-  }
-});
-
-// Group Management Endpoints (Admin Only)
-adminRoutes.post("/leagues/:leagueId/groups", async (c) => {
-  try {
-    const leagueId = c.req.param("leagueId");
-    const body = await c.req.json();
-
-    const { name, level, gender } = body;
-
-    // Validate required fields
-    if (!name || !level || !gender) {
-      return c.json(
-        { error: "Missing required fields: name, level, gender" },
-        400
-      );
-    }
-
-    // Sanitize text inputs
-    const sanitizedName = sanitizeText(name);
-
-    // Validate enum values
-    const validLevels = ["1", "2", "3", "4"];
-    const validGenders = ["male", "female", "mixed"];
-
-    if (!validLevels.includes(level)) {
-      return c.json(
-        { error: "Invalid level. Must be one of: 1, 2, 3, 4" },
-        400
-      );
-    }
-
-    if (!validGenders.includes(gender)) {
-      return c.json(
-        { error: "Invalid gender. Must be one of: male, female, mixed" },
-        400
-      );
-    }
-
-    const databaseUrl = getDatabaseUrl();
-    const db = await getDatabase(databaseUrl);
-
-    // Check if league exists
-    const [league] = await db
-      .select()
-      .from(leagues)
-      .where(eq(leagues.id, leagueId));
-    if (!league) {
-      return c.json({ error: "League not found" }, 404);
-    }
-
-    // Generate unique ID
-    const groupId = `group_${randomUUID()}`;
-
-    const newGroup: NewGroup = {
-      id: groupId,
-      league_id: leagueId,
-      name: sanitizedName,
-      level,
-      gender,
-    };
-
-    const [createdGroup] = await db.insert(groups).values(newGroup).returning();
-
-    return c.json(
-      {
-        group: createdGroup,
-        message: "Group created successfully",
-      },
-      201
-    );
-  } catch (error) {
-    console.error("Group creation error:", error);
-    const { message, status } = handleDatabaseError(error);
-    return c.json({ error: message }, status as any);
   }
 });
 
@@ -744,117 +700,6 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
   }
 });
 
-adminRoutes.get("/leagues/:leagueId/groups", async (c) => {
-  try {
-    const leagueId = c.req.param("leagueId");
-    const databaseUrl = getDatabaseUrl();
-    const db = await getDatabase(databaseUrl);
-
-    // Check if league exists
-    const [league] = await db
-      .select()
-      .from(leagues)
-      .where(eq(leagues.id, leagueId));
-    if (!league) {
-      return c.json({ error: "League not found" }, 404);
-    }
-
-    const leagueGroups = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.league_id, leagueId));
-
-    return c.json({
-      groups: leagueGroups,
-      message: "Groups retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Groups retrieval error:", error);
-    return c.json({ error: "Failed to retrieve groups" }, 500);
-  }
-});
-
-adminRoutes.put("/groups/:id", async (c) => {
-  try {
-    const groupId = c.req.param("id");
-    const body = await c.req.json();
-
-    const { name, level, gender } = body;
-
-    // Validate enum values if provided
-    if (level) {
-      const validLevels = ["1", "2", "3", "4"];
-      if (!validLevels.includes(level)) {
-        return c.json(
-          { error: "Invalid level. Must be one of: 1, 2, 3, 4" },
-          400
-        );
-      }
-    }
-
-    if (gender) {
-      const validGenders = ["male", "female", "mixed"];
-      if (!validGenders.includes(gender)) {
-        return c.json(
-          { error: "Invalid gender. Must be one of: male, female, mixed" },
-          400
-        );
-      }
-    }
-
-    const updateData: any = { updated_at: new Date() };
-    if (name !== undefined) updateData.name = sanitizeText(name);
-    if (level !== undefined) updateData.level = level;
-    if (gender !== undefined) updateData.gender = gender;
-
-    const databaseUrl = getDatabaseUrl();
-    const db = await getDatabase(databaseUrl);
-
-    const [updatedGroup] = await db
-      .update(groups)
-      .set(updateData)
-      .where(eq(groups.id, groupId))
-      .returning();
-
-    if (!updatedGroup) {
-      return c.json({ error: "Group not found" }, 404);
-    }
-
-    return c.json({
-      group: updatedGroup,
-      message: "Group updated successfully",
-    });
-  } catch (error) {
-    console.error("Group update error:", error);
-    const { message, status } = handleDatabaseError(error);
-    return c.json({ error: message }, status as any);
-  }
-});
-
-adminRoutes.delete("/groups/:id", async (c) => {
-  try {
-    const groupId = c.req.param("id");
-    const databaseUrl = getDatabaseUrl();
-    const db = await getDatabase(databaseUrl);
-
-    const [deletedGroup] = await db
-      .delete(groups)
-      .where(eq(groups.id, groupId))
-      .returning();
-
-    if (!deletedGroup) {
-      return c.json({ error: "Group not found" }, 404);
-    }
-
-    return c.json({
-      message: "Group deleted successfully",
-    });
-  } catch (error) {
-    console.error("Group deletion error:", error);
-    return c.json({ error: "Failed to delete group" }, 500);
-  }
-});
-
 // Public League Endpoints (No Authentication Required)
 api.get("/leagues", async (c) => {
   try {
@@ -888,48 +733,13 @@ api.get("/leagues/:id", async (c) => {
       return c.json({ error: "League not found" }, 404);
     }
 
-    const leagueGroups = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.league_id, leagueId));
-
     return c.json({
-      league: { ...league, groups: leagueGroups },
+      league: league,
       message: "League retrieved successfully",
     });
   } catch (error) {
     console.error("Public league retrieval error:", error);
     return c.json({ error: "Failed to retrieve league" }, 500);
-  }
-});
-
-api.get("/leagues/:id/groups", async (c) => {
-  try {
-    const leagueId = c.req.param("id");
-    const databaseUrl = getDatabaseUrl();
-    const db = await getDatabase(databaseUrl);
-
-    // Check if league exists
-    const [league] = await db
-      .select()
-      .from(leagues)
-      .where(eq(leagues.id, leagueId));
-    if (!league) {
-      return c.json({ error: "League not found" }, 404);
-    }
-
-    const leagueGroups = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.league_id, leagueId));
-
-    return c.json({
-      groups: leagueGroups,
-      message: "Groups retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Public groups retrieval error:", error);
-    return c.json({ error: "Failed to retrieve groups" }, 500);
   }
 });
 
@@ -968,18 +778,17 @@ adminRoutes.get("/players", async (c) => {
 });
 
 // Admin Team Management Endpoints
-adminRoutes.get("/groups/:groupId/teams", async (c) => {
+adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
   try {
-    const groupId = c.req.param("groupId");
+    const leagueId = c.req.param("leagueId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all teams in this group with creator information
-    const groupTeams = await db
+    // Get all teams in this league with creator information
+    const leagueTeams = await db
       .select({
         team: teams,
         league: leagues,
-        group: groups,
         creator: {
           id: users.id,
           email: users.email,
@@ -996,17 +805,165 @@ adminRoutes.get("/groups/:groupId/teams", async (c) => {
       })
       .from(teams)
       .innerJoin(leagues, eq(teams.league_id, leagues.id))
-      .innerJoin(groups, eq(teams.group_id, groups.id))
       .innerJoin(users, eq(teams.created_by, users.id))
-      .where(eq(teams.group_id, groupId));
+      .where(eq(teams.league_id, leagueId));
 
     return c.json({
-      teams: groupTeams,
+      teams: leagueTeams,
       message: "Teams retrieved successfully",
     });
   } catch (error) {
     console.error("Admin teams retrieval error:", error);
     return c.json({ error: "Failed to retrieve teams" }, 500);
+  }
+});
+
+// Add team to league
+adminRoutes.post("/leagues/:leagueId/teams", async (c) => {
+  try {
+    const leagueId = c.req.param("leagueId");
+    const body = await c.req.json();
+    const { team_id } = body;
+
+    if (!team_id) {
+      return c.json({ error: "Team ID is required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check league exists
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, leagueId));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    // Check team exists
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, team_id));
+
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Validate team level matches league level
+    if (team.level !== league.level) {
+      return c.json(
+        {
+          error: `Team level (${team.level}) does not match league level (${league.level})`,
+        },
+        400
+      );
+    }
+
+    // Validate team gender matches league gender
+    if (team.gender !== league.gender) {
+      return c.json(
+        {
+          error: `Team gender (${team.gender}) does not match league gender (${league.gender})`,
+        },
+        400
+      );
+    }
+
+    // Check if team is already in an active league (not started or in progress)
+    if (team.league_id) {
+      const [currentLeague] = await db
+        .select()
+        .from(leagues)
+        .where(eq(leagues.id, team.league_id));
+
+      if (currentLeague) {
+        const status = getLeagueStatus(currentLeague);
+        if (status === "not_started" || status === "in_progress") {
+          return c.json(
+            {
+              error: `Team is already in an active league: "${currentLeague.name}"`,
+            },
+            409
+          );
+        }
+      }
+    }
+
+    // Add team to league
+    const [updatedTeam] = await db
+      .update(teams)
+      .set({
+        league_id: leagueId,
+        updated_at: new Date(),
+      })
+      .where(eq(teams.id, team_id))
+      .returning();
+
+    return c.json(
+      {
+        team: updatedTeam,
+        message: "Team added to league successfully",
+      },
+      200
+    );
+  } catch (error) {
+    console.error("Add team to league error:", error);
+    return c.json({ error: "Failed to add team to league" }, 500);
+  }
+});
+
+// Remove team from league
+adminRoutes.delete("/leagues/:leagueId/teams/:teamId", async (c) => {
+  try {
+    const leagueId = c.req.param("leagueId");
+    const teamId = c.req.param("teamId");
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Check league exists
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, leagueId));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    // Check team exists and is assigned to this league
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.league_id, leagueId)));
+
+    if (!team) {
+      return c.json(
+        { error: "Team not found or not assigned to this league" },
+        404
+      );
+    }
+
+    // Remove team from league
+    const [updatedTeam] = await db
+      .update(teams)
+      .set({
+        league_id: null,
+        updated_at: new Date(),
+      })
+      .where(eq(teams.id, teamId))
+      .returning();
+
+    return c.json({
+      team: updatedTeam,
+      message: "Team removed from league successfully",
+    });
+  } catch (error) {
+    console.error("Remove team from league error:", error);
+    return c.json({ error: "Failed to remove team from league" }, 500);
   }
 });
 
@@ -1023,9 +980,9 @@ protectedRoutes.post("/teams", async (c) => {
       return c.json({ error: "Team name, level, and gender are required" }, 400);
     }
 
-    // Validate level is one of: "1", "2", "3", "4"
-    if (!["1", "2", "3", "4"].includes(level)) {
-      return c.json({ error: "Level must be 1, 2, 3, or 4" }, 400);
+    // Validate level is one of: "2", "3", "4"
+    if (!["2", "3", "4"].includes(level)) {
+      return c.json({ error: "Level must be 2, 3, or 4" }, 400);
     }
 
     // Validate gender is one of: "male", "female", "mixed"
@@ -1075,17 +1032,16 @@ protectedRoutes.post("/teams", async (c) => {
     // Generate unique passcode
     const teamPasscode = await generateUniquePasscode(db);
 
-    // Create team without league_id and group_id
+    // Create team without league_id
     const teamId = randomUUID();
     const [newTeam] = await db
       .insert(teams)
       .values({
         id: teamId,
         name: sanitizedName,
-        level: level as "1" | "2" | "3" | "4",
+        level: level as "2" | "3" | "4",
         gender: gender as "male" | "female" | "mixed",
         league_id: null,
-        group_id: null,
         created_by: user.id,
         passcode: teamPasscode,
       })
@@ -1130,7 +1086,7 @@ protectedRoutes.get("/teams", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get teams where user is a member (using leftJoin for nullable league/group)
+    // Get teams where user is a member (using leftJoin for nullable league)
     const userTeams = await db
       .select({
         team: teams,
@@ -1139,12 +1095,6 @@ protectedRoutes.get("/teams", async (c) => {
           name: leagues.name,
           start_date: leagues.start_date,
           end_date: leagues.end_date,
-        },
-        group: {
-          id: groups.id,
-          name: groups.name,
-          level: groups.level,
-          gender: groups.gender,
         },
         member_count: sql<number>`(
           SELECT COUNT(*) 
@@ -1155,7 +1105,6 @@ protectedRoutes.get("/teams", async (c) => {
       })
       .from(teams)
       .leftJoin(leagues, eq(teams.league_id, leagues.id))
-      .leftJoin(groups, eq(teams.group_id, groups.id))
       .where(
         sql`${teams.id} IN (
           SELECT tm.team_id 
@@ -1164,11 +1113,10 @@ protectedRoutes.get("/teams", async (c) => {
         )`
       );
 
-    // Normalize null league/group to null in response
+    // Normalize null league to null in response
     const normalizedTeams = userTeams.map(t => ({
       ...t,
       league: t.league?.id ? t.league : null,
-      group: t.group?.id ? t.group : null,
     }));
 
     return c.json({
@@ -1235,7 +1183,7 @@ protectedRoutes.get("/teams/:id", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get team details with optional league and group (using leftJoin for nullable foreign keys)
+    // Get team details with optional league (using leftJoin for nullable foreign keys)
     const [teamData] = await db
       .select({
         team: teams,
@@ -1245,16 +1193,9 @@ protectedRoutes.get("/teams/:id", async (c) => {
           start_date: leagues.start_date,
           end_date: leagues.end_date,
         },
-        group: {
-          id: groups.id,
-          name: groups.name,
-          level: groups.level,
-          gender: groups.gender,
-        },
       })
       .from(teams)
       .leftJoin(leagues, eq(teams.league_id, leagues.id))
-      .leftJoin(groups, eq(teams.group_id, groups.id))
       .where(eq(teams.id, teamId));
 
     if (!teamData || !teamData.team) {
@@ -1311,7 +1252,6 @@ protectedRoutes.get("/teams/:id", async (c) => {
       team: {
         team: teamResponse,
         league: teamData.league || null,
-        group: teamData.group || null,
         members,
       },
       message: "Team details retrieved successfully",
@@ -1969,7 +1909,7 @@ protectedRoutes.get("/players/search", async (c) => {
       // This allows players to be on teams with different level/gender combinations
       if (level && gender) {
         // Validate level and gender are valid enum values
-        const validLevels = ["1", "2", "3", "4"];
+        const validLevels = ["2", "3", "4"];
         const validGenders = ["male", "female", "mixed"];
         
         if (validLevels.includes(level) && validGenders.includes(gender)) {
@@ -1979,7 +1919,7 @@ protectedRoutes.get("/players/search", async (c) => {
             .innerJoin(teams, eq(team_members.team_id, teams.id))
             .where(
               and(
-                eq(teams.level, level as "1" | "2" | "3" | "4"),
+                eq(teams.level, level as "2" | "3" | "4"),
                 eq(teams.gender, gender as "male" | "female" | "mixed")
               )
             );
@@ -2065,9 +2005,9 @@ protectedRoutes.get("/players/search", async (c) => {
 });
 
 // Calendar Generation Endpoints (Admin Only)
-adminRoutes.post("/groups/:groupId/generate-calendar", async (c) => {
+adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
   try {
-    const groupId = c.req.param("groupId");
+    const leagueId = c.req.param("leagueId");
     const body = await c.req.json();
     const { start_date } = body;
 
@@ -2083,33 +2023,15 @@ adminRoutes.post("/groups/:groupId/generate-calendar", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get group and league info
-    console.log(`Getting group info for groupId: ${groupId}`);
-    const [group] = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.id, groupId));
-
-    if (!group) {
-      console.log(`Group not found for groupId: ${groupId}`);
-      return c.json({ error: "Group not found" }, 404);
-    }
-
-    console.log(`Found group:`, { id: group.id, name: group.name, league_id: group.league_id });
-
-    if (!group.league_id) {
-      console.error(`Group ${groupId} has no league_id`);
-      return c.json({ error: "Group has no associated league" }, 400);
-    }
-
-    console.log(`Getting league info for leagueId: ${group.league_id}`);
+    // Get league info
+    console.log(`Getting league info for leagueId: ${leagueId}`);
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, group.league_id));
+      .where(eq(leagues.id, leagueId));
 
     if (!league) {
-      console.log(`League not found for leagueId: ${group.league_id}`);
+      console.log(`League not found for leagueId: ${leagueId}`);
       return c.json({ error: "League not found" }, 404);
     }
 
@@ -2118,15 +2040,15 @@ adminRoutes.post("/groups/:groupId/generate-calendar", async (c) => {
     // Generate calendar
     console.log("Creating calendar generator and generating calendar");
     const generator = new CalendarGenerator(db);
-    const result = await generator.generateCalendar(groupId, startDate);
+    const result = await generator.generateCalendar(leagueId, startDate);
 
     console.log(`Calendar generation completed. Saving ${result.matches.length} matches to database`);
     // Save matches to database
-    await generator.saveMatches(result.matches, league.id, groupId);
+    await generator.saveMatches(result.matches, leagueId);
 
     console.log("Updating league dates");
     // Update league dates
-    await generator.updateLeagueDates(league.id, result.start_date, result.end_date);
+    await generator.updateLeagueDates(leagueId, result.start_date, result.end_date);
 
     return c.json({
       matches: result.matches,
@@ -2142,26 +2064,26 @@ adminRoutes.post("/groups/:groupId/generate-calendar", async (c) => {
   }
 });
 
-adminRoutes.get("/groups/:groupId/calendar", async (c) => {
+adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
   try {
-    const groupId = c.req.param("groupId");
-    console.log(`Retrieving calendar for group: ${groupId}`);
+    const leagueId = c.req.param("leagueId");
+    console.log(`Retrieving calendar for league: ${leagueId}`);
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all matches for the group first
-    const groupMatches = await db
+    // Get all matches for the league first
+    const leagueMatches = await db
       .select()
       .from(matches)
-      .where(eq(matches.group_id, groupId))
+      .where(eq(matches.league_id, leagueId))
       .orderBy(matches.week_number, matches.match_date);
     
-    console.log(`Found ${groupMatches.length} matches for group ${groupId}`);
+    console.log(`Found ${leagueMatches.length} matches for league ${leagueId}`);
 
     // Get team details for all unique team IDs
     const teamIds = new Set<string>();
-    groupMatches.forEach(match => {
+    leagueMatches.forEach(match => {
       teamIds.add(match.home_team_id);
       teamIds.add(match.away_team_id);
     });
@@ -2178,7 +2100,7 @@ adminRoutes.get("/groups/:groupId/calendar", async (c) => {
     const teamMap = new Map(teamDetails.map(team => [team.id, team]));
 
     // Combine matches with team details
-    const matchesWithTeams = groupMatches.map(match => ({
+    const matchesWithTeams = leagueMatches.map(match => ({
       match,
       home_team: teamMap.get(match.home_team_id) || { id: match.home_team_id, name: "Unknown Team" },
       away_team: teamMap.get(match.away_team_id) || { id: match.away_team_id, name: "Unknown Team" },
@@ -2193,7 +2115,7 @@ adminRoutes.get("/groups/:groupId/calendar", async (c) => {
     console.error("Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      groupId: c.req.param("groupId")
+      leagueId: c.req.param("leagueId")
     });
     return c.json(createErrorResponse("Failed to retrieve calendar", 500), 500);
   }
@@ -2341,20 +2263,20 @@ adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
 });
 
 // Clear calendar endpoint for testing
-adminRoutes.delete("/groups/:groupId/calendar", async (c) => {
+adminRoutes.delete("/leagues/:leagueId/calendar", async (c) => {
   try {
-    const groupId = c.req.param("groupId");
-    console.log(`Clearing calendar for group: ${groupId}`);
+    const leagueId = c.req.param("leagueId");
+    console.log(`Clearing calendar for league: ${leagueId}`);
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Delete all matches for this group
+    // Delete all matches for this league
     const deletedMatches = await db
       .delete(matches)
-      .where(eq(matches.group_id, groupId));
+      .where(eq(matches.league_id, leagueId));
 
-    console.log(`Deleted matches for group ${groupId}`);
+    console.log(`Deleted matches for league ${leagueId}`);
 
     return c.json({
       message: "Calendar cleared successfully",

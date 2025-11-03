@@ -16,14 +16,14 @@ import {
 interface GenerateCalendarModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  groupId: string;
+  leagueId: string;
   onCalendarGenerated?: () => void;
 }
 
 export function GenerateCalendarModal({
   open,
   onOpenChange,
-  groupId,
+  leagueId,
   onCalendarGenerated,
 }: GenerateCalendarModalProps) {
   const [startDate, setStartDate] = useState("");
@@ -50,7 +50,7 @@ export function GenerateCalendarModal({
       setLoading(true);
       setError(null);
 
-      const response = await api.generateGroupCalendar(groupId, startDate);
+      const response = await api.generateLeagueCalendar(leagueId, startDate);
       
       if (response.error) {
         setError(response.error);
@@ -91,7 +91,7 @@ export function GenerateCalendarModal({
             Generate League Calendar
           </DialogTitle>
           <DialogDescription>
-            Create a match schedule for all teams in this group. Each team will play every other team exactly once.
+            Create a match schedule for all teams in this league. Each team will play every other team exactly once.
           </DialogDescription>
         </DialogHeader>
 
