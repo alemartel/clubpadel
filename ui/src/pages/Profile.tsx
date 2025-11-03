@@ -26,6 +26,7 @@ import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { uploadWidgetConfig } from "@/lib/cloudinary";
 import { useTranslation } from "@/hooks/useTranslation";
+import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
 
 export function Profile() {
   const { user: firebaseUser, isAdmin, refreshServerUser } = useAuth();
@@ -42,6 +43,16 @@ export function Profile() {
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [showPictureModal, setShowPictureModal] = useState(false);
   const uploadWidgetRef = useRef<any>(null);
+
+  // Password change state
+  const [passwordFormData, setPasswordFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   // Form state - we'll fetch user data from server
   const [formData, setFormData] = useState({
@@ -136,10 +147,6 @@ export function Profile() {
     }
   };
 
-  const handleCancel = () => {
-    navigate(-1);
-  };
-
   const handlePictureChange = async (imageUrl: string) => {
     setPictureLoading(true);
     setPictureError("");
@@ -188,6 +195,70 @@ export function Profile() {
 
   const handleCancelRemove = () => {
     setShowRemoveDialog(false);
+  };
+
+  const handlePasswordInputChange = (field: string, value: string) => {
+    setPasswordFormData((prev) => ({ ...prev, [field]: value }));
+    setPasswordError("");
+    setPasswordSuccess("");
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    // Validation
+    if (!passwordFormData.currentPassword) {
+      setPasswordError(t('currentPasswordRequired'));
+      return;
+    }
+
+    if (passwordFormData.newPassword.length < 6) {
+      setPasswordError(t('passwordTooShort') || 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordFormData.newPassword !== passwordFormData.confirmNewPassword) {
+      setPasswordError(t('passwordsMustMatch'));
+      return;
+    }
+
+    if (!firebaseUser || !firebaseUser.email) {
+      setPasswordError(t('passwordChangeError'));
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      // Re-authenticate user
+      const credential = EmailAuthProvider.credential(
+        firebaseUser.email,
+        passwordFormData.currentPassword
+      );
+      await reauthenticateWithCredential(firebaseUser, credential);
+
+      // Update password
+      await updatePassword(firebaseUser, passwordFormData.newPassword);
+
+      setPasswordSuccess(t('passwordChanged'));
+      setPasswordFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
+      });
+    } catch (err: any) {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setPasswordError(t('currentPasswordIncorrect'));
+      } else if (err.code === 'auth/weak-password') {
+        setPasswordError(t('passwordTooShort') || 'Password is too weak');
+      } else {
+        setPasswordError(t('passwordChangeError') + ": " + (err.message || 'Unknown error'));
+      }
+      console.error('Password change error:', err);
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   // Show loading state while fetching initial data
@@ -519,15 +590,114 @@ export function Profile() {
                     </>
                   )}
                 </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 flex-1 sm:flex-none"
+        {/* Password Change Card */}
+        <Card className="bg-white shadow-sm mt-6">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-900">
+              {t('changePassword')}
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              {t('changePasswordSubtitle')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="currentPassword"
+                  className="text-sm font-medium text-gray-700"
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
+                  {t('currentPassword')}
+                </Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordFormData.currentPassword}
+                  onChange={(e) =>
+                    handlePasswordInputChange("currentPassword", e.target.value)
+                  }
+                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
+                  placeholder={t('currentPasswordPlaceholder')}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="newPassword"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {t('newPassword')}
+                </Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordFormData.newPassword}
+                  onChange={(e) =>
+                    handlePasswordInputChange("newPassword", e.target.value)
+                  }
+                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
+                  placeholder={t('newPasswordPlaceholder')}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="confirmNewPassword"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {t('confirmNewPassword')}
+                </Label>
+                <Input
+                  id="confirmNewPassword"
+                  type="password"
+                  value={passwordFormData.confirmNewPassword}
+                  onChange={(e) =>
+                    handlePasswordInputChange("confirmNewPassword", e.target.value)
+                  }
+                  className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-gray-800"
+                  placeholder={t('confirmNewPasswordPlaceholder')}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-600">{passwordError}</p>
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                  <p className="text-sm text-green-600">{passwordSuccess}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
+                >
+                  {passwordLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      {t('saving')}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {t('saveChanges')}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

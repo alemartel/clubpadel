@@ -14,6 +14,7 @@ import { ControlPanel } from "@/pages/ControlPanel";
 import { MyTeams } from "./pages/MyTeams";
 import { CreateTeam } from "./pages/CreateTeam";
 import { TeamDetail } from "./pages/TeamDetail";
+import { Register } from "@/pages/Register";
 import {
   BrowserRouter as Router,
   Routes,
@@ -134,7 +135,10 @@ function AppContent() {
             <div className="relative z-10">
               <Navbar />
               <main className="flex flex-col items-center justify-center flex-1 p-4 min-h-[calc(100vh-3rem)]">
-                <LoginForm />
+                <Routes>
+                  <Route path="/register" element={<Register />} />
+                  <Route path="*" element={<LoginForm />} />
+                </Routes>
               </main>
             </div>
           </div>
