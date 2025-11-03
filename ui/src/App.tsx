@@ -128,7 +128,7 @@ function AppContent() {
               className="absolute inset-0 bg-cover bg-no-repeat"
               style={{ 
                 backgroundImage: 'url(/login-background.jpg)',
-                backgroundPosition: 'top -250px left 0px'
+                backgroundPosition: 'center center'
               }}
             />
             <div className="absolute inset-0 bg-black/20" />

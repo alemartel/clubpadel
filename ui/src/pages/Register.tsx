@@ -6,10 +6,13 @@ import { auth } from "@/lib/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { useTranslation } from "@/hooks/useTranslation"
 import { useNavigate } from "react-router-dom"
+import { api } from "@/lib/serverComm"
 
 export function Register() {
   const { t } = useTranslation('auth')
   const navigate = useNavigate()
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -25,6 +28,16 @@ export function Register() {
 
   const validateForm = (): boolean => {
     setValidationError("")
+    
+    if (!firstName) {
+      setValidationError(t('firstNameRequired'))
+      return false
+    }
+    
+    if (!lastName) {
+      setValidationError(t('lastNameRequired'))
+      return false
+    }
     
     if (!email) {
       setValidationError(t('emailRequired'))
@@ -67,6 +80,18 @@ export function Register() {
     setLoading(true)
     try {
       await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Update profile with first name and last name
+      try {
+        await api.updateUserProfile({
+          first_name: firstName,
+          last_name: lastName,
+        })
+      } catch (profileErr) {
+        console.error('Failed to update profile after registration:', profileErr)
+        // Don't fail registration if profile update fails
+      }
+      
       setSuccess(t('signUpSuccess'))
       // User is automatically signed in after successful registration and redirected by auth context
     } catch (err: any) {
@@ -98,6 +123,26 @@ export function Register() {
       <form onSubmit={handleSubmit}>
         <CardContent>
           <div className="grid w-full items-center gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <Input
+                id="firstName"
+                placeholder={t('firstName')}
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <Input
+                id="lastName"
+                placeholder={t('lastName')}
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+            </div>
             <div className="flex flex-col space-y-1.5">
               <Input
                 id="email"

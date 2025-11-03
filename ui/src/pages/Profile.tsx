@@ -473,9 +473,6 @@ export function Profile() {
                   className="bg-gray-50 border-gray-200 text-gray-600 cursor-not-allowed"
                   placeholder="Email address"
                 />
-                <p className="text-xs text-gray-500">
-                  Email cannot be changed as it's used for authentication
-                </p>
               </div>
 
               <div className="space-y-2">
