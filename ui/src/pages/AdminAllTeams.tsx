@@ -19,8 +19,9 @@ import {
   Pencil,
   Mars,
   Venus,
+  Plus,
 } from "lucide-react";
-import { api } from "@/lib/serverComm";
+import { api, type NewTeam } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
@@ -28,11 +29,15 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
 import { TeamDetail } from "./TeamDetail";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfilePictureModal } from "@/components/ProfilePictureModal";
 
 export function AdminAllTeams() {
+  const { isAdmin } = useAuth();
   const { t } = useTranslation("teams");
   const { t: tCommon } = useTranslation("common");
   const { t: tNav } = useTranslation("navigation");
@@ -56,6 +61,13 @@ export function AdminAllTeams() {
     lastName?: string;
     email: string;
   } | null>(null);
+  // Create team modal state
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [createTeamName, setCreateTeamName] = useState("");
+  const [createTeamLevel, setCreateTeamLevel] = useState<string>("");
+  const [createTeamGender, setCreateTeamGender] = useState<string>("");
+  const [createTeamLoading, setCreateTeamLoading] = useState(false);
+  const [createTeamError, setCreateTeamError] = useState<string | null>(null);
 
   const loadTeams = async () => {
     try {
@@ -80,6 +92,58 @@ export function AdminAllTeams() {
     loadTeams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level]);
+
+  // Gender map for converting display values to backend values
+  const genderMap: Record<string, string> = {
+    "Masculine": "male",
+    "Femenine": "female",
+    "Mixed": "mixed"
+  };
+
+  // Admin team creation: Creates empty teams with no members.
+  // Backend will skip gender validation and member addition for admins.
+  // Admins can then edit the team to add members using the existing edit functionality.
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!createTeamName.trim() || !createTeamLevel || !createTeamGender) {
+      setCreateTeamError(t('pleaseFillAllFields'));
+      return;
+    }
+
+    try {
+      setCreateTeamLoading(true);
+      setCreateTeamError(null);
+
+      const teamData: NewTeam = {
+        name: createTeamName.trim(),
+        level: createTeamLevel,
+        gender: genderMap[createTeamGender],
+      };
+
+      // Backend detects admin status and creates empty team (no members, no gender validation)
+      const response = await api.createTeam(teamData);
+      
+      if (response.error) {
+        setCreateTeamError(response.error);
+      } else {
+        // Reset form and close modal
+        setCreateTeamName("");
+        setCreateTeamLevel("");
+        setCreateTeamGender("");
+        setShowCreateTeamModal(false);
+        // Show success toast
+        toast.success("Team created");
+        // Refresh teams list
+        loadTeams();
+      }
+    } catch (err) {
+      setCreateTeamError(t('failedToCreateTeam'));
+      console.error("Error creating team:", err);
+    } finally {
+      setCreateTeamLoading(false);
+    }
+  };
 
   const handleMarkPaid = async (
     teamId: string,
@@ -155,6 +219,15 @@ export function AdminAllTeams() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{tNav('teamManagement')}</h1>
         </div>
+        {isAdmin && (
+          <Button
+            onClick={() => setShowCreateTeamModal(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {t('createTeam')}
+          </Button>
+        )}
       </div>
 
       {/* Compact filters */}
@@ -209,7 +282,7 @@ export function AdminAllTeams() {
             </div>
           </div>
         </CardHeader>
-        {/* No filter content – now included in header row above */}
+        {/* No filter content – now included in header row above */}
       </Card>
 
       {error && (
@@ -595,6 +668,83 @@ export function AdminAllTeams() {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showCreateTeamModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowCreateTeamModal(false);
+          setCreateTeamName("");
+          setCreateTeamLevel("");
+          setCreateTeamGender("");
+          setCreateTeamError(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('createTeam')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateTeam} className="space-y-4">
+            {createTeamError && (
+              <div className="p-4 border border-destructive/20 bg-destructive/10 rounded-md">
+                <p className="text-destructive text-sm">{createTeamError}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="createTeamName">{t('teamName')}</Label>
+              <Input
+                id="createTeamName"
+                value={createTeamName}
+                onChange={(e) => setCreateTeamName(e.target.value)}
+                placeholder={t('teamNamePlaceholder')}
+                required
+                maxLength={100}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="createTeamLevel">{t('selectLevel')}</Label>
+              <Select value={createTeamLevel} onValueChange={setCreateTeamLevel}>
+                <SelectTrigger id="createTeamLevel">
+                  <SelectValue placeholder={t('selectLevel')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="createTeamGender">{t('selectGender')}</Label>
+              <Select value={createTeamGender} onValueChange={setCreateTeamGender}>
+                <SelectTrigger id="createTeamGender">
+                  <SelectValue placeholder={t('selectGender')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masculine">{t('masculine')}</SelectItem>
+                  <SelectItem value="Femenine">{t('femenine')}</SelectItem>
+                  <SelectItem value="Mixed">{t('mixed')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={createTeamLoading}>
+                  {tCommon('cancel')}
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={createTeamLoading || !createTeamName.trim() || !createTeamLevel || !createTeamGender}
+              >
+                {createTeamLoading ? t('creatingTeam') : t('createTeam')}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
       {selectedUserForPicture && (

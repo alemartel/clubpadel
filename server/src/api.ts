@@ -1036,22 +1036,29 @@ protectedRoutes.post("/teams", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Validate creator's gender matches team gender requirement
-    const [creator] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, user.id));
+    const isAdmin = user.role === "admin";
 
-    if (creator?.gender) {
-      if (gender === "male" && creator.gender !== "male") {
-        return c.json({ 
-          error: "Masculine teams can only be created by male players" 
-        }, 403);
-      }
-      if (gender === "female" && creator.gender !== "female") {
-        return c.json({ 
-          error: "Feminine teams can only be created by female players" 
-        }, 403);
+    // Admin-specific behavior: Admins can create teams of any gender regardless of their own gender,
+    // and teams are created empty (no members added). This allows admins to create placeholder teams
+    // that can be populated later. Regular players must match team gender and are added as the first member.
+    // Validate creator's gender matches team gender requirement (skip for admins)
+    if (!isAdmin) {
+      const [creator] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, user.id));
+
+      if (creator?.gender) {
+        if (gender === "male" && creator.gender !== "male") {
+          return c.json({ 
+            error: "Masculine teams can only be created by male players" 
+          }, 403);
+        }
+        if (gender === "female" && creator.gender !== "female") {
+          return c.json({ 
+            error: "Feminine teams can only be created by female players" 
+          }, 403);
+        }
       }
     }
 
@@ -1084,25 +1091,27 @@ protectedRoutes.post("/teams", async (c) => {
       })
       .returning();
 
-    // Add creator as team member
-    await db
-      .insert(team_members)
-      .values({
-        id: randomUUID(),
-        team_id: teamId,
-        user_id: user.id,
-      })
-      .returning();
+    // Add creator as team member (skip for admins - teams created empty for later population)
+    if (!isAdmin) {
+      await db
+        .insert(team_members)
+        .values({
+          id: randomUUID(),
+          team_id: teamId,
+          user_id: user.id,
+        })
+        .returning();
 
-    // Create notification for team creation (creator joins the team they created)
-    await db.insert(team_change_notifications).values({
-      id: randomUUID(),
-      user_id: user.id, // The player who created the team (and joined it)
-      team_id: teamId,
-      action: "joined",
-      created_at: new Date(),
-      read: false,
-    });
+      // Create notification for team creation (creator joins the team they created)
+      await db.insert(team_change_notifications).values({
+        id: randomUUID(),
+        user_id: user.id, // The player who created the team (and joined it)
+        team_id: teamId,
+        action: "joined",
+        created_at: new Date(),
+        read: false,
+      });
+    }
 
     return c.json({
       team: newTeam,

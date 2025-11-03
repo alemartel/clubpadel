@@ -230,7 +230,7 @@ export function AdminLeagues() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/admin/leagues/${league.id}/groups`)}
+                      onClick={() => navigate(`/admin/teams`)}
                       className="flex-1 min-h-[44px]"
                     >
                       <Users className="w-4 h-4 mr-1 hidden sm:block" />

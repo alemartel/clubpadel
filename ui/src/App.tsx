@@ -9,8 +9,6 @@ import { Settings } from "@/pages/Settings";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
 import { AdminAllTeams } from "@/pages/AdminAllTeams";
-import { AdminGroups } from "@/pages/AdminGroups";
-import { AdminTeams } from "@/pages/AdminTeams";
 import { PlayerManagement } from "@/pages/PlayerManagement";
 import { ControlPanel } from "@/pages/ControlPanel";
 import { MyTeams } from "./pages/MyTeams";
@@ -26,6 +24,7 @@ import {
 } from "react-router-dom";
 import { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 // Admin route protection component
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -175,22 +174,6 @@ function AppContent() {
                     }
                   />
                   <Route
-                    path="/admin/leagues/:leagueId/groups"
-                    element={
-                      <AdminRoute>
-                        <AdminGroups />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/leagues/:leagueId/groups/:groupId/teams"
-                    element={
-                      <AdminRoute>
-                        <AdminTeams />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
                     path="/admin/player-management"
                     element={
                       <AdminRoute>
@@ -240,6 +223,7 @@ function App() {
         <Router>
           <AppContent />
         </Router>
+        <Toaster />
       </ThemeProvider>
     </AuthProvider>
   );

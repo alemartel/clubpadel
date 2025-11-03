@@ -87,9 +87,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 
   // Function to get the correct back navigation URL
   const getBackUrl = () => {
-    if (isAdmin && team && team.league && team.group) {
-      // If admin and we have team data with league/group, go back to admin teams page
-      return `/admin/leagues/${team.league.id}/groups/${team.group.id}/teams`;
+    if (isAdmin) {
+      // If admin, go back to admin teams page
+      return "/admin/teams";
     }
     // Otherwise, go to user's teams page
     return "/teams";
