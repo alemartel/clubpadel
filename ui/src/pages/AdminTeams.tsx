@@ -689,15 +689,7 @@ export function AdminTeams() {
           loadTeams();
         }
       }}>
-        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-2 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
-          <DialogHeader>
-            <DialogTitle className="sr-only">
-              {(() => {
-                const st = teams.find((it) => it.team?.id === selectedEditTeamId);
-                return st?.team?.name || tCommon('edit');
-              })()}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
           {selectedEditTeamId && (
             <TeamDetail
               teamId={selectedEditTeamId}

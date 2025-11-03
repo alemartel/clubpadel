@@ -416,7 +416,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   }
 
   return (
-    <div className={embedded ? "max-w-4xl mx-auto" : "container mx-auto p-4 max-w-4xl"}>
+    <div className={embedded ? "" : "container mx-auto p-4 max-w-4xl"}>
 
       {error && (
         <div className="mb-6 p-4 border border-destructive/20 bg-destructive/10 rounded-md">
@@ -424,9 +424,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className={embedded ? "space-y-6" : "grid gap-6 lg:grid-cols-3"}>
         {/* Team Information */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={embedded ? "space-y-6" : "lg:col-span-2 space-y-6"}>
           <Card>
             <CardContent className="space-y-4 pt-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -473,7 +473,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                               <Edit className="w-4 h-4" />
                             </Button>
                           )}
-                          {isAdmin && (
+                          {isAdmin && !embedded && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -812,6 +812,20 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         </div>
 
       </div>
+
+      {/* Delete Team Button (shown at bottom when embedded) */}
+      {isAdmin && embedded && (
+        <div className="mt-6 pt-6 border-t">
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {t('deleteTeam')}
+          </Button>
+        </div>
+      )}
 
       {/* Player Search Modal */}
       {isAdmin && (

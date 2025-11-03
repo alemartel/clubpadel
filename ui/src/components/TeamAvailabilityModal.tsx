@@ -68,7 +68,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
         day_of_week: day.key,
         is_available: false,
         start_time: '09:00',
-        end_time: '17:00',
+        end_time: '21:00',
       }));
       setAvailability(initialAvailability);
       loadAvailability(initialAvailability);
@@ -95,7 +95,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
               return formatTimeString(parsed.hours, parsed.minutes);
             })(),
             end_time: (() => {
-              const parsed = parseTime(formatTimeForInput(existing.end_time) || '17:00');
+              const parsed = parseTime(formatTimeForInput(existing.end_time) || '21:00');
               return formatTimeString(parsed.hours, parsed.minutes);
             })(),
           } : day;
@@ -259,7 +259,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -276,22 +276,6 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
           </div>
         )}
 
-        {hasInvalidTimeRanges && (
-          <div className="bg-red-50 dark:bg-red-900/10 border border-red-500/50 rounded-md p-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm text-red-800 dark:text-red-200 font-medium mb-1">
-                  {t('invalidTimeRange') || 'Invalid time range'}
-                </p>
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  {t('startTimeGreaterThanEndTime') || 'Start time cannot be greater than end time for'}: {invalidTimeRanges.map(d => d.dayName).join(', ')}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {!validation.meetsRequirements && (
           <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-500/50 rounded-md p-3">
             <div className="flex items-start gap-2">
@@ -302,6 +286,22 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
                 </p>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-line">
                   {t('availabilityWarningDescription')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasInvalidTimeRanges && (
+          <div className="bg-red-50 dark:bg-red-900/10 border border-red-500/50 rounded-md p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium mb-1">
+                  {t('invalidTimeRange') || 'Invalid time range'}
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  {t('startTimeGreaterThanEndTime') || 'Start time cannot be greater than end time for'}: {invalidTimeRanges.map(d => d.dayName).join(', ')}
                 </p>
               </div>
             </div>
