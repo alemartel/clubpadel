@@ -48,6 +48,7 @@ import { Plus, Edit, Trash2, Calendar, Users, X, ChevronDown, ChevronUp, Search 
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
+import { TeamDetail } from "./TeamDetail";
 
 export function AdminLeagues() {
   const { isAdmin, loading } = useAuth();
@@ -87,6 +88,7 @@ export function AdminLeagues() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showRemoveTeamConfirm, setShowRemoveTeamConfirm] = useState(false);
   const [pendingRemoveTeam, setPendingRemoveTeam] = useState<{ leagueId: string; teamId: string } | null>(null);
+  const [selectedTeamInfo, setSelectedTeamInfo] = useState<{ teamId: string; leagueId: string } | null>(null);
   const editLeagueNameInputRef = useRef<HTMLInputElement>(null);
 
   // Validation errors
@@ -460,7 +462,10 @@ export function AdminLeagues() {
                                 key={item.team.id}
                                 className="flex items-center justify-between p-2 border rounded-md"
                               >
-                                <div>
+                                <div
+                                  onClick={() => setSelectedTeamInfo({ teamId: item.team.id, leagueId: league.id })}
+                                  className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                                >
                                   <p className="font-medium text-sm">{item.team.name}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {t('members') || "Members"}: {item.member_count || 0}
@@ -469,7 +474,10 @@ export function AdminLeagues() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleRemoveTeamClick(league.id, item.team.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveTeamClick(league.id, item.team.id);
+                                  }}
                                   className="h-8 w-8 p-0"
                                 >
                                   <X className="w-4 h-4" />
@@ -913,6 +921,34 @@ export function AdminLeagues() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Team Members Modal */}
+      <Dialog
+        open={!!selectedTeamInfo}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTeamInfo(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
+          <DialogTitle className="sr-only">{tTeams('teamDetails')}</DialogTitle>
+          {selectedTeamInfo && (
+            <TeamDetail
+              teamId={selectedTeamInfo.teamId}
+              embedded={true}
+              forceAdmin={true}
+              onClose={() => {
+                // Refresh teams for the league if needed
+                if (selectedTeamInfo?.leagueId) {
+                  loadLeagueTeams(selectedTeamInfo.leagueId);
+                }
+                setSelectedTeamInfo(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

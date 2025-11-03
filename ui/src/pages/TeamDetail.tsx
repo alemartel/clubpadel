@@ -154,11 +154,20 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
     // Check if user is removing themselves
     const isRemovingSelf = serverUser?.id === userId;
     
+    // Get the name of the member being removed for the toast message
+    const memberToRemove = team?.members.find(m => m.member.user_id === userId);
+    const memberName = memberToRemove?.user.display_name || 
+      `${memberToRemove?.user.first_name || ''} ${memberToRemove?.user.last_name || ''}`.trim() || 
+      memberToRemove?.user.email || '';
+    
     try {
       const response = await api.removeTeamMember(id, userId);
       if (response.error) {
         setError(response.error);
       } else {
+        // Show success toast
+        toast.success(memberName ? t('memberRemoved', { name: memberName }) : t('memberRemoved', { name: '' }));
+        
         // If user removed themselves, redirect to My Teams page
         if (isRemovingSelf) {
           navigate('/teams');
@@ -764,14 +773,10 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (isAdmin) {
-                                handleRemoveMember(user.id);
-                              } else {
-                                setPendingRemoveUserId(user.id);
-                                const name = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
-                                setPendingRemoveUserName(name);
-                                setConfirmRemoveOpen(true);
-                              }
+                              setPendingRemoveUserId(user.id);
+                              const name = user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+                              setPendingRemoveUserName(name);
+                              setConfirmRemoveOpen(true);
                             }}
                           >
                             <UserMinus className="w-4 h-4" />
@@ -828,34 +833,32 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         />
       )}
 
-      {/* Confirm Remove Member (Players only) */}
-      {!isAdmin && (
-        <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{tCommon('confirm')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {pendingRemoveUserName ? `${pendingRemoveUserName}` : ''}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (pendingRemoveUserId) {
-                    handleRemoveMember(pendingRemoveUserId);
-                  }
-                  setConfirmRemoveOpen(false);
-                  setPendingRemoveUserId(null);
-                  setPendingRemoveUserName(null);
-                }}
-              >
-                {tCommon('confirm')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {/* Confirm Remove Member */}
+      <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('removeMember')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRemoveUserName ? t('removeMemberConfirm', { name: pendingRemoveUserName }) : t('removeMemberConfirm', { name: '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRemoveUserId) {
+                  handleRemoveMember(pendingRemoveUserId);
+                }
+                setConfirmRemoveOpen(false);
+                setPendingRemoveUserId(null);
+                setPendingRemoveUserName(null);
+              }}
+            >
+              {tCommon('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Team Confirmation (Admin only) */}
       {isAdmin && (
