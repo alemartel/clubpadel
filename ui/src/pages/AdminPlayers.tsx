@@ -10,12 +10,11 @@ import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Search, Users, ChevronDown, ChevronUp, CheckCircle2, XCircle, Info } from "lucide-react";
+import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -39,6 +38,10 @@ interface Player {
   last_name?: string;
   display_name?: string;
   phone_number?: string;
+  profile_picture_url?: string;
+  dni?: string;
+  tshirt_size?: string;
+  gender?: string;
   role: string;
   created_at: string;
   updated_at: string;
@@ -74,6 +77,9 @@ export function AdminPlayers() {
   // Payment details modal state
   const [showPaymentDetailsDialog, setShowPaymentDetailsDialog] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<{ amount: number | null; date: string | null } | null>(null);
+  
+  // Player detail modal state
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -292,7 +298,7 @@ export function AdminPlayers() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player) => {
                 const teams = playerTeamsMap[player.id] || [];
                 const isExpanded = expandedPlayers.has(player.id);
@@ -300,133 +306,153 @@ export function AdminPlayers() {
                 const teamsCount = teams.length;
 
                 return (
-                  <Card key={player.id} className="relative">
-                    <CardHeader className="pb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className="text-base truncate">
-                            {getPlayerName(player)}
-                          </CardTitle>
-                          <CardDescription className="truncate">
+                  <Card key={player.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="text-base truncate">
+                        <div 
+                          className="flex items-center gap-2 flex-wrap cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedPlayer(player)}
+                        >
+                          <UserAvatar
+                            user={{
+                              photo_url: null,
+                              profile_picture_url: player.profile_picture_url || null,
+                              first_name: player.first_name || null,
+                              last_name: player.last_name || null,
+                              email: player.email,
+                            }}
+                            size="sm"
+                          />
+                          <span>{getPlayerName(player)}</span>
+                          <span className="text-sm font-normal text-muted-foreground truncate">
                             ({player.email})
-                          </CardDescription>
+                          </span>
                         </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
                         {player.phone_number && (
-                          <div className="text-sm text-muted-foreground mt-1">
+                          <div className="text-sm text-muted-foreground">
                             {player.phone_number}
                           </div>
                         )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <Collapsible open={isExpanded} onOpenChange={() => handleToggleTeams(player.id)}>
-                        <CollapsibleTrigger className="flex items-center justify-between w-full text-left text-sm font-medium hover:text-foreground transition-colors">
-                          <span>
-                            {isExpanded && teamsCount > 0 
-                              ? tCommon('playerTeamsCount', { count: teamsCount })
-                              : tCommon('playerTeams')
-                            }
-                          </span>
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-2 mt-2">
-                          {isLoading ? (
-                            <div className="text-center py-4 text-sm text-muted-foreground">
-                              {tCommon('loading')}
-                            </div>
-                          ) : teams.length === 0 ? (
-                            <div className="text-center py-4 text-sm text-muted-foreground">
-                              {tCommon('noTeamsForPlayer')}
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {teams.map((teamInfo) => {
-                                const displayName = teamInfo.league
-                                  ? tCommon('leagueTeamDisplay', {
-                                      leagueName: teamInfo.league.name,
-                                      teamName: teamInfo.team.name
-                                    })
-                                  : `${teamInfo.team.name} (${tCommon('noLeagueForTeam')})`;
-                                
-                                return (
-                                  <div key={teamInfo.team_member_id} className="p-2 border rounded-md">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        {teamInfo.payment_status.paid ? (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                                <CheckCircle2 className="w-4 h-4" />
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
-                                          </Tooltip>
-                                        ) : (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
-                                                <XCircle className="w-4 h-4" />
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                          </Tooltip>
-                                        )}
-                                        <div className="min-w-0 flex-1">
-                                          <div className="text-sm font-medium truncate">
-                                            {displayName}
+                        
+                        {/* Teams Collapsible Section */}
+                        <Collapsible
+                          open={isExpanded}
+                          onOpenChange={() => handleToggleTeams(player.id)}
+                        >
+                          <div className="border-t pt-3 mt-3">
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-full justify-between">
+                                <span className="flex items-center gap-2">
+                                  <Users className="w-4 h-4" />
+                                  <span>
+                                    {tCommon('playerTeams')}
+                                    {isExpanded && teamsCount > 0 && (
+                                      <> ({teamsCount})</>
+                                    )}
+                                  </span>
+                                </span>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-2 mt-2">
+                              {isLoading ? (
+                                <div className="text-center py-4 text-sm text-muted-foreground">
+                                  {tCommon('loading')}
+                                </div>
+                              ) : teams.length === 0 ? (
+                                <div className="text-center py-4 text-sm text-muted-foreground">
+                                  {tCommon('noTeamsForPlayer')}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {teams.map((teamInfo) => {
+                                    const displayName = teamInfo.league
+                                      ? tCommon('leagueTeamDisplay', {
+                                          leagueName: teamInfo.league.name,
+                                          teamName: teamInfo.team.name
+                                        })
+                                      : `${teamInfo.team.name} (${tCommon('noLeagueForTeam')})`;
+                                    
+                                    return (
+                                      <div key={teamInfo.team_member_id} className="p-2 border rounded-md">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            {teamInfo.payment_status.paid ? (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
+                                              </Tooltip>
+                                            ) : (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
+                                                    <XCircle className="w-4 h-4" />
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
+                                              </Tooltip>
+                                            )}
+                                            <div className="min-w-0 flex-1">
+                                              <div className="text-sm font-medium truncate">
+                                                {displayName}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2 min-w-0 ml-2">
+                                            <Switch
+                                              checked={!!teamInfo.payment_status.paid}
+                                              onCheckedChange={(checked) => {
+                                                handleMarkPaid(
+                                                  player.id,
+                                                  teamInfo.team.id,
+                                                  player.id,
+                                                  teamInfo.team_member_id,
+                                                  !!teamInfo.payment_status.paid,
+                                                  checked
+                                                );
+                                              }}
+                                              id={`switch-paid-${player.id}-${teamInfo.team_member_id}`}
+                                              aria-label={tCommon('paid')}
+                                            />
+                                            {teamInfo.payment_status.paid && (
+                                              <button
+                                                onClick={() => {
+                                                  setPaymentDetails({
+                                                    amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
+                                                    date: teamInfo.payment_status.paid_at || null
+                                                  });
+                                                  setShowPaymentDetailsDialog(true);
+                                                }}
+                                                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                                              >
+                                                {teamInfo.payment_status.paid_amount ?? 0}€
+                                                <Info className="w-3 h-3" />
+                                              </button>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
-                                      <div className="flex flex-col items-end min-w-0 ml-2">
-                                        <Switch
-                                          checked={!!teamInfo.payment_status.paid}
-                                          onCheckedChange={(checked) => {
-                                            handleMarkPaid(
-                                              player.id,
-                                              teamInfo.team.id,
-                                              player.id,
-                                              teamInfo.team_member_id,
-                                              !!teamInfo.payment_status.paid,
-                                              checked
-                                            );
-                                          }}
-                                          id={`switch-paid-${player.id}-${teamInfo.team_member_id}`}
-                                          aria-label={tCommon('paid')}
-                                        />
-                                        {teamInfo.payment_status.paid && (
-                                          <button
-                                            onClick={() => {
-                                              setPaymentDetails({
-                                                amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
-                                                date: teamInfo.payment_status.paid_at || null
-                                              });
-                                              setShowPaymentDetailsDialog(true);
-                                            }}
-                                            className="text-xs text-muted-foreground mt-1 hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                                          >
-                                            {teamInfo.payment_status.paid_amount ?? 0}€
-                                            <Info className="w-3 h-3" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <div className="text-sm text-muted-foreground">
-                        {t('joinedOn')}: {new Date(player.created_at).toLocaleDateString()}
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
                       </div>
-                    </CardFooter>
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -504,6 +530,77 @@ export function AdminPlayers() {
           </div>
           <DialogFooter>
             <Button onClick={() => setShowPaymentDetailsDialog(false)}>
+              {tCommon('close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Player Detail Modal */}
+      <Dialog open={!!selectedPlayer} onOpenChange={(open) => !open && setSelectedPlayer(null)}>
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
+          <DialogHeader>
+            <DialogTitle>{tCommon('playerDetails') || "Player Details"}</DialogTitle>
+          </DialogHeader>
+          {selectedPlayer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <UserAvatar
+                  user={{
+                    photo_url: null,
+                    profile_picture_url: selectedPlayer.profile_picture_url || null,
+                    first_name: selectedPlayer.first_name || null,
+                    last_name: selectedPlayer.last_name || null,
+                    email: selectedPlayer.email,
+                  }}
+                  size="lg"
+                />
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {selectedPlayer.first_name && selectedPlayer.last_name 
+                      ? `${selectedPlayer.first_name} ${selectedPlayer.last_name}`
+                      : selectedPlayer.first_name || selectedPlayer.last_name || selectedPlayer.email
+                    }
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{selectedPlayer.email}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <Label className="text-sm font-medium">{tCommon('dni') || "DNI"}</Label>
+                  <p className="text-sm mt-1">{selectedPlayer.dni || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">{tCommon('tshirtSize') || "T-shirt Size"}</Label>
+                  <p className="text-sm mt-1">{selectedPlayer.tshirt_size || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">{tCommon('phoneNumber') || "Phone Number"}</Label>
+                  <p className="text-sm mt-1">{selectedPlayer.phone_number || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">{tTeams('gender') || "Gender"}</Label>
+                  <p className="text-sm mt-1">
+                    {selectedPlayer.gender === 'male' 
+                      ? (tTeams('masculine') || "Masculine")
+                      : selectedPlayer.gender === 'female'
+                      ? (tTeams('femenine') || "Feminine")
+                      : selectedPlayer.gender === 'mixed'
+                      ? (tTeams('mixed') || "Mixed")
+                      : "-"
+                    }
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">{t('joinedOn')}</Label>
+                  <p className="text-sm mt-1">{new Date(selectedPlayer.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setSelectedPlayer(null)}>
               {tCommon('close')}
             </Button>
           </DialogFooter>

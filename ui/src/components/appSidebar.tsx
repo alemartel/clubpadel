@@ -60,7 +60,7 @@ export function AppSidebar() {
                     asChild
                   >
                     <Link to="/teams" onClick={handleMenuClick}>
-                      <Users className="w-4 h-4" />
+                      <Shield className="w-4 h-4" />
                       <span>{t('myTeams')}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -86,18 +86,18 @@ export function AppSidebar() {
                       asChild
                     >
                       <Link to="/admin/teams" onClick={handleMenuClick}>
-                        <Users className="w-4 h-4" />
+                        <Shield className="w-4 h-4" />
                         <span>{t('teamManagement')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={isActive("/admin/admin-players")}
+                      isActive={isActive("/admin/players")}
                       asChild
                     >
-                      <Link to="/admin/admin-players" onClick={handleMenuClick}>
-                        <Shield className="w-4 h-4" />
+                      <Link to="/admin/players" onClick={handleMenuClick}>
+                        <Users className="w-4 h-4" />
                         <span>{t('playerManagement')}</span>
                       </Link>
                     </SidebarMenuButton>

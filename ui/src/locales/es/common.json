@@ -278,5 +278,12 @@
   "noTeamsForPlayer": "Este jugador no está en ningún equipo",
   "leagueTeamDisplay": "{{leagueName}} + {{teamName}}",
   "noLeagueForTeam": "Sin liga",
-  "paid": "Pagado"
+  "paid": "Pagado",
+  "playerDetails": "Detalles del jugador",
+  "firstName": "Nombre",
+  "lastName": "Apellido",
+  "displayName": "Nombre de usuario",
+  "phoneNumber": "Teléfono",
+  "dni": "DNI",
+  "tshirtSize": "Talla de camiseta"
 }

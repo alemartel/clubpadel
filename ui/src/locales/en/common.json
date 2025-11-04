@@ -278,5 +278,12 @@
   "noTeamsForPlayer": "This player is not on any teams",
   "leagueTeamDisplay": "{{leagueName}} + {{teamName}}",
   "noLeagueForTeam": "No league",
-  "paid": "Paid"
+  "paid": "Paid",
+  "playerDetails": "Player Details",
+  "firstName": "First Name",
+  "lastName": "Last Name",
+  "displayName": "Display Name",
+  "phoneNumber": "Phone Number",
+  "dni": "DNI",
+  "tshirtSize": "T-shirt Size"
 }

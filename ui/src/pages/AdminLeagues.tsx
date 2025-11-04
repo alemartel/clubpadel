@@ -588,28 +588,26 @@ export function AdminLeagues() {
                                                     </div>
                                                   </div>
                                                 </div>
-                                                <div className="flex flex-col items-end min-w-0 ml-2">
-                                                  <div className="flex items-center gap-2">
-                                                    {member.paid ? (
-                                                      <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                          <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                                            <CheckCircle2 className="w-4 h-4" />
-                                                          </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="top">{tTeams('paid')}</TooltipContent>
-                                                      </Tooltip>
-                                                    ) : (
-                                                      <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                          <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
-                                                            <XCircle className="w-4 h-4" />
-                                                          </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                                      </Tooltip>
-                                                    )}
-                                                  </div>
+                                                <div className="flex items-center gap-2 min-w-0 ml-2">
+                                                  {member.paid ? (
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
+                                                          <CheckCircle2 className="w-4 h-4" />
+                                                        </span>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="top">{tTeams('paid')}</TooltipContent>
+                                                    </Tooltip>
+                                                  ) : (
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
+                                                          <XCircle className="w-4 h-4" />
+                                                        </span>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
+                                                    </Tooltip>
+                                                  )}
                                                   {member.paid && (
                                                     <button
                                                       onClick={() => {
@@ -619,7 +617,7 @@ export function AdminLeagues() {
                                                         });
                                                         setShowPaymentDetailsDialog(true);
                                                       }}
-                                                      className="text-xs text-muted-foreground mt-1 hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                                                      className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
                                                     >
                                                       {member.paid_amount ?? 0}€
                                                       <Info className="w-3 h-3" />
