@@ -240,7 +240,7 @@ export function AdminPlayers() {
 
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-4 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{t('playerManagement')}</h1>
@@ -248,20 +248,7 @@ export function AdminPlayers() {
         </div>
       </div>
 
-      {/* Stats Card */}
-      <Card>
-        <CardContent className="p-2 md:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">{t('total')}</p>
-              <p className="text-lg md:text-2xl font-bold">{players.length}</p>
-            </div>
-            <Users className="w-5 h-5 md:w-8 md:h-8 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search */}
+      {/* Search and Stats */}
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -272,6 +259,10 @@ export function AdminPlayers() {
             className="pl-10"
           />
         </div>
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-muted-foreground" />
+          <p className="text-lg font-bold">{players.length}</p>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -281,39 +272,27 @@ export function AdminPlayers() {
         </div>
       )}
 
-      {/* Players Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{t('allPlayersTitle')}</CardTitle>
-              <CardDescription>
-                {t('manageAllPlayers')}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loadingPlayers ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
-            </div>
-          ) : filteredPlayers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm ? t('noMatchingPlayersFound') : t('noPlayersFound')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {searchTerm
-                  ? t('tryAdjustingSearch')
-                  : t('noPlayersRegisteredYet')
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {/* Players List */}
+      {loadingPlayers ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
+        </div>
+      ) : filteredPlayers.length === 0 ? (
+        <div className="text-center py-8">
+          <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">
+            {searchTerm ? t('noMatchingPlayersFound') : t('noPlayersFound')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {searchTerm
+              ? t('tryAdjustingSearch')
+              : t('noPlayersRegisteredYet')
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player) => {
                 const teams = playerTeamsMap[player.id] || [];
                 const isExpanded = expandedPlayers.has(player.id);
@@ -324,12 +303,14 @@ export function AdminPlayers() {
                   <Card key={player.id} className="relative">
                     <CardHeader className="pb-3">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">
-                          {getPlayerName(player)}
-                        </CardTitle>
-                        <CardDescription className="truncate">
-                          {player.email}
-                        </CardDescription>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-base truncate">
+                            {getPlayerName(player)}
+                          </CardTitle>
+                          <CardDescription className="truncate">
+                            ({player.email})
+                          </CardDescription>
+                        </div>
                         {player.phone_number && (
                           <div className="text-sm text-muted-foreground mt-1">
                             {player.phone_number}
@@ -449,10 +430,8 @@ export function AdminPlayers() {
                   </Card>
                 );
               })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
