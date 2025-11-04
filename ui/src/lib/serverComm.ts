@@ -220,6 +220,22 @@ export interface NewTeamMember {
   user_id: string;
 }
 
+export interface TeamWithDetails {
+  team: Team;
+  league: {
+    id: string;
+    name: string;
+    start_date: string;
+    end_date: string;
+  } | null;
+  member_count: number;
+  user_payment_status?: {
+    paid: boolean;
+    paid_at: string | null;
+    paid_amount: number | null;
+  } | null;
+}
+
 // Match interfaces
 export interface Match {
   id: string;

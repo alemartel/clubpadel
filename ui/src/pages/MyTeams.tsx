@@ -19,16 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface TeamWithDetails {
-  team: Team;
-  league: {
-    id: string;
-    name: string;
-    start_date: string;
-    end_date: string;
-  } | null;
-  member_count: number;
-}
+import { TeamWithDetails } from "@/lib/serverComm";
 
 export function MyTeams() {
   const { canCreateTeams, refreshServerUser } = useAuth();

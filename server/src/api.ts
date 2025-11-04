@@ -1150,10 +1150,42 @@ protectedRoutes.get("/teams", async (c) => {
         )`
       );
 
-    // Normalize null league to null in response
+    // Get payment status for the current user for each team
+    const teamIds = userTeams.map(t => t.team.id);
+    const userPaymentStatuses = teamIds.length > 0
+      ? await db
+          .select({
+            team_id: team_members.team_id,
+            paid: team_members.paid,
+            paid_at: team_members.paid_at,
+            paid_amount: team_members.paid_amount,
+          })
+          .from(team_members)
+          .where(
+            and(
+              inArray(team_members.team_id, teamIds),
+              eq(team_members.user_id, user.id)
+            )
+          )
+      : [];
+
+    // Create a map of team_id -> payment status
+    const paymentStatusMap = new Map(
+      userPaymentStatuses.map(status => [
+        status.team_id,
+        {
+          paid: status.paid,
+          paid_at: status.paid_at ? status.paid_at.toISOString() : null,
+          paid_amount: status.paid_amount ? parseFloat(status.paid_amount) : null,
+        }
+      ])
+    );
+
+    // Normalize null league to null in response and add payment status
     const normalizedTeams = userTeams.map(t => ({
       ...t,
       league: t.league?.id ? t.league : null,
+      user_payment_status: paymentStatusMap.get(t.team.id) || null,
     }));
 
     return c.json({

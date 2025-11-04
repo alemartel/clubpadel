@@ -1,10 +1,31 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { ProfileWarning } from "@/components/ProfileWarning";
+import { PaymentWarning } from "@/components/PaymentWarning";
 import { useSidebar } from "@/components/ui/sidebar";
+import { api, type TeamWithDetails } from "@/lib/serverComm";
 
 export function Home() {
   const { serverUser, isAdmin } = useAuth();
   const { state } = useSidebar();
+  const [userTeams, setUserTeams] = useState<TeamWithDetails[]>([]);
+
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const response = await api.getMyTeams();
+        if (response.teams) {
+          setUserTeams(response.teams);
+        }
+      } catch (error) {
+        console.error("Failed to load teams:", error);
+      }
+    };
+
+    if (!isAdmin) {
+      loadTeams();
+    }
+  }, [isAdmin]);
 
   // Calculate positioning based on sidebar state
   // On mobile: center the content normally
@@ -32,6 +53,7 @@ export function Home() {
       />
       <div className={getContainerClasses()}>
         <ProfileWarning serverUser={serverUser} isAdmin={isAdmin} />
+        <PaymentWarning teams={userTeams} isAdmin={isAdmin} serverUser={serverUser} />
       </div>
     </div>
   );

@@ -254,9 +254,9 @@ export function AdminLeagues() {
     }, 0);
   };
 
-  const loadLeagueTeams = async (leagueId: string) => {
-    // Prevent duplicate loads
-    if (leagueTeamsMap[leagueId] || teamsLoadingMap[leagueId]) return;
+  const loadLeagueTeams = async (leagueId: string, forceRefresh: boolean = false) => {
+    // Prevent duplicate loads unless force refresh is requested
+    if (!forceRefresh && (leagueTeamsMap[leagueId] || teamsLoadingMap[leagueId])) return;
     
     setTeamsLoadingMap(prev => ({ ...prev, [leagueId]: true }));
     try {
@@ -1236,8 +1236,24 @@ export function AdminLeagues() {
       <Dialog
         open={!!selectedTeamInfo}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && selectedTeamInfo) {
+            // Refresh teams for the league when modal closes
+            const leagueId = selectedTeamInfo.leagueId;
             setSelectedTeamInfo(null);
+            // Force refresh by clearing cache and reloading
+            if (leagueId) {
+              setLeagueTeamsMap(prev => {
+                const updated = { ...prev };
+                delete updated[leagueId];
+                return updated;
+              });
+              setTeamsLoadingMap(prev => {
+                const updated = { ...prev };
+                delete updated[leagueId];
+                return updated;
+              });
+              loadLeagueTeams(leagueId, true);
+            }
           }
         }}
       >
@@ -1251,9 +1267,23 @@ export function AdminLeagues() {
               onClose={() => {
                 // Refresh teams for the league if needed
                 if (selectedTeamInfo?.leagueId) {
-                  loadLeagueTeams(selectedTeamInfo.leagueId);
+                  const leagueId = selectedTeamInfo.leagueId;
+                  setSelectedTeamInfo(null);
+                  // Force refresh by clearing cache and reloading
+                  setLeagueTeamsMap(prev => {
+                    const updated = { ...prev };
+                    delete updated[leagueId];
+                    return updated;
+                  });
+                  setTeamsLoadingMap(prev => {
+                    const updated = { ...prev };
+                    delete updated[leagueId];
+                    return updated;
+                  });
+                  loadLeagueTeams(leagueId, true);
+                } else {
+                  setSelectedTeamInfo(null);
                 }
-                setSelectedTeamInfo(null);
               }}
             />
           )}

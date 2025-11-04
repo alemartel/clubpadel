@@ -262,5 +262,15 @@
   "and": "and",
   "missing": "missing",
   "profileIncompleteUpdateButton": "Update profile",
-  "notPaid": "Not Paid"
+  "notPaid": "Not Paid",
+  "paymentWarningTitle": "Payment required",
+  "paymentWarningMessage": "You have unpaid fees for active leagues",
+  "paymentWarningDetails": "{{teamName}} in {{leagueName}}",
+  "paymentWarningAction": "View teams",
+  "paymentWarningMultipleTeams": "You have unpaid fees for {{count}} active league(s)",
+  "paymentHowToPay": "How to pay?",
+  "paymentOptions": "Payment options",
+  "paymentOptionsTitle": "Payment options",
+  "paymentOptionClub": "At the club",
+  "paymentOptionBizum": "Bizum (concept: {{concept}}), to phone {{phone}}"
 }
