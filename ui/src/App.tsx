@@ -178,7 +178,7 @@ function AppContent() {
                     }
                   />
                   <Route
-                    path="/admin/player-management"
+                    path="/admin/admin-players"
                     element={
                       <AdminRoute>
                         <AdminPlayers />

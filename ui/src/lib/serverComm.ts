@@ -411,6 +411,29 @@ export async function getAllPlayers() {
   return response.json();
 }
 
+export interface PlayerTeamInfo {
+  team: Team;
+  league: {
+    id: string;
+    name: string;
+    start_date: string | null;
+    end_date: string | null;
+    level: string;
+    gender: string;
+  } | null;
+  payment_status: {
+    paid: boolean;
+    paid_at: string | null;
+    paid_amount: number | null;
+  };
+  team_member_id: string;
+}
+
+export async function getPlayerTeams(playerId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/players/${playerId}/teams`);
+  return response.json();
+}
+
 // Team Availability API functions
 export async function getTeamAvailability(teamId: string) {
   const response = await fetchWithAuth(`/api/v1/protected/teams/${teamId}/availability`);
@@ -565,6 +588,7 @@ export const api = {
   addTeamToLeague,
   removeTeamFromLeague,
   getAllPlayers,
+  getPlayerTeams,
   getTeamAvailability,
   updateTeamAvailability,
   generateLeagueCalendar,

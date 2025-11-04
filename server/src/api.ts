@@ -777,6 +777,67 @@ adminRoutes.get("/players", async (c) => {
   }
 });
 
+// Admin: Get all teams and leagues for a specific player
+adminRoutes.get("/players/:playerId/teams", async (c) => {
+  try {
+    const playerId = c.req.param("playerId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get all team memberships for this player with team and league information
+    const playerTeams = await db
+      .select({
+        team_member_id: team_members.id,
+        paid: team_members.paid,
+        paid_at: team_members.paid_at,
+        paid_amount: team_members.paid_amount,
+        team: teams,
+        league: {
+          id: leagues.id,
+          name: leagues.name,
+          start_date: leagues.start_date,
+          end_date: leagues.end_date,
+          level: leagues.level,
+          gender: leagues.gender,
+        },
+      })
+      .from(team_members)
+      .innerJoin(teams, eq(team_members.team_id, teams.id))
+      .leftJoin(leagues, eq(teams.league_id, leagues.id))
+      .where(eq(team_members.user_id, playerId))
+      .orderBy(
+        sql`CASE 
+          WHEN ${leagues.start_date} IS NULL OR ${leagues.end_date} IS NULL THEN 3
+          WHEN ${leagues.start_date} > NOW() THEN 2
+          WHEN ${leagues.start_date} <= NOW() AND ${leagues.end_date} >= NOW() THEN 1
+          ELSE 3
+        END`,
+        sql`${leagues.start_date} DESC NULLS LAST`
+      );
+
+    // Shape response
+    const response = playerTeams.map((row) => ({
+      team: row.team,
+      league: row.league?.id ? row.league : null,
+      payment_status: {
+        paid: row.paid,
+        paid_at: row.paid_at ? row.paid_at.toISOString() : null,
+        paid_amount: row.paid_amount ? parseFloat(row.paid_amount) : null,
+      },
+      team_member_id: row.team_member_id,
+    }));
+
+    return c.json({
+      teams: response,
+      message: "Player teams retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Admin player teams retrieval error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
 // Admin Team Management Endpoints
 adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
   try {

@@ -272,5 +272,11 @@
   "paymentOptions": "Payment options",
   "paymentOptionsTitle": "Payment options",
   "paymentOptionClub": "At the club",
-  "paymentOptionBizum": "Bizum (concept: {{concept}}), to phone {{phone}}"
+  "paymentOptionBizum": "Bizum (concept: {{concept}}), to phone {{phone}}",
+  "playerTeams": "Teams",
+  "playerTeamsCount": "Teams ({{count}})",
+  "noTeamsForPlayer": "This player is not on any teams",
+  "leagueTeamDisplay": "{{leagueName}} + {{teamName}}",
+  "noLeagueForTeam": "No league",
+  "paid": "Paid"
 }

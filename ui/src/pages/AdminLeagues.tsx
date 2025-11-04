@@ -44,7 +44,6 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/user-avatar";
 import { Plus, Edit, Trash2, Calendar, Users, X, ChevronDown, ChevronUp, Search, CheckCircle2, XCircle, Mars, Venus, Calendar as CalendarIcon, Info } from "lucide-react";
@@ -94,14 +93,7 @@ export function AdminLeagues() {
   const [selectedTeamInfo, setSelectedTeamInfo] = useState<{ teamId: string; leagueId: string } | null>(null);
   const editLeagueNameInputRef = useRef<HTMLInputElement>(null);
   
-  // Payment state
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
-  const [paymentUserId, setPaymentUserId] = useState<string | null>(null);
-  const [paymentLeagueId, setPaymentLeagueId] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<string>("");
-  const [paymentError, setPaymentError] = useState<string>("");
-  // Payment details modal state
+  // Payment details modal state (read-only)
   const [showPaymentDetailsDialog, setShowPaymentDetailsDialog] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<{ amount: number | null; date: string | null } | null>(null);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
@@ -374,67 +366,6 @@ export function AdminLeagues() {
     }
   };
 
-  const handleMarkPaid = async (
-    teamId: string,
-    userId: string,
-    leagueId: string,
-    currentPaid: boolean,
-    desiredPaid: boolean
-  ) => {
-    if (!currentPaid && desiredPaid) {
-      // Going from unpaid to paid, open modal
-      setPaymentTeamId(teamId);
-      setPaymentUserId(userId);
-      setPaymentLeagueId(leagueId);
-      setPaymentAmount("");
-      setPaymentError("");
-      setShowPaymentDialog(true);
-    } else if (currentPaid && !desiredPaid) {
-      // Going from paid to unpaid
-      try {
-        await api.updateMemberPaid(teamId, userId, { paid: false });
-        toast.success(tTeams('memberMarkedUnpaid') || "Member marked as unpaid");
-        // Refresh teams for this league
-        try {
-          const response = await api.getAdminTeamsByLeague(leagueId);
-          setLeagueTeamsMap(prev => ({ ...prev, [leagueId]: response.teams || [] }));
-        } catch (refreshErr: any) {
-          console.error("Failed to refresh teams:", refreshErr);
-          toast.error(t('failedToLoadTeams') || "Failed to refresh teams");
-        }
-      } catch (err: any) {
-        console.error("Failed to update payment status:", err);
-        toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
-      }
-    }
-  };
-
-  const handlePaymentDialogConfirm = async () => {
-    const amount = parseFloat(paymentAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setPaymentError(tTeams("amountPaid") + ": " + tCommon("pleaseFillAllFields"));
-      return;
-    }
-    if (paymentTeamId && paymentUserId && paymentLeagueId) {
-      try {
-        await api.updateMemberPaid(paymentTeamId, paymentUserId, { paid: true, paid_amount: amount });
-        toast.success(tTeams('memberMarkedPaid') || "Member marked as paid");
-        setShowPaymentDialog(false);
-        setPaymentError("");
-        setPaymentAmount("");
-        // Refresh teams for this league
-        try {
-          const response = await api.getAdminTeamsByLeague(paymentLeagueId);
-          setLeagueTeamsMap(prev => ({ ...prev, [paymentLeagueId]: response.teams || [] }));
-        } catch (refreshErr: any) {
-          console.error("Failed to refresh teams:", refreshErr);
-          toast.error(t('failedToLoadTeams') || "Failed to refresh teams");
-        }
-      } catch (err: any) {
-        setPaymentError(err.message || tCommon("error"));
-      }
-    }
-  };
 
   const handleToggleTeamMembers = (teamId: string) => {
     const newExpanded = new Set(expandedTeams);
@@ -678,14 +609,6 @@ export function AdminLeagues() {
                                                         <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
                                                       </Tooltip>
                                                     )}
-                                                    <Switch
-                                                      checked={!!member.paid}
-                                                      onCheckedChange={(checked) => {
-                                                        handleMarkPaid(item.team.id, user.id, league.id, !!member.paid || false, checked);
-                                                      }}
-                                                      id={`switch-paid-${item.team.id}-${user.id}`}
-                                                      aria-label={tTeams('paid')}
-                                                    />
                                                   </div>
                                                   {member.paid && (
                                                     <button
@@ -1154,48 +1077,6 @@ export function AdminLeagues() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{tTeams("markPaid")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              autoFocus
-              type="number"
-              min={0.01}
-              step="any"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              placeholder={tTeams("amountPaid")}
-            />
-            {paymentError && (
-              <div className="text-destructive text-xs">{paymentError}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPaymentDialog(false);
-                setPaymentError("");
-                setPaymentAmount("");
-              }}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              onClick={handlePaymentDialogConfirm}
-              title={tTeams("markPaid")}
-              aria-label={tTeams("markPaid")}
-            >
-              {tTeams("markPaid")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Payment Details Dialog */}
       <Dialog open={showPaymentDetailsDialog} onOpenChange={setShowPaymentDetailsDialog}>

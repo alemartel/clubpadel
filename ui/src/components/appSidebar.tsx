@@ -93,10 +93,10 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={isActive("/admin/player-management")}
+                      isActive={isActive("/admin/admin-players")}
                       asChild
                     >
-                      <Link to="/admin/player-management" onClick={handleMenuClick}>
+                      <Link to="/admin/admin-players" onClick={handleMenuClick}>
                         <Shield className="w-4 h-4" />
                         <span>{t('playerManagement')}</span>
                       </Link>
