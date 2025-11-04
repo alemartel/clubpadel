@@ -141,7 +141,6 @@ export function PaymentWarning({ teams, isAdmin, serverUser }: PaymentWarningPro
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">{t('paymentOptionsTitle')}</h4>
               <ul className="space-y-2 list-disc list-inside text-sm">
                 <li>{t('paymentOptionClub')}</li>
                 <li>
