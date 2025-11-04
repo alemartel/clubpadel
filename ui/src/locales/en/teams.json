@@ -126,5 +126,6 @@
   "failedToDeleteTeam": "Failed to delete team",
   "failedToUpdateTeamName": "Failed to update team name",
   "paymentDetails": "Payment Details",
-  "paidDate": "Paid Date"
+  "paidDate": "Paid date",
+  "team": "Team"
 }

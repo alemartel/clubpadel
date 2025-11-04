@@ -27,6 +27,7 @@ import { useNavigate } from "react-router-dom";
 import { uploadWidgetConfig } from "@/lib/cloudinary";
 import { useTranslation } from "@/hooks/useTranslation";
 import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
+import { toast } from "sonner";
 
 export function Profile() {
   const { user: firebaseUser, isAdmin, refreshServerUser } = useAuth();
@@ -139,7 +140,7 @@ export function Profile() {
       await api.updateUserProfile(updateData);
       // Refresh server user data in auth context so ProfileWarning updates
       await refreshServerUser();
-      setSuccess("Profile updated successfully!");
+      toast.success(t('profileUpdated'));
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
     } finally {

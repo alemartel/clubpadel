@@ -46,7 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/user-avatar";
-import { Plus, Edit, Trash2, Calendar, Users, X, ChevronDown, ChevronUp, Search, CheckCircle2, XCircle, Mars, Venus, Calendar as CalendarIcon, Info } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, Users, Shield, X, ChevronDown, ChevronUp, Search, Wallet, XCircle, Mars, Venus, Calendar as CalendarIcon, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
@@ -445,7 +445,7 @@ export function AdminLeagues() {
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="w-full justify-between">
                           <span className="flex items-center gap-2">
-                            <Users className="w-4 h-4" />
+                            <Shield className="w-4 h-4" />
                             <span>
                               {t('teams')}
                               {expandedLeagues.has(league.id) && leagueTeamsMap[league.id] && (
@@ -590,38 +590,43 @@ export function AdminLeagues() {
                                                 </div>
                                                 <div className="flex items-center gap-2 min-w-0 ml-2">
                                                   {member.paid ? (
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                                          <CheckCircle2 className="w-4 h-4" />
-                                                        </span>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent side="top">{tTeams('paid')}</TooltipContent>
-                                                    </Tooltip>
+                                                    <>
+                                                      <button
+                                                        onClick={() => {
+                                                          setPaymentDetails({
+                                                            amount: member.paid_amount ? parseFloat(member.paid_amount) : null,
+                                                            date: member.paid_at || null
+                                                          });
+                                                          setShowPaymentDetailsDialog(true);
+                                                        }}
+                                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                                                      >
+                                                        {member.paid_amount ?? 0}€
+                                                        <Info className="w-3 h-3" />
+                                                      </button>
+                                                      <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                          <button
+                                                            onClick={() => {
+                                                              setPaymentDetails({
+                                                                amount: member.paid_amount ? parseFloat(member.paid_amount) : null,
+                                                                date: member.paid_at || null
+                                                              });
+                                                              setShowPaymentDetailsDialog(true);
+                                                            }}
+                                                            className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                                          >
+                                                            <Wallet className="w-4 h-4" />
+                                                          </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
+                                                      </Tooltip>
+                                                    </>
                                                   ) : (
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
-                                                          <XCircle className="w-4 h-4" />
-                                                        </span>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                                    </Tooltip>
-                                                  )}
-                                                  {member.paid && (
-                                                    <button
-                                                      onClick={() => {
-                                                        setPaymentDetails({
-                                                          amount: member.paid_amount ? parseFloat(member.paid_amount) : null,
-                                                          date: member.paid_at || null
-                                                        });
-                                                        setShowPaymentDetailsDialog(true);
-                                                      }}
-                                                      className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                                                    >
-                                                      {member.paid_amount ?? 0}€
-                                                      <Info className="w-3 h-3" />
-                                                    </button>
+                                                    <div className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1">
+                                                      <span>{tCommon('notPaid')}</span>
+                                                      <XCircle className="w-4 h-4 text-amber-600" />
+                                                    </div>
                                                   )}
                                                 </div>
                                               </div>

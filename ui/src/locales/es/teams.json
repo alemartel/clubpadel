@@ -126,5 +126,6 @@
   "failedToDeleteTeam": "Error al eliminar el equipo",
   "failedToUpdateTeamName": "Error al actualizar el nombre del equipo",
   "paymentDetails": "Detalles del pago",
-  "paidDate": "Fecha de pago"
+  "paidDate": "Fecha de pago",
+  "team": "Equipo"
 }

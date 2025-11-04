@@ -13,12 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Search, Users, ChevronDown, ChevronUp, CheckCircle2, XCircle, Info } from "lucide-react";
+import { Search, Users, Shield, ChevronDown, ChevronUp, Wallet, XCircle, Info } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { ProfilePictureModal } from "@/components/ProfilePictureModal";
 
 interface Player {
   id: string;
@@ -53,6 +63,7 @@ export function AdminPlayers() {
   const { t } = useTranslation('players');
   const { t: tCommon } = useTranslation('common');
   const { t: tTeams } = useTranslation('teams');
+  const { t: tLeagues } = useTranslation('leagues');
 
   // State for all players
   const [players, setPlayers] = useState<Player[]>([]);
@@ -76,10 +87,24 @@ export function AdminPlayers() {
   
   // Payment details modal state
   const [showPaymentDetailsDialog, setShowPaymentDetailsDialog] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<{ amount: number | null; date: string | null } | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{ 
+    amount: number | null; 
+    date: string | null;
+    leagueName?: string | null;
+    teamName?: string;
+  } | null>(null);
+  
+  // Unpaid confirmation modal state
+  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const [pendingUnpaidData, setPendingUnpaidData] = useState<{
+    playerId: string;
+    teamId: string;
+    userId: string;
+  } | null>(null);
   
   // Player detail modal state
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [showPictureModal, setShowPictureModal] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -178,26 +203,56 @@ export function AdminPlayers() {
       setPaymentError("");
       setShowPaymentDialog(true);
     } else if (currentPaid && !desiredPaid) {
-      // Going from paid to unpaid
+      // Going from paid to unpaid - show confirmation modal
+      setPendingUnpaidData({ playerId, teamId, userId });
+      setShowUnpaidConfirm(true);
+    }
+  };
+
+  const handleConfirmUnpaid = async () => {
+    if (!pendingUnpaidData) return;
+    
+    const playerId = pendingUnpaidData.playerId;
+    
+    try {
+      await updateMemberPaid(pendingUnpaidData.teamId, pendingUnpaidData.userId, { paid: false });
+      toast.success(tTeams('memberMarkedUnpaid') || "Member marked as unpaid");
+      
+      // Clear the existing data and force reload
+      setPlayerTeamsMap(prev => {
+        const updated = { ...prev };
+        delete updated[playerId];
+        return updated;
+      });
+      setTeamsLoadingMap(prev => {
+        const updated = { ...prev };
+        delete updated[playerId];
+        return updated;
+      });
+      
+      // Force reload by setting loading state and fetching
+      setTeamsLoadingMap(prev => ({ ...prev, [playerId]: true }));
       try {
-        await updateMemberPaid(teamId, userId, { paid: false });
-        toast.success(tTeams('memberMarkedUnpaid') || "Member marked as unpaid");
-        // Refresh teams for this player
-        setPlayerTeamsMap(prev => {
-          const updated = { ...prev };
-          delete updated[playerId];
-          return updated;
-        });
-        setTeamsLoadingMap(prev => {
-          const updated = { ...prev };
-          delete updated[playerId];
-          return updated;
-        });
-        loadPlayerTeams(playerId);
-      } catch (err: any) {
-        console.error("Failed to update payment status:", err);
-        toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
+        const response = await getPlayerTeams(playerId);
+        setPlayerTeamsMap(prev => ({ ...prev, [playerId]: response.teams || [] }));
+      } catch (error) {
+        console.error("Failed to reload player teams:", error);
+        toast.error(tCommon('failedToLoadTeams') || "Failed to load teams");
+      } finally {
+        setTeamsLoadingMap(prev => ({ ...prev, [playerId]: false }));
       }
+      
+      setShowUnpaidConfirm(false);
+      setPendingUnpaidData(null);
+    } catch (err: any) {
+      console.error("Failed to update payment status:", err);
+      toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
+      // Reset loading state on error
+      setTeamsLoadingMap(prev => {
+        const updated = { ...prev };
+        delete updated[playerId];
+        return updated;
+      });
     }
   };
 
@@ -214,7 +269,7 @@ export function AdminPlayers() {
         setShowPaymentDialog(false);
         setPaymentError("");
         setPaymentAmount("");
-        // Refresh teams for this player
+        // Clear the existing data and force reload
         setPlayerTeamsMap(prev => {
           const updated = { ...prev };
           delete updated[paymentPlayerId];
@@ -225,7 +280,18 @@ export function AdminPlayers() {
           delete updated[paymentPlayerId];
           return updated;
         });
-        loadPlayerTeams(paymentPlayerId);
+        
+        // Force reload by setting loading state and fetching
+        setTeamsLoadingMap(prev => ({ ...prev, [paymentPlayerId]: true }));
+        try {
+          const response = await getPlayerTeams(paymentPlayerId);
+          setPlayerTeamsMap(prev => ({ ...prev, [paymentPlayerId]: response.teams || [] }));
+        } catch (error) {
+          console.error("Failed to reload player teams:", error);
+          toast.error(tCommon('failedToLoadTeams') || "Failed to load teams");
+        } finally {
+          setTeamsLoadingMap(prev => ({ ...prev, [paymentPlayerId]: false }));
+        }
       } catch (err: any) {
         setPaymentError(err.message || tCommon("error"));
       }
@@ -279,25 +345,25 @@ export function AdminPlayers() {
       )}
 
       {/* Players List */}
-      {loadingPlayers ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
-        </div>
-      ) : filteredPlayers.length === 0 ? (
-        <div className="text-center py-8">
-          <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground mb-2">
-            {searchTerm ? t('noMatchingPlayersFound') : t('noPlayersFound')}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {searchTerm
-              ? t('tryAdjustingSearch')
-              : t('noPlayersRegisteredYet')
-            }
-          </p>
-        </div>
-      ) : (
+          {loadingPlayers ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
+            </div>
+          ) : filteredPlayers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                {searchTerm ? t('noMatchingPlayersFound') : t('noPlayersFound')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm
+                  ? t('tryAdjustingSearch')
+                  : t('noPlayersRegisteredYet')
+                }
+              </p>
+            </div>
+          ) : (
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player) => {
                 const teams = playerTeamsMap[player.id] || [];
@@ -307,7 +373,7 @@ export function AdminPlayers() {
 
                 return (
                   <Card key={player.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
+                    <CardHeader className="pt-6 pb-0 px-4">
                       <CardTitle className="text-base truncate">
                         <div 
                           className="flex items-center gap-2 flex-wrap cursor-pointer hover:opacity-80 transition-opacity"
@@ -330,14 +396,8 @@ export function AdminPlayers() {
                         </div>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4">
                       <div className="space-y-3">
-                        {player.phone_number && (
-                          <div className="text-sm text-muted-foreground">
-                            {player.phone_number}
-                          </div>
-                        )}
-                        
                         {/* Teams Collapsible Section */}
                         <Collapsible
                           open={isExpanded}
@@ -347,7 +407,7 @@ export function AdminPlayers() {
                             <CollapsibleTrigger asChild>
                               <Button variant="ghost" size="sm" className="w-full justify-between">
                                 <span className="flex items-center gap-2">
-                                  <Users className="w-4 h-4" />
+                                  <Shield className="w-4 h-4" />
                                   <span>
                                     {tCommon('playerTeams')}
                                     {isExpanded && teamsCount > 0 && (
@@ -382,28 +442,21 @@ export function AdminPlayers() {
                                       : `${teamInfo.team.name} (${tCommon('noLeagueForTeam')})`;
                                     
                                     return (
-                                      <div key={teamInfo.team_member_id} className="p-2 border rounded-md">
+                                      <div 
+                                        key={teamInfo.team_member_id} 
+                                        className="p-2 border rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                        onClick={() => {
+                                          setPaymentDetails({
+                                            amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
+                                            date: teamInfo.payment_status.paid_at || null,
+                                            leagueName: teamInfo.league?.name || null,
+                                            teamName: teamInfo.team.name
+                                          });
+                                          setShowPaymentDetailsDialog(true);
+                                        }}
+                                      >
                                         <div className="flex items-center justify-between">
                                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            {teamInfo.payment_status.paid ? (
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
-                                              </Tooltip>
-                                            ) : (
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className="inline-flex items-center gap-1 text-amber-600 text-sm cursor-pointer">
-                                                    <XCircle className="w-4 h-4" />
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top">{tCommon('notPaid')}</TooltipContent>
-                                              </Tooltip>
-                                            )}
                                             <div className="min-w-0 flex-1">
                                               <div className="text-sm font-medium truncate">
                                                 {displayName}
@@ -411,7 +464,64 @@ export function AdminPlayers() {
                                             </div>
                                           </div>
                                           <div className="flex items-center gap-2 min-w-0 ml-2">
-                                            <Switch
+                                            {teamInfo.payment_status.paid ? (
+                                              <>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPaymentDetails({
+                                                      amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
+                                                      date: teamInfo.payment_status.paid_at || null,
+                                                      leagueName: teamInfo.league?.name || null,
+                                                      teamName: teamInfo.team.name
+                                                    });
+                                                    setShowPaymentDetailsDialog(true);
+                                                  }}
+                                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                                                >
+                                                  {teamInfo.payment_status.paid_amount ?? 0}€
+                                                  <Info className="w-3 h-3" />
+                                                </button>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <button
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPaymentDetails({
+                                                          amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
+                                                          date: teamInfo.payment_status.paid_at || null,
+                                                          leagueName: teamInfo.league?.name || null,
+                                                          teamName: teamInfo.team.name
+                                                        });
+                                                        setShowPaymentDetailsDialog(true);
+                                                      }}
+                                                      className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                                                    >
+                                                      <Wallet className="w-4 h-4" />
+                                                    </button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
+                                                </Tooltip>
+                                              </>
+                                            ) : (
+                                              <div 
+                                                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setPaymentDetails({
+                                                    amount: null,
+                                                    date: null,
+                                                    leagueName: teamInfo.league?.name || null,
+                                                    teamName: teamInfo.team.name
+                                                  });
+                                                  setShowPaymentDetailsDialog(true);
+                                                }}
+                                              >
+                                                <span>{tCommon('notPaid')}</span>
+                                                <XCircle className="w-4 h-4 text-amber-600" />
+                                              </div>
+                                            )}
+                                            <Checkbox
                                               checked={!!teamInfo.payment_status.paid}
                                               onCheckedChange={(checked) => {
                                                 handleMarkPaid(
@@ -420,40 +530,25 @@ export function AdminPlayers() {
                                                   player.id,
                                                   teamInfo.team_member_id,
                                                   !!teamInfo.payment_status.paid,
-                                                  checked
+                                                  !!checked
                                                 );
                                               }}
-                                              id={`switch-paid-${player.id}-${teamInfo.team_member_id}`}
+                                              id={`checkbox-paid-${player.id}-${teamInfo.team_member_id}`}
                                               aria-label={tCommon('paid')}
                                             />
-                                            {teamInfo.payment_status.paid && (
-                                              <button
-                                                onClick={() => {
-                                                  setPaymentDetails({
-                                                    amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
-                                                    date: teamInfo.payment_status.paid_at || null
-                                                  });
-                                                  setShowPaymentDetailsDialog(true);
-                                                }}
-                                                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                                              >
-                                                {teamInfo.payment_status.paid_amount ?? 0}€
-                                                <Info className="w-3 h-3" />
-                                              </button>
-                                            )}
                                           </div>
                                         </div>
                                       </div>
                                     );
                                   })}
-                                </div>
-                              )}
+                        </div>
+                      )}
                             </CollapsibleContent>
-                          </div>
+                    </div>
                         </Collapsible>
-                      </div>
+                    </div>
                     </CardContent>
-                  </Card>
+                </Card>
                 );
               })}
         </div>
@@ -510,6 +605,16 @@ export function AdminPlayers() {
           <div className="space-y-4">
             {paymentDetails && (
               <>
+                {paymentDetails.leagueName && (
+                  <div>
+                    <Label className="text-sm font-medium">{tLeagues('league') || "League"}</Label>
+                    <p className="text-base mt-1">{paymentDetails.leagueName}</p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm font-medium">{tTeams('team') || "Team"}</Label>
+                  <p className="text-base mt-1">{paymentDetails.teamName}</p>
+                </div>
                 <div>
                   <Label className="text-sm font-medium">{tTeams('amountPaid')}</Label>
                   <p className="text-lg font-semibold mt-1">{paymentDetails.amount ?? 0}€</p>
@@ -554,6 +659,8 @@ export function AdminPlayers() {
                     email: selectedPlayer.email,
                   }}
                   size="lg"
+                  className={selectedPlayer.profile_picture_url ? "cursor-pointer hover:opacity-80 transition-opacity" : undefined}
+                  onClick={selectedPlayer.profile_picture_url ? () => setShowPictureModal(true) : undefined}
                 />
                 <div>
                   <h3 className="text-lg font-semibold">
@@ -606,6 +713,43 @@ export function AdminPlayers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Unpaid Confirmation Dialog */}
+      <AlertDialog open={showUnpaidConfirm} onOpenChange={(open) => {
+        setShowUnpaidConfirm(open);
+        if (!open) {
+          setPendingUnpaidData(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tTeams('markUnpaid') || "Mark as unpaid"}</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnpaid}
+              className="bg-black text-white hover:bg-black/90"
+            >
+              {tCommon('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Profile Picture Modal */}
+      {selectedPlayer && (
+        <ProfilePictureModal
+          open={showPictureModal}
+          onOpenChange={setShowPictureModal}
+          imageUrl={selectedPlayer.profile_picture_url || null}
+          firstName={selectedPlayer.first_name || null}
+          lastName={selectedPlayer.last_name || null}
+          email={selectedPlayer.email}
+        />
+      )}
 
     </div>
   );
