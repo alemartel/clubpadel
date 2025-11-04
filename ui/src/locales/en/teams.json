@@ -74,6 +74,7 @@
   "endTime": "End time",
   "saveAvailability": "Save availability",
   "savingAvailability": "Saving...",
+  "availabilitySaved": "Availability saved",
   "failedToLoadAvailability": "Failed to load current availability",
   "failedToSaveAvailability": "Failed to save availability",
   "invalidTimeRange": "Invalid time range",
@@ -125,6 +126,7 @@
   "teamDeleted": "Team deleted",
   "failedToDeleteTeam": "Failed to delete team",
   "failedToUpdateTeamName": "Failed to update team name",
+  "teamLevelUpdated": "Team level updated",
   "paymentDetails": "Payment Details",
   "paidDate": "Paid date",
   "team": "Team"

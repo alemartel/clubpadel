@@ -25,6 +25,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface TeamWithDetails {
@@ -84,6 +85,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
   const [isEditingTeamName, setIsEditingTeamName] = useState(false);
   const [editedTeamName, setEditedTeamName] = useState("");
   const [isSavingTeamName, setIsSavingTeamName] = useState(false);
+  const [isEditingTeamLevel, setIsEditingTeamLevel] = useState(false);
+  const [editedTeamLevel, setEditedTeamLevel] = useState("");
+  const [isSavingTeamLevel, setIsSavingTeamLevel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingTeam, setIsDeletingTeam] = useState(false);
 
@@ -226,6 +230,53 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
       console.error("Error updating team name:", err);
     } finally {
       setIsSavingTeamName(false);
+    }
+  };
+
+  // Team level editing handlers (admin only)
+  const handleEditTeamLevel = () => {
+    if (!team || !isAdmin) return;
+    setEditedTeamLevel(team.team.level);
+    setIsEditingTeamLevel(true);
+  };
+
+  const handleCancelEditTeamLevel = () => {
+    setIsEditingTeamLevel(false);
+    setEditedTeamLevel("");
+  };
+
+  const handleSaveTeamLevel = async () => {
+    if (!id || !team || !isAdmin) return;
+    
+    if (!editedTeamLevel) {
+      setError(t('selectLevel') + " " + tCommon('required'));
+      return;
+    }
+
+    if (editedTeamLevel === team.team.level) {
+      // No change, just cancel
+      handleCancelEditTeamLevel();
+      return;
+    }
+
+    try {
+      setIsSavingTeamLevel(true);
+      setError(null);
+      const response = await api.updateTeam(id, { level: editedTeamLevel });
+      
+      if (response.error) {
+        setError(response.error);
+      } else {
+        setIsEditingTeamLevel(false);
+        setEditedTeamLevel("");
+        await loadTeam(); // Reload to get updated team data
+        toast.success(t('teamLevelUpdated') || 'Team level updated');
+      }
+    } catch (err: any) {
+      setError(err.message || t('failedToUpdateTeamName') || 'Failed to update team level');
+      console.error("Error updating team level:", err);
+    } finally {
+      setIsSavingTeamLevel(false);
     }
   };
 
@@ -519,9 +570,57 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                       </div>
                     )}
                     <div className="flex items-center gap-2 mt-3">
-                      <Badge variant={getLevelBadgeVariant(team.team.level)}>
-                        Level {team.team.level}
-                      </Badge>
+                      {isEditingTeamLevel && isAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={editedTeamLevel}
+                            onValueChange={setEditedTeamLevel}
+                            disabled={isSavingTeamLevel}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="2">2</SelectItem>
+                              <SelectItem value="3">3</SelectItem>
+                              <SelectItem value="4">4</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveTeamLevel}
+                            disabled={isSavingTeamLevel || !editedTeamLevel}
+                          >
+                            <Save className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEditTeamLevel}
+                            disabled={isSavingTeamLevel}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Badge variant={getLevelBadgeVariant(team.team.level)}>
+                            Level {team.team.level}
+                          </Badge>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleEditTeamLevel}
+                              className="h-6 w-6 p-0"
+                              title={tCommon('edit')}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </>
+                      )}
                       <Badge variant={getGenderBadgeVariant(team.team.gender)}>
                         {team.team.gender === "male" ? t('masculine') : team.team.gender === "female" ? t('femenine') : t('mixed')}
                       </Badge>

@@ -68,6 +68,16 @@ export const team_change_notifications = appSchema.table("team_change_notificati
   read_at: timestamp("read_at"),
 });
 
+export const team_leagues = appSchema.table("team_leagues", {
+  id: text("id").primaryKey(),
+  team_id: text("team_id").notNull(), // Foreign key to teams.id
+  league_id: text("league_id").notNull(), // Foreign key to leagues.id
+  created_at: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate team-league associations
+  teamLeagueUnique: unique("team_leagues_team_league_unique").on(table.team_id, table.league_id),
+}));
+
 // Export types
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
@@ -77,3 +87,5 @@ export type TeamAvailability = typeof team_availability.$inferSelect;
 export type NewTeamAvailability = typeof team_availability.$inferInsert;
 export type TeamChangeNotification = typeof team_change_notifications.$inferSelect;
 export type NewTeamChangeNotification = typeof team_change_notifications.$inferInsert;
+export type TeamLeague = typeof team_leagues.$inferSelect;
+export type NewTeamLeague = typeof team_leagues.$inferInsert;

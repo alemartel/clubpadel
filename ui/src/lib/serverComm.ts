@@ -204,6 +204,7 @@ export interface NewTeam {
 
 export interface UpdateTeam {
   name?: string;
+  level?: string;
 }
 
 export interface TeamMember {

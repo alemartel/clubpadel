@@ -491,7 +491,7 @@ export function AdminTeams() {
           loadTeams();
         }
       }}>
-        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
           <DialogTitle className="sr-only">{t('teamDetails')}</DialogTitle>
           {selectedEditTeamId && (
             <TeamDetail

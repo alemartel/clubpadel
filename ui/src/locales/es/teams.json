@@ -74,6 +74,7 @@
   "endTime": "Hora de fin",
   "saveAvailability": "Guardar disponibilidad",
   "savingAvailability": "Guardando...",
+  "availabilitySaved": "Disponibilidad guardada",
   "failedToLoadAvailability": "Error al cargar la disponibilidad actual",
   "failedToSaveAvailability": "Error al guardar la disponibilidad",
   "invalidTimeRange": "Rango de tiempo inválido",
@@ -125,6 +126,7 @@
   "teamDeleted": "Equipo eliminado",
   "failedToDeleteTeam": "Error al eliminar el equipo",
   "failedToUpdateTeamName": "Error al actualizar el nombre del equipo",
+  "teamLevelUpdated": "Nivel del equipo actualizado",
   "paymentDetails": "Detalles del pago",
   "paidDate": "Fecha de pago",
   "team": "Equipo"

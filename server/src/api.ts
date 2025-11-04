@@ -20,10 +20,12 @@ import {
   team_members,
   team_availability,
   team_change_notifications,
+  team_leagues,
   type NewTeam,
   type NewTeamMember,
   type NewTeamAvailability,
   type NewTeamChangeNotification,
+  type NewTeamLeague,
 } from "./schema/teams";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator";
@@ -561,21 +563,48 @@ adminRoutes.delete("/leagues/:id", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
+    // Check if league exists
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, leagueId));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    // Delete all matches associated with this league
+    await db
+      .delete(matches)
+      .where(eq(matches.league_id, leagueId));
+
+    // Remove all team-league associations for this league
+    await db
+      .delete(team_leagues)
+      .where(eq(team_leagues.league_id, leagueId));
+
+    // Update teams.league_id to null for teams that were pointing to this league
+    await db
+      .update(teams)
+      .set({
+        league_id: null,
+        updated_at: new Date(),
+      })
+      .where(eq(teams.league_id, leagueId));
+
+    // Delete the league
     const [deletedLeague] = await db
       .delete(leagues)
       .where(eq(leagues.id, leagueId))
       .returning();
-
-    if (!deletedLeague) {
-      return c.json({ error: "League not found" }, 404);
-    }
 
     return c.json({
       message: "League deleted successfully",
     });
   } catch (error) {
     console.error("League deletion error:", error);
-    return c.json({ error: "Failed to delete league" }, 500);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
   }
 });
 
@@ -789,6 +818,7 @@ adminRoutes.get("/players/:playerId/teams", async (c) => {
     const db = await getDatabase(databaseUrl);
 
     // Get all team memberships for this player with team and league information
+    // Use team_leagues to get all leagues for each team
     const playerTeams = await db
       .select({
         team_member_id: team_members.id,
@@ -807,7 +837,8 @@ adminRoutes.get("/players/:playerId/teams", async (c) => {
       })
       .from(team_members)
       .innerJoin(teams, eq(team_members.team_id, teams.id))
-      .leftJoin(leagues, eq(teams.league_id, leagues.id))
+      .leftJoin(team_leagues, eq(team_members.team_id, team_leagues.team_id))
+      .leftJoin(leagues, eq(team_leagues.league_id, leagues.id))
       .where(eq(team_members.user_id, playerId))
       .orderBy(
         sql`CASE 
@@ -849,7 +880,7 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all teams in this league with creator information
+    // Get all teams in this league using team_leagues junction table
     const leagueTeams = await db
       .select({
         team: teams,
@@ -868,10 +899,11 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
           WHERE tm.team_id = ${teams.id}
         )`,
       })
-      .from(teams)
-      .innerJoin(leagues, eq(teams.league_id, leagues.id))
+      .from(team_leagues)
+      .innerJoin(teams, eq(team_leagues.team_id, teams.id))
+      .innerJoin(leagues, eq(team_leagues.league_id, leagues.id))
       .innerJoin(users, eq(teams.created_by, users.id))
-      .where(eq(teams.league_id, leagueId));
+      .where(eq(team_leagues.league_id, leagueId));
 
     if (leagueTeams.length === 0) {
       return c.json({
@@ -974,14 +1006,36 @@ adminRoutes.post("/leagues/:leagueId/teams", async (c) => {
       );
     }
 
-    // Check if team is already in an active league (not started or in progress)
-    if (team.league_id) {
-      const [currentLeague] = await db
-        .select()
-        .from(leagues)
-        .where(eq(leagues.id, team.league_id));
+    // Check if team is already in this league
+    const [existingAssociation] = await db
+      .select()
+      .from(team_leagues)
+      .where(and(eq(team_leagues.team_id, team_id), eq(team_leagues.league_id, leagueId)));
 
-      if (currentLeague) {
+    if (existingAssociation) {
+      return c.json(
+        {
+          error: "Team is already in this league",
+        },
+        409
+      );
+    }
+
+    // Check if team is already in an active league (not started or in progress)
+    // Only block if the target league is also active (not completed)
+    const targetLeagueStatus = getLeagueStatus(league);
+    if (targetLeagueStatus !== "completed") {
+      // Get all leagues this team is currently in
+      const teamLeagues = await db
+        .select({
+          league: leagues,
+        })
+        .from(team_leagues)
+        .innerJoin(leagues, eq(team_leagues.league_id, leagues.id))
+        .where(eq(team_leagues.team_id, team_id));
+
+      // Check if team is in any active league
+      for (const { league: currentLeague } of teamLeagues) {
         const status = getLeagueStatus(currentLeague);
         if (status === "not_started" || status === "in_progress") {
           return c.json(
@@ -994,19 +1048,32 @@ adminRoutes.post("/leagues/:leagueId/teams", async (c) => {
       }
     }
 
-    // Add team to league
-    const [updatedTeam] = await db
-      .update(teams)
-      .set({
+    // Add team to league using team_leagues junction table
+    const teamLeagueId = randomUUID();
+    await db
+      .insert(team_leagues)
+      .values({
+        id: teamLeagueId,
+        team_id: team_id,
         league_id: leagueId,
-        updated_at: new Date(),
-      })
-      .where(eq(teams.id, team_id))
-      .returning();
+      });
+
+    // Also update teams.league_id for backward compatibility (set to most recent or active league)
+    // Update teams.league_id to point to this league if target is active, or keep current if it's active
+    const targetIsActive = targetLeagueStatus === "not_started" || targetLeagueStatus === "in_progress";
+    if (targetIsActive) {
+      await db
+        .update(teams)
+        .set({
+          league_id: leagueId,
+          updated_at: new Date(),
+        })
+        .where(eq(teams.id, team_id));
+    }
 
     return c.json(
       {
-        team: updatedTeam,
+        team: team,
         message: "Team added to league successfully",
       },
       200
@@ -1036,31 +1103,56 @@ adminRoutes.delete("/leagues/:leagueId/teams/:teamId", async (c) => {
       return c.json({ error: "League not found" }, 404);
     }
 
-    // Check team exists and is assigned to this league
+    // Check team exists
     const [team] = await db
       .select()
       .from(teams)
-      .where(and(eq(teams.id, teamId), eq(teams.league_id, leagueId)));
+      .where(eq(teams.id, teamId));
 
     if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+
+    // Check if team is assigned to this league
+    const [teamLeague] = await db
+      .select()
+      .from(team_leagues)
+      .where(and(eq(team_leagues.team_id, teamId), eq(team_leagues.league_id, leagueId)));
+
+    if (!teamLeague) {
       return c.json(
-        { error: "Team not found or not assigned to this league" },
+        { error: "Team is not assigned to this league" },
         404
       );
     }
 
-    // Remove team from league
-    const [updatedTeam] = await db
-      .update(teams)
-      .set({
-        league_id: null,
-        updated_at: new Date(),
-      })
-      .where(eq(teams.id, teamId))
-      .returning();
+    // Remove team from league using team_leagues junction table
+    await db
+      .delete(team_leagues)
+      .where(and(eq(team_leagues.team_id, teamId), eq(team_leagues.league_id, leagueId)));
+
+    // Update teams.league_id if it was pointing to this league
+    // Find another league for this team, or set to null
+    if (team.league_id === leagueId) {
+      const [otherLeague] = await db
+        .select()
+        .from(team_leagues)
+        .innerJoin(leagues, eq(team_leagues.league_id, leagues.id))
+        .where(eq(team_leagues.team_id, teamId))
+        .orderBy(desc(leagues.created_at))
+        .limit(1);
+
+      const newLeagueId = otherLeague?.league?.id || null;
+      await db
+        .update(teams)
+        .set({
+          league_id: newLeagueId,
+          updated_at: new Date(),
+        })
+        .where(eq(teams.id, teamId));
+    }
 
     return c.json({
-      team: updatedTeam,
       message: "Team removed from league successfully",
     });
   } catch (error) {
@@ -1401,11 +1493,16 @@ protectedRoutes.put("/teams/:id", async (c) => {
     const user = c.get("user");
     const teamId = c.req.param("id");
     const body = await c.req.json();
-    const { name } = body;
+    const { name, level } = body;
 
-    const sanitizedName = sanitizeText(name);
-    if (!sanitizedName) {
-      return c.json({ error: "Team name is required" }, 400);
+    // Only admins can update teams
+    if (user.role !== "admin") {
+      return c.json({ error: "Only admins can update teams" }, 403);
+    }
+
+    // Validate that at least one field is being updated
+    if (!name && !level) {
+      return c.json({ error: "At least one field (name or level) must be provided" }, 400);
     }
 
     const databaseUrl = getDatabaseUrl();
@@ -1421,41 +1518,79 @@ protectedRoutes.put("/teams/:id", async (c) => {
       return c.json({ error: "Team not found" }, 404);
     }
 
-    // Only admins can update team name
-    if (user.role !== "admin") {
-      return c.json({ error: "Only admins can update team name" }, 403);
+    // Validate and sanitize name if provided
+    let sanitizedName: string | undefined;
+    if (name !== undefined) {
+      sanitizedName = sanitizeText(name);
+      if (!sanitizedName) {
+        return c.json({ error: "Team name cannot be empty" }, 400);
+      }
+
+      // Check if new name is unique (globally if no league, within each league if team is in any leagues)
+      // Get all leagues this team is in
+      const teamLeagues = await db
+        .select({ league_id: team_leagues.league_id })
+        .from(team_leagues)
+        .where(eq(team_leagues.team_id, teamId));
+
+      if (teamLeagues.length > 0) {
+        // If team is in any leagues, check uniqueness within each league
+        const leagueIds = teamLeagues.map(tl => tl.league_id);
+        const [existingTeam] = await db
+          .select()
+          .from(teams)
+          .innerJoin(team_leagues, eq(teams.id, team_leagues.team_id))
+          .where(
+            and(
+              inArray(team_leagues.league_id, leagueIds),
+              eq(teams.name, sanitizedName),
+              ne(teams.id, teamId)
+            )
+          );
+
+        if (existingTeam) {
+          return c.json({ error: "Team name must be unique within the league" }, 409);
+        }
+      } else {
+        // If team has no league, check global uniqueness
+        const [existingTeam] = await db
+          .select()
+          .from(teams)
+          .where(and(eq(teams.name, sanitizedName), ne(teams.id, teamId)));
+
+        if (existingTeam) {
+          return c.json({ error: "Team name must be unique" }, 409);
+        }
+      }
     }
 
-    // Check if new name is unique (globally if no league, within league if league exists)
-    if (team.league_id) {
-      // If team has a league, check uniqueness within that league
-      const [existingTeam] = await db
-        .select()
-        .from(teams)
-        .where(and(eq(teams.league_id, team.league_id), eq(teams.name, sanitizedName), ne(teams.id, teamId)));
-
-      if (existingTeam) {
-        return c.json({ error: "Team name must be unique within the league" }, 409);
+    // Validate level if provided
+    if (level !== undefined) {
+      const validLevels = ["2", "3", "4"];
+      if (!validLevels.includes(level)) {
+        return c.json({ error: "Level must be 2, 3, or 4" }, 400);
       }
-    } else {
-      // If team has no league, check global uniqueness
-      const [existingTeam] = await db
-        .select()
-        .from(teams)
-        .where(and(eq(teams.name, sanitizedName), ne(teams.id, teamId)));
 
-      if (existingTeam) {
-        return c.json({ error: "Team name must be unique" }, 409);
-      }
+      // Note: We don't validate that the team level matches the league level here
+      // because this constraint only applies when adding a team to a league,
+      // not when updating an existing team's level
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date(),
+    };
+    if (sanitizedName !== undefined) {
+      updateData.name = sanitizedName;
+    }
+    if (level !== undefined) {
+      updateData.level = level;
     }
 
     // Update team
     const [updatedTeam] = await db
       .update(teams)
-      .set({
-        name: sanitizedName,
-        updated_at: new Date(),
-      })
+      .set(updateData)
       .where(eq(teams.id, teamId))
       .returning();
 
@@ -2034,8 +2169,8 @@ protectedRoutes.get("/players/search", async (c) => {
       const leagueTeamMembers = await db
         .select({ user_id: team_members.user_id })
         .from(team_members)
-        .innerJoin(teams, eq(team_members.team_id, teams.id))
-        .where(eq(teams.league_id, league_id));
+        .innerJoin(team_leagues, eq(team_members.team_id, team_leagues.team_id))
+        .where(eq(team_leagues.league_id, league_id));
 
       excludedUserIds = leagueTeamMembers.map(m => m.user_id);
     } else {

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
+import { toast } from "sonner";
 
 interface TeamAvailabilityModalProps {
   teamId: string;
@@ -192,6 +193,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
 
     try {
       await api.updateTeamAvailability(teamId, availability);
+      toast.success(t('availabilitySaved') || 'Availability saved');
       onOpenChange(false);
       onSuccess?.();
     } catch (err: any) {
@@ -259,7 +261,7 @@ export function TeamAvailabilityModal({ teamId, open, onOpenChange, onSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-4">
+      <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />

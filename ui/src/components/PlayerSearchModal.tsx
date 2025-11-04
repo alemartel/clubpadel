@@ -106,7 +106,7 @@ export function PlayerSearchModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] max-h-[80vh] overflow-hidden flex flex-col p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />

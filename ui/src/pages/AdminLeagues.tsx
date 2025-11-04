@@ -220,11 +220,17 @@ export function AdminLeagues() {
     if (!deleteConfirmLeague) return;
 
     try {
-      await api.deleteLeague(deleteConfirmLeague.id);
-      setDeleteConfirmLeague(null);
-      loadLeagues();
-    } catch (error) {
+      const response = await api.deleteLeague(deleteConfirmLeague.id);
+      if (response.error) {
+        toast.error(response.error);
+      } else {
+        toast.success(t('leagueDeleted'));
+        setDeleteConfirmLeague(null);
+        loadLeagues();
+      }
+    } catch (error: any) {
       console.error("Failed to delete league:", error);
+      toast.error(error.message || t('failedToDeleteLeague') || 'Failed to delete league');
     }
   };
 
@@ -673,7 +679,6 @@ export function AdminLeagues() {
                   size="sm"
                   onClick={() => setDeleteConfirmLeague(league)}
                   className="min-h-[44px] min-w-[44px]"
-                  disabled
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -943,30 +948,30 @@ export function AdminLeagues() {
 
 
       {/* Delete League Confirmation */}
-      <Dialog
+      <AlertDialog
         open={!!deleteConfirmLeague}
-        onOpenChange={() => setDeleteConfirmLeague(null)}
+        onOpenChange={(open) => !open && setDeleteConfirmLeague(null)}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('deleteLeague')}</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteLeague')}</AlertDialogTitle>
+            <AlertDialogDescription>
               {t('deleteLeagueConfirm', { name: deleteConfirmLeague?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmLeague(null)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteConfirmLeague(null)}>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLeague}
+              className="bg-black text-white hover:bg-black/90"
             >
-{tCommon('cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteLeague}>
-              {t('deleteLeague')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {tCommon('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Team Search Modal */}
       <Dialog

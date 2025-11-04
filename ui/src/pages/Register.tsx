@@ -2,6 +2,8 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { auth } from "@/lib/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { useTranslation } from "@/hooks/useTranslation"
@@ -10,12 +12,14 @@ import { api } from "@/lib/serverComm"
 
 export function Register() {
   const { t } = useTranslation('auth')
+  const { t: tTeams } = useTranslation('teams')
   const navigate = useNavigate()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [gender, setGender] = useState("")
   const [error, setError] = useState("")
   const [validationError, setValidationError] = useState("")
   const [success, setSuccess] = useState("")
@@ -64,6 +68,11 @@ export function Register() {
       return false
     }
     
+    if (!gender) {
+      setValidationError(t('genderRequired') || tTeams('genderRequired') || "Gender is required")
+      return false
+    }
+    
     return true
   }
 
@@ -81,11 +90,20 @@ export function Register() {
     try {
       await createUserWithEmailAndPassword(auth, email, password)
       
-      // Update profile with first name and last name
+      // Map display gender values to backend values
+      const genderMap: Record<string, string> = {
+        "Masculine": "male",
+        "Femenine": "female",
+        "Mixed": "mixed"
+      };
+      const backendGender = gender ? genderMap[gender] || undefined : undefined;
+
+      // Update profile with first name, last name, and gender
       try {
         await api.updateUserProfile({
           first_name: firstName,
           last_name: lastName,
+          gender: backendGender,
         })
       } catch (profileErr) {
         console.error('Failed to update profile after registration:', profileErr)
@@ -93,7 +111,11 @@ export function Register() {
       }
       
       setSuccess(t('signUpSuccess'))
-      // User is automatically signed in after successful registration and redirected by auth context
+      // User is automatically signed in after successful registration
+      // Redirect to home page after a short delay to show success message
+      setTimeout(() => {
+        navigate('/')
+      }, 1000)
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError(t('signUpError') + ": " + t('emailAlreadyInUse'))
@@ -176,13 +198,26 @@ export function Register() {
                 minLength={6}
               />
             </div>
+            <div className="flex flex-col space-y-1.5">
+              <Label htmlFor="gender">{tTeams('gender') || "Gender"}</Label>
+              <Select value={gender} onValueChange={setGender} required>
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder={tTeams('selectGender') || "Select gender"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masculine">{tTeams('masculine')}</SelectItem>
+                  <SelectItem value="Femenine">{tTeams('femenine')}</SelectItem>
+                  <SelectItem value="Mixed">{tTeams('mixed')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {validationError && <p className="text-sm text-red-500">{validationError}</p>}
             {error && <p className="text-sm text-red-500">{error}</p>}
             {success && <p className="text-sm text-green-500">{success}</p>}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading || !firstName || !lastName || !email || !password || !confirmPassword || !gender}>
             {loading ? t('creatingAccount') : t('signUpButton')}
           </Button>
           <Button
