@@ -114,7 +114,7 @@ export function Register() {
       // User is automatically signed in after successful registration
       // Redirect to home page after a short delay to show success message
       setTimeout(() => {
-        navigate('/')
+        navigate('/', { replace: true })
       }, 1000)
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {

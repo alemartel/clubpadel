@@ -21,7 +21,7 @@ import { api, type NewTeam } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Badge } from "@/components/ui/badge";
 import { getLevelBadgeVariant, getGenderBadgeVariant } from "@/lib/badge-utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -492,7 +492,10 @@ export function AdminTeams() {
         }
       }}>
         <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
-          <DialogTitle className="sr-only">{t('teamDetails')}</DialogTitle>
+          <DialogHeader className="hidden">
+            <DialogTitle className="sr-only">{t('teamDetails')}</DialogTitle>
+            <DialogDescription />
+          </DialogHeader>
           {selectedEditTeamId && (
             <TeamDetail
               teamId={selectedEditTeamId}
@@ -516,9 +519,11 @@ export function AdminTeams() {
         }
       }}>
         <DialogContent>
-          <DialogHeader>
+          <DialogHeader className="hidden">
             <DialogTitle>{t('createTeam')}</DialogTitle>
+            <DialogDescription />
           </DialogHeader>
+          <div className="text-lg font-semibold leading-none tracking-tight mb-4">{t('createTeam')}</div>
           <form onSubmit={handleCreateTeam} className="space-y-4">
             {createTeamError && (
               <div className="p-4 border border-destructive/20 bg-destructive/10 rounded-md">

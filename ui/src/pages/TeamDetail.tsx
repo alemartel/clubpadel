@@ -482,11 +482,11 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         {/* Team Information */}
         <div className={embedded ? "space-y-6" : "lg:col-span-2 space-y-6"}>
           <Card>
-            <CardContent className="space-y-4 pt-4">
+            <CardContent className="space-y-4 p-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-start gap-2">
                       {isEditingTeamName && isAdmin ? (
                         <div className="flex items-center gap-2 flex-1 max-w-md">
                           <Input
@@ -515,7 +515,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                         </div>
                       ) : (
                         <>
-                          <h4 className="font-medium text-center">{team.team.name}</h4>
+                          <h4 className="font-medium text-left">{team.team.name}</h4>
                           {isAdmin && (
                             <Button
                               variant="ghost"
@@ -736,7 +736,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 
           {/* Team Members */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <div className="flex items-center justify-between">
                 <h4 className="flex items-center gap-2 text-base sm:text-lg font-semibold">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -769,7 +769,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               {isTeamIncomplete && showWarnings && (
                 <div className="mb-4 p-3 border border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/10 rounded-md">
                   <div className="flex items-start gap-2">
@@ -817,9 +817,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     }
                     
                     return (
-                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                      <div key={member.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                             <UserAvatar
                               user={{
                                 photo_url: null,
@@ -842,16 +842,16 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                             {user.gender && (
                               <div className="flex-shrink-0">
                                 {user.gender === "male" ? (
-                                  <Mars className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                  <Mars className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                                 ) : user.gender === "female" ? (
-                                  <Venus className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                                  <Venus className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600 dark:text-pink-400" />
                                 ) : null}
                               </div>
                             )}
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div 
-                              className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
+                              className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline truncate text-sm sm:text-base" : "font-medium truncate text-sm sm:text-base"}
                               onClick={user.profile_picture_url ? () => {
                                 setSelectedUserForPicture({
                                   imageUrl: user.profile_picture_url!,
@@ -863,7 +863,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                             >
                               {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
                             </div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground truncate max-w-[120px] sm:max-w-none">{user.email}</div>
                           </div>
                         </div>
                       <div className="flex items-center gap-2">
@@ -895,7 +895,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 
       {/* Delete Team Button (shown at bottom when embedded) */}
       {isAdmin && embedded && (
-        <div className="mt-6 pt-6 border-t">
+        <div className="pt-6 border-t">
           <Button
             variant="destructive"
             onClick={() => setShowDeleteConfirm(true)}
