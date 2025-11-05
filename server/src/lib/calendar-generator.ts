@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { eq, and } from "drizzle-orm";
-import { teams, team_availability } from "../schema/teams";
+import { eq, and, or, sql, inArray } from "drizzle-orm";
+import { teams, team_availability, team_members } from "../schema/teams";
 import { leagues, matches as matchesTable, type NewMatch } from "../schema/leagues";
 import type { DatabaseConnection } from "./db";
 
@@ -25,11 +25,12 @@ export interface GeneratedMatch {
   league_id: string;
   home_team_id: string;
   away_team_id: string;
-  match_date: Date;
+  match_date: Date | null;
   match_time: string;
   week_number: number;
   home_team_name: string;
   away_team_name: string;
+  needsManualAssignment: boolean;
 }
 
 export interface CalendarGenerationResult {
@@ -88,11 +89,19 @@ export class CalendarGenerator {
         matchesPerWeek
       );
 
-      // 6. Calculate end date (1 week after last match)
+      // 6. Calculate end date (1 week after last match with assigned date)
       console.log("Step 6: Calculating end date");
-      const lastMatchDate = new Date(Math.max(...generatedMatches.map(m => m.match_date.getTime())));
-      const endDate = new Date(lastMatchDate);
-      endDate.setDate(endDate.getDate() + 7);
+      const matchesWithDates = generatedMatches.filter(m => m.match_date !== null) as GeneratedMatch[];
+      let endDate = new Date(startDate);
+      if (matchesWithDates.length > 0) {
+        const lastMatchDate = new Date(Math.max(...matchesWithDates.map(m => (m.match_date as Date).getTime())));
+        endDate = new Date(lastMatchDate);
+        endDate.setDate(endDate.getDate() + 7);
+      } else {
+        // If no matches have dates, set end date to start date + total weeks
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + (totalWeeks * 7));
+      }
 
       console.log(`Calendar generation completed. Generated ${generatedMatches.length} matches.`);
       return {
@@ -229,6 +238,10 @@ export class CalendarGenerator {
     const matches: GeneratedMatch[] = [];
     const teamMap = new Map(teamAvailability.map(t => [t.team_id, t]));
 
+    // Track home/away alternation per team across weeks
+    const teamHomeAwayStatus = new Map<string, 'home' | 'away' | null>();
+    teamAvailability.forEach(t => teamHomeAwayStatus.set(t.team_id, null));
+
     // Create a proper round-robin schedule
     const schedule = this.createRoundRobinSchedule(teamAvailability.map(t => t.team_id), totalWeeks);
 
@@ -240,35 +253,96 @@ export class CalendarGenerator {
       const weekMatches = schedule[week - 1] || [];
       const scheduledTimes = new Set<string>(); // Track scheduled times to prevent conflicts
 
-      for (const [homeTeamId, awayTeamId] of weekMatches) {
-        const homeTeam = teamMap.get(homeTeamId)!;
-        const awayTeam = teamMap.get(awayTeamId)!;
+      for (const [team1Id, team2Id] of weekMatches) {
+        const team1 = teamMap.get(team1Id)!;
+        const team2 = teamMap.get(team2Id)!;
+        
+        // Determine home/away based on alternation
+        const team1LastStatus = teamHomeAwayStatus.get(team1Id);
+        const team2LastStatus = teamHomeAwayStatus.get(team2Id);
+        
+        let homeTeamId: string;
+        let awayTeamId: string;
+        let homeTeam: TeamAvailability;
+        let awayTeam: TeamAvailability;
+
+        // Apply home/away alternation: if team was home last week, make them away this week
+        if (team1LastStatus === 'home' || team2LastStatus === 'away') {
+          // Team1 was home or team2 was away, so make team1 away and team2 home
+          homeTeamId = team2Id;
+          awayTeamId = team1Id;
+          homeTeam = team2;
+          awayTeam = team1;
+        } else if (team2LastStatus === 'home' || team1LastStatus === 'away') {
+          // Team2 was home or team1 was away, so make team2 away and team1 home
+          homeTeamId = team1Id;
+          awayTeamId = team2Id;
+          homeTeam = team1;
+          awayTeam = team2;
+        } else {
+          // First match for both teams or both null - assign randomly (use team creation order via ID)
+          if (team1Id < team2Id) {
+            homeTeamId = team1Id;
+            awayTeamId = team2Id;
+            homeTeam = team1;
+            awayTeam = team2;
+          } else {
+            homeTeamId = team2Id;
+            awayTeamId = team1Id;
+            homeTeam = team2;
+            awayTeam = team1;
+          }
+        }
+
+        // Update home/away status for tracking
+        teamHomeAwayStatus.set(homeTeamId, 'home');
+        teamHomeAwayStatus.set(awayTeamId, 'away');
         
         // Find best available day and time for this match, avoiding conflicts
-        const { matchDate, matchTime } = this.findBestMatchTimeWithConflictAvoidance(
+        const result = await this.findBestMatchTimeWithConflictAvoidance(
           homeTeam,
           awayTeam,
+          homeTeamId,
+          awayTeamId,
           weekStart,
           scheduledTimes
         );
 
-        // Add this time slot to avoid conflicts
-        const timeKey = `${matchDate.toISOString().split('T')[0]}_${matchTime}`;
-        scheduledTimes.add(timeKey);
+        if (result.needsManualAssignment) {
+          // No valid date found - mark for manual assignment
+          const match: GeneratedMatch = {
+            id: randomUUID(),
+            league_id: "", // Will be set by saveMatches method
+            home_team_id: homeTeamId,
+            away_team_id: awayTeamId,
+            match_date: null,
+            match_time: DEFAULT_MATCH_TIME,
+            week_number: week,
+            home_team_name: homeTeam.team_name,
+            away_team_name: awayTeam.team_name,
+            needsManualAssignment: true,
+          };
+          matches.push(match);
+        } else {
+          // Add this time slot to avoid conflicts
+          const timeKey = `${result.matchDate.toISOString().split('T')[0]}_${result.matchTime}`;
+          scheduledTimes.add(timeKey);
 
-        const match: GeneratedMatch = {
-          id: randomUUID(),
-          league_id: "", // Will be set by saveMatches method
-          home_team_id: homeTeamId,
-          away_team_id: awayTeamId,
-          match_date: matchDate,
-          match_time: matchTime,
-          week_number: week,
-          home_team_name: homeTeam.team_name,
-          away_team_name: awayTeam.team_name,
-        };
+          const match: GeneratedMatch = {
+            id: randomUUID(),
+            league_id: "", // Will be set by saveMatches method
+            home_team_id: homeTeamId,
+            away_team_id: awayTeamId,
+            match_date: result.matchDate,
+            match_time: result.matchTime,
+            week_number: week,
+            home_team_name: homeTeam.team_name,
+            away_team_name: awayTeam.team_name,
+            needsManualAssignment: false,
+          };
 
-        matches.push(match);
+          matches.push(match);
+        }
       }
     }
 
@@ -337,12 +411,114 @@ export class CalendarGenerator {
     return schedule;
   }
 
-  private findBestMatchTimeWithConflictAvoidance(
+  /**
+   * Check if any player from either team has a match conflict on the proposed date
+   */
+  private async checkPlayerMatchConflicts(
+    team1Id: string,
+    team2Id: string,
+    proposedDate: Date
+  ): Promise<boolean> {
+    try {
+      // Get all players from both teams
+      const team1Members = await this.db
+        .select({ user_id: team_members.user_id })
+        .from(team_members)
+        .where(eq(team_members.team_id, team1Id));
+
+      const team2Members = await this.db
+        .select({ user_id: team_members.user_id })
+        .from(team_members)
+        .where(eq(team_members.team_id, team2Id));
+
+      const allPlayerIds = new Set([
+        ...team1Members.map(m => m.user_id),
+        ...team2Members.map(m => m.user_id)
+      ]);
+
+      if (allPlayerIds.size === 0) {
+        return false; // No players, no conflict
+      }
+
+      // Check for existing matches on the same date involving any of these players
+      const dateStr = proposedDate.toISOString().split('T')[0];
+      const dateStart = new Date(dateStr);
+      dateStart.setHours(0, 0, 0, 0);
+      const dateEnd = new Date(dateStr);
+      dateEnd.setHours(23, 59, 59, 999);
+
+      // Get all matches on this date
+      const existingMatches = await this.db
+        .select()
+        .from(matchesTable)
+        .where(
+          and(
+            sql`DATE(${matchesTable.match_date}) = DATE(${sql.raw(`'${dateStr}'`)})`,
+            sql`${matchesTable.match_date} IS NOT NULL`,
+            sql`${matchesTable.match_date} < ${sql.raw(`'2100-01-01'::timestamp`)}` // Exclude placeholder dates
+          )
+        );
+
+      if (existingMatches.length === 0) {
+        return false; // No existing matches, no conflict
+      }
+
+      // Batch fetch all team members for all existing matches in one query
+      const existingMatchTeamIds = new Set<string>();
+      existingMatches.forEach(match => {
+        existingMatchTeamIds.add(match.home_team_id);
+        existingMatchTeamIds.add(match.away_team_id);
+      });
+
+      // Get all team members for all existing match teams in one query
+      const allExistingTeamMembers = existingMatchTeamIds.size > 0 ? await this.db
+        .select({
+          team_id: team_members.team_id,
+          user_id: team_members.user_id
+        })
+        .from(team_members)
+        .where(inArray(team_members.team_id, Array.from(existingMatchTeamIds))) : [];
+
+      // Build a map of team_id -> Set of player IDs
+      const teamPlayersMap = new Map<string, Set<string>>();
+      for (const member of allExistingTeamMembers) {
+        if (!teamPlayersMap.has(member.team_id)) {
+          teamPlayersMap.set(member.team_id, new Set());
+        }
+        teamPlayersMap.get(member.team_id)!.add(member.user_id);
+      }
+
+      // Check if any existing match involves players from our teams
+      for (const match of existingMatches) {
+        const homeTeamPlayers = teamPlayersMap.get(match.home_team_id) || new Set();
+        const awayTeamPlayers = teamPlayersMap.get(match.away_team_id) || new Set();
+        const existingMatchPlayers = new Set([...homeTeamPlayers, ...awayTeamPlayers]);
+
+        // Check for intersection
+        for (const playerId of allPlayerIds) {
+          if (existingMatchPlayers.has(playerId)) {
+            return true; // Conflict found
+          }
+        }
+      }
+
+      return false; // No conflicts
+    } catch (error) {
+      console.error('Error checking player match conflicts:', error);
+      // On error, log and throw to prevent silent failures
+      // This is safer than returning false and potentially creating conflicts
+      throw new Error(`Failed to check player match conflicts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async findBestMatchTimeWithConflictAvoidance(
     homeTeam: TeamAvailability,
     awayTeam: TeamAvailability,
+    homeTeamId: string,
+    awayTeamId: string,
     weekStart: Date,
     scheduledTimes: Set<string>
-  ): { matchDate: Date; matchTime: string } {
+  ): Promise<{ matchDate: Date; matchTime: string; needsManualAssignment: boolean }> {
     const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     
     // Validate inputs
@@ -383,13 +559,29 @@ export class CalendarGenerator {
       awayAvailableDays.includes(day)
     );
 
-    // Try to find a time slot that doesn't conflict
+    // Calculate availability counts for priority logic
+    const homeAvailableCount = homeAvailableDays.length;
+    const awayAvailableCount = awayAvailableDays.length;
+    const MIN_AVAILABILITY_REQUIREMENT = 2; // Minimum days required
+
+    // Try to find a time slot that doesn't conflict with player matches
     for (const day of commonDays) {
       const dayIndex = daysOfWeek.indexOf(day);
       const matchDate = new Date(weekStart);
-      matchDate.setDate(matchDate.getDate() + dayIndex);
+      // Calculate days until the target day of week
+      let daysUntilDay = (dayIndex - weekStart.getDay() + 7) % 7;
+      if (daysUntilDay === 0) {
+        daysUntilDay = 7; // If same day, schedule for next week
+      }
+      matchDate.setDate(weekStart.getDate() + daysUntilDay);
       
-      // Try different times to avoid conflicts
+      // Check for player match conflicts before scheduling
+      const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
+      if (hasConflict) {
+        continue; // Skip this date, try next
+      }
+      
+      // Try different times to avoid time slot conflicts
       const possibleTimes = ["10:00:00", "11:00:00", "12:00:00", "13:00:00", "14:00:00", "15:00:00", "16:00:00", "17:00:00"];
       
       for (const time of possibleTimes) {
@@ -397,19 +589,99 @@ export class CalendarGenerator {
         if (!scheduledTimes.has(timeKey)) {
           return {
             matchDate,
-            matchTime: time
+            matchTime: time,
+            needsManualAssignment: false
           };
         }
       }
     }
 
-    // Fallback to Saturday if no common days or all times are taken
-    console.warn(`No available time slot found for ${homeTeam.team_name} vs ${awayTeam.team_name}, defaulting to Saturday`);
-    const saturday = new Date(weekStart);
-    saturday.setDate(saturday.getDate() + (SATURDAY_DAY_INDEX - weekStart.getDay()));
+    // No conflict-free date found - apply priority logic
+    // Priority 1: Team that meets minimum availability requirement
+    const homeMeetsMinimum = homeAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
+    const awayMeetsMinimum = awayAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
+
+    if (homeMeetsMinimum && !awayMeetsMinimum) {
+      // Home team meets minimum, try to schedule on their available days
+      for (const day of homeAvailableDays) {
+        const dayIndex = daysOfWeek.indexOf(day);
+        const matchDate = new Date(weekStart);
+        let daysUntilDay = (dayIndex - weekStart.getDay() + 7) % 7;
+        if (daysUntilDay === 0) daysUntilDay = 7;
+        matchDate.setDate(weekStart.getDate() + daysUntilDay);
+        
+        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
+        if (!hasConflict) {
+          return {
+            matchDate,
+            matchTime: DEFAULT_MATCH_TIME,
+            needsManualAssignment: false
+          };
+        }
+      }
+    } else if (awayMeetsMinimum && !homeMeetsMinimum) {
+      // Away team meets minimum, try to schedule on their available days
+      for (const day of awayAvailableDays) {
+        const dayIndex = daysOfWeek.indexOf(day);
+        const matchDate = new Date(weekStart);
+        let daysUntilDay = (dayIndex - weekStart.getDay() + 7) % 7;
+        if (daysUntilDay === 0) daysUntilDay = 7;
+        matchDate.setDate(weekStart.getDate() + daysUntilDay);
+        
+        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
+        if (!hasConflict) {
+          return {
+            matchDate,
+            matchTime: DEFAULT_MATCH_TIME,
+            needsManualAssignment: false
+          };
+        }
+      }
+    }
+
+    // Priority 2: Team with most availability
+    if (homeAvailableCount > awayAvailableCount) {
+      for (const day of homeAvailableDays) {
+        const dayIndex = daysOfWeek.indexOf(day);
+        const matchDate = new Date(weekStart);
+        let daysUntilDay = (dayIndex - weekStart.getDay() + 7) % 7;
+        if (daysUntilDay === 0) daysUntilDay = 7;
+        matchDate.setDate(weekStart.getDate() + daysUntilDay);
+        
+        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
+        if (!hasConflict) {
+          return {
+            matchDate,
+            matchTime: DEFAULT_MATCH_TIME,
+            needsManualAssignment: false
+          };
+        }
+      }
+    } else if (awayAvailableCount > 0) {
+      for (const day of awayAvailableDays) {
+        const dayIndex = daysOfWeek.indexOf(day);
+        const matchDate = new Date(weekStart);
+        let daysUntilDay = (dayIndex - weekStart.getDay() + 7) % 7;
+        if (daysUntilDay === 0) daysUntilDay = 7;
+        matchDate.setDate(weekStart.getDate() + daysUntilDay);
+        
+        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
+        if (!hasConflict) {
+          return {
+            matchDate,
+            matchTime: DEFAULT_MATCH_TIME,
+            needsManualAssignment: false
+          };
+        }
+      }
+    }
+
+    // No valid date found - mark for manual assignment
+    console.warn(`No available time slot found for ${homeTeam.team_name} vs ${awayTeam.team_name}, marking for manual assignment`);
     return {
-      matchDate: saturday,
-      matchTime: DEFAULT_MATCH_TIME
+      matchDate: new Date(weekStart), // Placeholder date
+      matchTime: DEFAULT_MATCH_TIME,
+      needsManualAssignment: true
     };
   }
 
@@ -502,15 +774,25 @@ export class CalendarGenerator {
     matches: GeneratedMatch[],
     leagueId: string
   ): Promise<void> {
-    const matchRecords: NewMatch[] = matches.map(match => ({
-      id: match.id,
-      league_id: leagueId,
-      home_team_id: match.home_team_id,
-      away_team_id: match.away_team_id,
-      match_date: match.match_date,
-      match_time: match.match_time,
-      week_number: match.week_number,
-    }));
+    const matchRecords: NewMatch[] = matches.map(match => {
+      // For matches needing manual assignment, use placeholder date (2099-12-31)
+      // The schema requires match_date to be not null, so we use a far future date
+      // The API endpoint filters by this date and the manual assignment endpoint will update it
+      const placeholderDate = new Date('2099-12-31');
+      const matchDate = match.needsManualAssignment 
+        ? placeholderDate 
+        : (match.match_date || placeholderDate);
+      
+      return {
+        id: match.id,
+        league_id: leagueId,
+        home_team_id: match.home_team_id,
+        away_team_id: match.away_team_id,
+        match_date: matchDate,
+        match_time: match.match_time,
+        week_number: match.week_number,
+      };
+    });
 
     await this.db.insert(matchesTable).values(matchRecords);
   }

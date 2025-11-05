@@ -207,7 +207,6 @@ export function Register() {
                 <SelectContent>
                   <SelectItem value="Masculine">{tTeams('masculine')}</SelectItem>
                   <SelectItem value="Femenine">{tTeams('femenine')}</SelectItem>
-                  <SelectItem value="Mixed">{tTeams('mixed')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

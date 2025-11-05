@@ -48,6 +48,10 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
         user = null; // Set to null so we go through migration logic
       } else {
         // User doesn't exist at all - create new user
+        // Check if this is the admin email
+        const adminEmails = ["martelmarrero@gmail.com"];
+        const isAdmin = firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase());
+        
         await db
           .insert(users)
           .values({
@@ -55,7 +59,7 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
             email: firebaseUser.email,
             display_name: null,
             photo_url: null,
-            role: "player", // Default role for new users
+            role: isAdmin ? "admin" : "player", // Assign admin role for specific emails
           })
           .onConflictDoNothing();
         

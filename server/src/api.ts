@@ -202,20 +202,28 @@ api.get("/db-test", async (c) => {
       "postgresql://postgres:password@localhost:5502/postgres";
     const dbUrl = getDatabaseUrl() || defaultLocalConnection;
 
+    console.log(`[db-test] Attempting to connect to database: ${dbUrl.replace(/:[^:@]+@/, ':****@')}`);
+
     const db = await getDatabase(dbUrl);
+    console.log("[db-test] Database connection established");
+
     const isHealthy = await testDatabaseConnection();
+    console.log(`[db-test] Connection health check: ${isHealthy}`);
 
     if (!isHealthy) {
       return c.json(
         {
           error: "Database connection is not healthy",
+          databaseUrl: dbUrl.replace(/:[^:@]+@/, ':****@'),
           timestamp: new Date().toISOString(),
         },
         500
       );
     }
 
+    console.log("[db-test] Querying users table...");
     const result = await db.select().from(schema.users).limit(5);
+    console.log(`[db-test] Query successful, found ${result.length} users`);
 
     return c.json({
       message: "Database connection successful!",
@@ -226,10 +234,23 @@ api.get("/db-test", async (c) => {
     });
   } catch (error) {
     console.error("Database test error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    // Provide more helpful error messages
+    let helpfulMessage = errorMessage;
+    if (errorMessage.includes("ECONNREFUSED") || errorMessage.includes("connection refused")) {
+      helpfulMessage = `Database server is not running. Please ensure the database server is started (check if 'pnpm dev' is running). Original error: ${errorMessage}`;
+    } else if (errorMessage.includes("does not exist") || errorMessage.includes("relation") || errorMessage.includes("schema")) {
+      helpfulMessage = `Database schema not initialized. Please run 'cd server && pnpm db:push' to create the schema. Original error: ${errorMessage}`;
+    }
+
     return c.json(
       {
         error: "Database connection failed",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: helpfulMessage,
+        originalError: errorMessage,
+        stack: errorStack,
         timestamp: new Date().toISOString(),
       },
       500
@@ -2341,7 +2362,8 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all matches for the league first
+    // Get all matches for the league
+    // We get all matches (including placeholder dates) and separate them later
     const leagueMatches = await db
       .select()
       .from(matches)
@@ -2368,15 +2390,36 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
     // Create a map for quick team lookup
     const teamMap = new Map(teamDetails.map(team => [team.id, team]));
 
+    // Separate matches with assigned dates from those needing manual assignment
+    const assignedMatches = leagueMatches.filter(m => {
+      const matchDate = new Date(m.match_date);
+      return matchDate < placeholderDate;
+    });
+    const needsAssignmentMatches = leagueMatches.filter(m => {
+      const matchDate = new Date(m.match_date);
+      return matchDate >= placeholderDate;
+    });
+
     // Combine matches with team details
-    const matchesWithTeams = leagueMatches.map(match => ({
+    const matchesWithTeams = assignedMatches.map(match => ({
       match,
+      home_team: teamMap.get(match.home_team_id) || { id: match.home_team_id, name: "Unknown Team" },
+      away_team: teamMap.get(match.away_team_id) || { id: match.away_team_id, name: "Unknown Team" },
+    }));
+
+    // Also include matches needing assignment (with null date for display)
+    const needsAssignmentWithTeams = needsAssignmentMatches.map(match => ({
+      match: {
+        ...match,
+        match_date: null, // Mark as needing assignment
+      },
       home_team: teamMap.get(match.home_team_id) || { id: match.home_team_id, name: "Unknown Team" },
       away_team: teamMap.get(match.away_team_id) || { id: match.away_team_id, name: "Unknown Team" },
     }));
 
     return c.json({
       matches: matchesWithTeams,
+      needsAssignment: needsAssignmentWithTeams,
       message: "Calendar retrieved successfully",
     });
   } catch (error) {
@@ -2387,6 +2430,225 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
       leagueId: c.req.param("leagueId")
     });
     return c.json(createErrorResponse("Failed to retrieve calendar", 500), 500);
+  }
+});
+
+// Classifications endpoint
+adminRoutes.get("/leagues/:leagueId/classifications", async (c) => {
+  try {
+    const leagueId = c.req.param("leagueId");
+    console.log(`Retrieving classifications for league: ${leagueId}`);
+    
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Get all teams in the league
+    const leagueTeams = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.league_id, leagueId));
+
+    // Get all matches for the league (future: when match results are added, filter by matches with results)
+    const leagueMatches = await db
+      .select()
+      .from(matches)
+      .where(
+        and(
+          eq(matches.league_id, leagueId),
+          sql`${matches.match_date} < ${sql.raw(`'2100-01-01'::timestamp`)}`
+        )
+      );
+
+    // Initialize standings for each team
+    const standings = new Map<string, {
+      team_id: string;
+      team_name: string;
+      matches_played: number;
+      wins: number;
+      draws: number;
+      losses: number;
+      goals_for: number;
+      goals_against: number;
+      goal_difference: number;
+      points: number;
+    }>();
+
+    leagueTeams.forEach(team => {
+      standings.set(team.id, {
+        team_id: team.id,
+        team_name: team.name,
+        matches_played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goals_for: 0,
+        goals_against: 0,
+        goal_difference: 0,
+        points: 0,
+      });
+    });
+
+    // Calculate standings from matches (when match results are added)
+    // For now, all teams will have zero stats
+    // TODO: When match results are added, update this logic:
+    // - For each match with results:
+    //   - If home_score and away_score exist:
+    //     - Update home team: goals_for += home_score, goals_against += away_score
+    //     - Update away team: goals_for += away_score, goals_against += home_score
+    //     - If home_score > away_score: home wins, away loses
+    //     - If away_score > home_score: away wins, home loses
+    //     - If home_score === away_score: both draw
+    //     - Update matches_played, wins, draws, losses accordingly
+    //     - Calculate points: (wins * 3) + draws
+
+    // Sort by points (desc), goal difference (desc), goals for (desc)
+    const classifications = Array.from(standings.values())
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
+        return b.goals_for - a.goals_for;
+      })
+      .map((entry, index) => ({
+        ...entry,
+        position: index + 1,
+      }));
+
+    return c.json({
+      classifications,
+      message: "Classifications retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Classifications retrieval error:", error);
+    return c.json(createErrorResponse("Failed to retrieve classifications", 500), 500);
+  }
+});
+
+// Manual match date assignment endpoint
+adminRoutes.put("/leagues/:leagueId/matches/:matchId/date", async (c) => {
+  try {
+    const leagueId = c.req.param("leagueId");
+    const matchId = c.req.param("matchId");
+    const body = await c.req.json();
+    const { match_date, match_time } = body;
+
+    if (!match_date || !match_time) {
+      return c.json({ error: "Match date and time are required" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    // Verify match exists and belongs to league
+    const [match] = await db
+      .select()
+      .from(matches)
+      .where(and(eq(matches.id, matchId), eq(matches.league_id, leagueId)));
+
+    if (!match) {
+      return c.json({ error: "Match not found" }, 404);
+    }
+
+    // Verify match has placeholder date (needs manual assignment)
+    const placeholderDate = new Date('2099-12-31');
+    if (match.match_date && new Date(match.match_date) < placeholderDate) {
+      return c.json({ error: "Match already has an assigned date. Please use the edit functionality to change it." }, 400);
+    }
+
+    // Get league dates for validation
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, leagueId));
+
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
+
+    // Validate date is within league dates (if they exist)
+    const assignedDate = new Date(match_date);
+    if (league.start_date && assignedDate < new Date(league.start_date)) {
+      return c.json({ error: "Match date cannot be before league start date" }, 400);
+    }
+    if (league.end_date && assignedDate > new Date(league.end_date)) {
+      return c.json({ error: "Match date cannot be after league end date" }, 400);
+    }
+
+    // Check for player match conflicts
+    const homeTeamMembers = await db
+      .select({ user_id: team_members.user_id })
+      .from(team_members)
+      .where(eq(team_members.team_id, match.home_team_id));
+
+    const awayTeamMembers = await db
+      .select({ user_id: team_members.user_id })
+      .from(team_members)
+      .where(eq(team_members.team_id, match.away_team_id));
+
+    const allPlayerIds = new Set([
+      ...homeTeamMembers.map(m => m.user_id),
+      ...awayTeamMembers.map(m => m.user_id)
+    ]);
+
+    // Check for existing matches on the same date involving any of these players
+    const dateStr = assignedDate.toISOString().split('T')[0];
+    const existingMatches = await db
+      .select()
+      .from(matches)
+      .where(
+        and(
+          sql`DATE(${matches.match_date}) = DATE(${sql.raw(`'${dateStr}'`)})`,
+          sql`${matches.match_date} < ${sql.raw(`'2100-01-01'::timestamp`)}`,
+          sql`${matches.id} != ${matchId}`
+        )
+      );
+
+    for (const existingMatch of existingMatches) {
+      const existingHomeMembers = await db
+        .select({ user_id: team_members.user_id })
+        .from(team_members)
+        .where(eq(team_members.team_id, existingMatch.home_team_id));
+
+      const existingAwayMembers = await db
+        .select({ user_id: team_members.user_id })
+        .from(team_members)
+        .where(eq(team_members.team_id, existingMatch.away_team_id));
+
+      const existingMatchPlayers = new Set([
+        ...existingHomeMembers.map(m => m.user_id),
+        ...existingAwayMembers.map(m => m.user_id)
+      ]);
+
+      // Check for intersection
+      for (const playerId of allPlayerIds) {
+        if (existingMatchPlayers.has(playerId)) {
+          return c.json({ 
+            error: `Player conflict detected: A player from this match already has another match scheduled on ${dateStr}` 
+          }, 400);
+        }
+      }
+    }
+
+    // Update match date and time
+    const combinedDateTime = new Date(match_date);
+    const [hours, minutes] = match_time.split(':');
+    combinedDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    await db
+      .update(matches)
+      .set({
+        match_date: combinedDateTime,
+        match_time: match_time,
+        updated_at: new Date(),
+      })
+      .where(eq(matches.id, matchId));
+
+    return c.json({
+      message: "Match date assigned successfully",
+    });
+  } catch (error) {
+    console.error("Match date assignment error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to assign match date";
+    return c.json(createErrorResponse(errorMessage, 500), 500);
   }
 });
 

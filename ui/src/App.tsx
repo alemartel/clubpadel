@@ -11,6 +11,7 @@ import { AdminLeagues } from "@/pages/AdminLeagues";
 import { AdminTeams } from "@/pages/AdminTeams";
 import { AdminPlayers } from "@/pages/AdminPlayers";
 import { ControlPanel } from "@/pages/ControlPanel";
+import { LeagueCalendarClassifications } from "@/pages/LeagueCalendarClassifications";
 import { MyTeams } from "./pages/MyTeams";
 import { CreateTeam } from "./pages/CreateTeam";
 import { TeamDetail } from "./pages/TeamDetail";
@@ -166,6 +167,14 @@ function AppContent() {
                     element={
                       <AdminRoute>
                         <AdminLeagues />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/leagues/:leagueId/calendar-classifications"
+                    element={
+                      <AdminRoute>
+                        <LeagueCalendarClassifications />
                       </AdminRoute>
                     }
                   />

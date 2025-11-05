@@ -46,7 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/user-avatar";
-import { Plus, Edit, Trash2, Calendar, Users, Shield, X, ChevronDown, ChevronUp, Search, Wallet, XCircle, Mars, Venus, Calendar as CalendarIcon, Info } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, Users, Shield, X, ChevronDown, ChevronUp, Search, Wallet, XCircle, Mars, Venus, Calendar as CalendarIcon, Info, Table2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
@@ -667,6 +667,21 @@ export function AdminLeagues() {
                   <Plus className="w-4 h-4 mr-1" />
                   {t('addTeam') || "Add Team"}
                 </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/admin/leagues/${league.id}/calendar-classifications`)}
+                      className="min-h-[44px] min-w-[44px]"
+                    >
+                      <Table2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Calendar and Classifications</p>
+                  </TooltipContent>
+                </Tooltip>
                 <Button
                   variant="outline"
                   size="sm"

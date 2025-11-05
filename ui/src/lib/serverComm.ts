@@ -243,7 +243,7 @@ export interface Match {
   league_id: string;
   home_team_id: string;
   away_team_id: string;
-  match_date: string;
+  match_date: string | null; // null indicates match needs manual assignment
   match_time: string;
   week_number: number;
   created_at: string;
@@ -344,6 +344,22 @@ export async function generateLeagueCalendar(leagueId: string, startDate: string
 
 export async function getLeagueCalendar(leagueId: string) {
   const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/calendar`);
+  return response.json();
+}
+
+export async function getLeagueClassifications(leagueId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/classifications`);
+  return response.json();
+}
+
+export async function updateMatchDate(leagueId: string, matchId: string, date: string, time: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/leagues/${leagueId}/matches/${matchId}/date`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ match_date: date, match_time: time }),
+  });
   return response.json();
 }
 
@@ -594,6 +610,8 @@ export const api = {
   updateTeamAvailability,
   generateLeagueCalendar,
   getLeagueCalendar,
+  getLeagueClassifications,
+  updateMatchDate,
   clearLeagueCalendar,
   updateLeagueDates,
   getAdminTeams,
