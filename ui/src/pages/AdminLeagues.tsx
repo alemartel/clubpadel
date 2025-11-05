@@ -396,7 +396,7 @@ export function AdminLeagues() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
+    <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{t('leagueManagement')}</h1>
@@ -409,23 +409,24 @@ export function AdminLeagues() {
       </div>
 
       {/* Leagues Section */}
-      {leaguesLoading ? (
-        <div className="text-center py-4">{t('loadingLeagues')}</div>
-      ) : leaguesError ? (
-        <div className="text-center text-red-500 py-4">{leaguesError}</div>
-      ) : leagues.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>{t('noLeaguesFound')}</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="-mt-2">
+        {leaguesLoading ? (
+          <div className="text-center py-4">{t('loadingLeagues')}</div>
+        ) : leaguesError ? (
+          <div className="text-center text-red-500 py-4">{leaguesError}</div>
+        ) : leagues.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>{t('noLeaguesFound')}</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {leagues.map((league) => (
             <Card key={league.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
+              <CardHeader className="pt-4 pb-3">
                 <CardTitle className="text-lg sm:text-xl">{league.name}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
@@ -686,7 +687,8 @@ export function AdminLeagues() {
             </Card>
           ))}
         </div>
-      )}
+        )}
+      </div>
 
 
       {/* Create League Dialog */}

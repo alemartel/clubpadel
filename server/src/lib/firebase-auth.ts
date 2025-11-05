@@ -42,8 +42,8 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
       const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
       
       // Basic validation for emulator tokens
-      if (!payload.sub || !payload.aud || payload.aud !== projectId) {
-        throw new Error('Invalid token payload');
+      if (!payload.sub) {
+        throw new Error('Invalid token payload: missing sub');
       }
       
       return {
@@ -51,7 +51,8 @@ export async function verifyFirebaseToken(token: string, projectId: string): Pro
         email: payload.email as string | undefined,
       };
     } catch (error) {
-      throw new Error('Invalid emulator token');
+      console.error('Emulator token verification error:', error);
+      throw new Error(`Invalid emulator token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

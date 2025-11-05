@@ -252,7 +252,7 @@ export function AdminTeams() {
             }
 
             return (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredTeams.map((item) => {
             // Team incomplete/concern logic (mimic TeamDetail)
             let teamWarningMsg = "";
@@ -312,7 +312,7 @@ export function AdminTeams() {
             return (
               <Card key={item.team.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="p-5">
-                  <CardTitle className="text-lg md:text-lg flex flex-row md:flex-col md:items-start items-center justify-between md:gap-2">
+                  <CardTitle className="text-base md:text-base flex flex-row md:flex-col md:items-start items-center justify-between md:gap-2">
                     <span>{item.team.name}</span>
                     <span className="flex items-center gap-2">
                       <Badge variant={getLevelBadgeVariant(item.team.level)}>
@@ -455,7 +455,7 @@ export function AdminTeams() {
                                 </div>
                                 <div>
                                   <div 
-                                    className={user.profile_picture_url ? "font-medium cursor-pointer hover:underline" : "font-medium"}
+                                    className={user.profile_picture_url ? "font-medium text-sm cursor-pointer hover:underline" : "font-medium text-sm"}
                                     onClick={user.profile_picture_url ? () => {
                                       setSelectedUserForPicture({
                                         imageUrl: user.profile_picture_url,

@@ -312,7 +312,7 @@ export function AdminPlayers() {
 
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
+    <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{t('playerManagement')}</h1>
@@ -321,7 +321,7 @@ export function AdminPlayers() {
       </div>
 
       {/* Search and Stats */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-3 sm:gap-4 -mt-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -364,7 +364,7 @@ export function AdminPlayers() {
               </p>
             </div>
           ) : (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player) => {
                 const teams = playerTeamsMap[player.id] || [];
                 const isExpanded = expandedPlayers.has(player.id);
@@ -396,7 +396,7 @@ export function AdminPlayers() {
                         </div>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4">
+                    <CardContent className="pt-2 px-4 pb-4">
                       <div className="space-y-3">
                         {/* Teams Collapsible Section */}
                         <Collapsible
