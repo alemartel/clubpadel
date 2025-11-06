@@ -328,7 +328,7 @@ export function AdminTeams() {
                       {hasWarnings && (
                         <button
                           className={
-                            'transition-colors p-1 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-900/30 ' +
+                            'transition-colors p-1 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-900/30 border border-border ' +
                             (expandedWarnings[item.team.id] ? 'ring-2 ring-yellow-500' : '')
                           }
                           onClick={() => setExpandedWarnings(x => ({ ...x, [item.team.id]: !x[item.team.id] }))}
@@ -342,7 +342,7 @@ export function AdminTeams() {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            className="transition-colors p-1 rounded-full hover:bg-accent border border-border ml-1"
+                            className="transition-colors p-1 rounded-md hover:bg-accent border border-border"
                             onClick={() => setSelectedEditTeamId(item.team.id)}
                             title={tCommon('edit')}
                             aria-label={tCommon('edit')}

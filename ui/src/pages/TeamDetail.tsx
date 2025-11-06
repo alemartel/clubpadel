@@ -747,11 +747,11 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     <button
                       type="button"
                       onClick={() => setShowWarnings((v) => !v)}
-                      className={`p-2 rounded-full hover:bg-muted relative ${showWarnings ? 'ring-2 ring-yellow-500' : ''}`}
+                      className={`p-1 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-900/30 border border-border relative ${showWarnings ? 'ring-2 ring-yellow-500' : ''}`}
                       aria-label={showWarnings ? tCommon('hide') : tCommon('show')}
                       title={showWarnings ? tCommon('hide') : tCommon('show')}
                     >
-                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                     </button>
                   )}
                   {isAdmin && (
