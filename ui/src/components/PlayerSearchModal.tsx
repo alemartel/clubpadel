@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/serverComm";
+import { toast } from "sonner";
+import { useTranslation } from "@/hooks/useTranslation";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +43,8 @@ export function PlayerSearchModal({
   gender, 
   onMemberAdded 
 }: PlayerSearchModalProps) {
+  const { t } = useTranslation('teams');
+  const { t: tCommon } = useTranslation('common');
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +67,7 @@ export function PlayerSearchModal({
         setPlayers(response.players);
       }
     } catch (err) {
-      setError("Failed to load available players");
+      setError(t('failedToLoadPlayers'));
       console.error("Error loading players:", err);
     } finally {
       setLoading(false);
@@ -74,10 +78,19 @@ export function PlayerSearchModal({
     try {
       setError(null);
       
+      // Get player name before removing from list
+      const player = players.find(p => p.user.id === userId);
+      const playerName = player?.user.display_name || 
+        `${player?.user.first_name || ''} ${player?.user.last_name || ''}`.trim() || 
+        player?.user.email || 'Player';
+      
       const response = await api.addTeamMember(teamId, { user_id: userId });
       if (response.error) {
         setError(response.error);
       } else {
+        // Show success toast
+        toast.success(t('memberAdded', { name: playerName }));
+        
         // Remove the player from the list and notify parent
         setPlayers(prev => prev.filter(p => p.user.id !== userId));
         onMemberAdded?.();
@@ -85,7 +98,7 @@ export function PlayerSearchModal({
         onOpenChange(false);
       }
     } catch (err) {
-      setError("Failed to add player to team");
+      setError(t('failedToAddPlayer'));
       console.error("Error adding player:", err);
     }
   };
@@ -110,10 +123,10 @@ export function PlayerSearchModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
-            Player Search
+            {t('playerSearch')}
           </DialogTitle>
           <DialogDescription className="text-left">
-            Search players by first or last name to add to your team
+            {t('playerSearchDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -127,7 +140,7 @@ export function PlayerSearchModal({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search by first or last name..."
+              placeholder={t('searchPlayerPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -139,14 +152,14 @@ export function PlayerSearchModal({
               <div className="flex items-center justify-center py-8">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                  <p className="text-sm text-muted-foreground">Loading players...</p>
+                  <p className="text-sm text-muted-foreground">{t('loadingPlayers')}</p>
                 </div>
               </div>
             ) : filteredPlayers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
-                  {searchTerm ? "No players found matching your search" : "No available players found"}
+                  {searchTerm ? t('noPlayersFoundSearch') : t('noAvailablePlayers')}
                 </p>
               </div>
             ) : (
@@ -168,7 +181,7 @@ export function PlayerSearchModal({
                       onClick={() => handleAddPlayer(player.user.id)}
                     >
                       <UserPlus className="w-4 h-4 mr-1" />
-                      Add
+                      {tCommon('add')}
                     </Button>
                   </div>
                 ))}

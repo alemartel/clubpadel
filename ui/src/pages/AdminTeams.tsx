@@ -491,7 +491,8 @@ export function AdminTeams() {
           loadTeams();
         }
       }}>
-        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] min-h-[60vh] max-h-[90vh] p-0 overflow-hidden flex flex-col [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background [&_[data-slot=dialog-close]]:!fixed [&_[data-slot=dialog-close]]:!top-4 [&_[data-slot=dialog-close]]:!right-4 [&_[data-slot=dialog-close]]:!z-[60]">
+          <div className="overflow-y-auto p-4 flex-1">
           <DialogHeader className="hidden">
             <DialogTitle className="sr-only">{t('teamDetails')}</DialogTitle>
             <DialogDescription />
@@ -507,6 +508,7 @@ export function AdminTeams() {
               }}
             />
           )}
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={showCreateTeamModal} onOpenChange={(open) => {

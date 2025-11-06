@@ -478,9 +478,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
         </div>
       )}
 
-      <div className={embedded ? "space-y-6" : "grid gap-6 lg:grid-cols-3"}>
+      <div className={embedded ? "space-y-4" : "grid gap-4 lg:grid-cols-3"}>
         {/* Team Information */}
-        <div className={embedded ? "space-y-6" : "lg:col-span-2 space-y-6"}>
+        <div className={embedded ? "space-y-4" : "lg:col-span-2 space-y-4"}>
           <Card>
             <CardContent className="space-y-4 p-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -736,10 +736,10 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 
           {/* Team Members */}
           <Card>
-            <CardHeader className="p-4">
+            <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between">
-                <h4 className="flex items-center gap-2 text-base sm:text-lg font-semibold">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                <h4 className="font-medium flex items-center gap-2">
+                  <Users className="w-4 h-4" />
                   {t('teamMembers')} ({team.members.length}/4)
                 </h4>
                 <div className="flex items-center gap-2">
@@ -760,10 +760,9 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                       size="sm"
                       onClick={() => setShowPlayerSearchModal(true)}
                       disabled={team.members.length >= 4}
+                      className="h-8 w-8 p-0"
                     >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      <span className="hidden sm:inline">{t('addPlayers')}</span>
-                      <span className="sm:hidden">{tCommon('add')}</span>
+                      <UserPlus className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
