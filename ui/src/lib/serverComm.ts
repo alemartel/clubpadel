@@ -380,11 +380,11 @@ export async function getAdminTeams(filters?: { gender?: string; level?: string 
   return response.json();
 }
 
-export async function updateMemberPaid(teamId: string, userId: string, payload: { paid: boolean; paid_at?: string; paid_amount?: number }) {
+export async function updateMemberPaid(teamId: string, userId: string, leagueId: string, payload: { paid: boolean; paid_at?: string; paid_amount?: number }) {
   const response = await fetchWithAuth(`/api/v1/admin/teams/${teamId}/members/${userId}/paid`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, league_id: leagueId }),
   });
   return response.json();
 }

@@ -138,6 +138,7 @@ export function AdminTeams() {
   // Helper: availability check logic
   function getAvailabilityWarning(team: any) {
     const days = team.availability || [];
+    // If no availability data is provided, show warning (team hasn't added availability)
     if (!days.length) return true;
     const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
     const weekends = ['saturday', 'sunday'];
@@ -146,15 +147,21 @@ export function AdminTeams() {
     const hasMinWeekdays = availableWeekdays.length >= 3;
     const hasLateWeekday = availableWeekdays.some((d: any) => {
       if (!d.end_time) return false;
-      const [h] = d.end_time.split(':').map(Number);
+      // Handle both string format (HH:MM:SS) and time object
+      const endTimeStr = typeof d.end_time === 'string' ? d.end_time : d.end_time.toString();
+      const [h] = endTimeStr.split(':').map(Number);
       return h >= 21;
     });
     const hasValidWeekend = availableWeekends.some((d: any) => {
       if (!d.start_time || !d.end_time) return false;
-      const [sh] = d.start_time.split(':').map(Number);
-      const [eh] = d.end_time.split(':').map(Number);
+      // Handle both string format (HH:MM:SS) and time object
+      const startTimeStr = typeof d.start_time === 'string' ? d.start_time : d.start_time.toString();
+      const endTimeStr = typeof d.end_time === 'string' ? d.end_time : d.end_time.toString();
+      const [sh] = startTimeStr.split(':').map(Number);
+      const [eh] = endTimeStr.split(':').map(Number);
       return sh <= 9 && eh >= 12;
     });
+    // Return true if requirements are NOT met (show warning)
     return !(hasMinWeekdays && (hasLateWeekday || hasValidWeekend));
   }
 

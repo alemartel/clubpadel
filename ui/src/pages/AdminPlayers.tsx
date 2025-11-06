@@ -3,7 +3,6 @@ import { useAuth } from "@/lib/auth-context";
 import {
   getAllPlayers,
   getPlayerTeams,
-  updateMemberPaid,
   type PlayerTeamInfo,
 } from "@/lib/serverComm";
 import { Input } from "@/components/ui/input";
@@ -13,13 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Search, Users, Shield, ChevronDown, ChevronUp, Wallet, XCircle, Info } from "lucide-react";
+import { Search, Users, Shield, ChevronDown, ChevronUp } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -72,35 +69,10 @@ export function AdminPlayers() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // State for player teams and payments
+  // State for player teams
   const [playerTeamsMap, setPlayerTeamsMap] = useState<Record<string, PlayerTeamInfo[]>>({});
   const [expandedPlayers, setExpandedPlayers] = useState<Set<string>>(new Set());
   const [teamsLoadingMap, setTeamsLoadingMap] = useState<Record<string, boolean>>({});
-  
-  // Payment dialog state
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
-  const [paymentUserId, setPaymentUserId] = useState<string | null>(null);
-  const [paymentPlayerId, setPaymentPlayerId] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<string>("");
-  const [paymentError, setPaymentError] = useState<string>("");
-  
-  // Payment details modal state
-  const [showPaymentDetailsDialog, setShowPaymentDetailsDialog] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<{ 
-    amount: number | null; 
-    date: string | null;
-    leagueName?: string | null;
-    teamName?: string;
-  } | null>(null);
-  
-  // Unpaid confirmation modal state
-  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
-  const [pendingUnpaidData, setPendingUnpaidData] = useState<{
-    playerId: string;
-    teamId: string;
-    userId: string;
-  } | null>(null);
   
   // Player detail modal state
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -186,117 +158,6 @@ export function AdminPlayers() {
     setExpandedPlayers(newExpanded);
   };
 
-  const handleMarkPaid = async (
-    playerId: string,
-    teamId: string,
-    userId: string,
-    _teamMemberId: string,
-    currentPaid: boolean,
-    desiredPaid: boolean
-  ) => {
-    if (!currentPaid && desiredPaid) {
-      // Going from unpaid to paid, open modal
-      setPaymentTeamId(teamId);
-      setPaymentUserId(userId);
-      setPaymentPlayerId(playerId);
-      setPaymentAmount("");
-      setPaymentError("");
-      setShowPaymentDialog(true);
-    } else if (currentPaid && !desiredPaid) {
-      // Going from paid to unpaid - show confirmation modal
-      setPendingUnpaidData({ playerId, teamId, userId });
-      setShowUnpaidConfirm(true);
-    }
-  };
-
-  const handleConfirmUnpaid = async () => {
-    if (!pendingUnpaidData) return;
-    
-    const playerId = pendingUnpaidData.playerId;
-    
-    try {
-      await updateMemberPaid(pendingUnpaidData.teamId, pendingUnpaidData.userId, { paid: false });
-      toast.success(tTeams('memberMarkedUnpaid') || "Member marked as unpaid");
-      
-      // Clear the existing data and force reload
-      setPlayerTeamsMap(prev => {
-        const updated = { ...prev };
-        delete updated[playerId];
-        return updated;
-      });
-      setTeamsLoadingMap(prev => {
-        const updated = { ...prev };
-        delete updated[playerId];
-        return updated;
-      });
-      
-      // Force reload by setting loading state and fetching
-      setTeamsLoadingMap(prev => ({ ...prev, [playerId]: true }));
-      try {
-        const response = await getPlayerTeams(playerId);
-        setPlayerTeamsMap(prev => ({ ...prev, [playerId]: response.teams || [] }));
-      } catch (error) {
-        console.error("Failed to reload player teams:", error);
-        toast.error(tCommon('failedToLoadTeams') || "Failed to load teams");
-      } finally {
-        setTeamsLoadingMap(prev => ({ ...prev, [playerId]: false }));
-      }
-      
-      setShowUnpaidConfirm(false);
-      setPendingUnpaidData(null);
-    } catch (err: any) {
-      console.error("Failed to update payment status:", err);
-      toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
-      // Reset loading state on error
-      setTeamsLoadingMap(prev => {
-        const updated = { ...prev };
-        delete updated[playerId];
-        return updated;
-      });
-    }
-  };
-
-  const handlePaymentDialogConfirm = async () => {
-    const amount = parseFloat(paymentAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setPaymentError(tTeams("amountPaid") + ": " + tCommon("pleaseFillAllFields"));
-      return;
-    }
-    if (paymentTeamId && paymentUserId && paymentPlayerId) {
-      try {
-        await updateMemberPaid(paymentTeamId, paymentUserId, { paid: true, paid_amount: amount });
-        toast.success(tTeams('memberMarkedPaid') || "Member marked as paid");
-        setShowPaymentDialog(false);
-        setPaymentError("");
-        setPaymentAmount("");
-        // Clear the existing data and force reload
-        setPlayerTeamsMap(prev => {
-          const updated = { ...prev };
-          delete updated[paymentPlayerId];
-          return updated;
-        });
-        setTeamsLoadingMap(prev => {
-          const updated = { ...prev };
-          delete updated[paymentPlayerId];
-          return updated;
-        });
-        
-        // Force reload by setting loading state and fetching
-        setTeamsLoadingMap(prev => ({ ...prev, [paymentPlayerId]: true }));
-        try {
-          const response = await getPlayerTeams(paymentPlayerId);
-          setPlayerTeamsMap(prev => ({ ...prev, [paymentPlayerId]: response.teams || [] }));
-        } catch (error) {
-          console.error("Failed to reload player teams:", error);
-          toast.error(tCommon('failedToLoadTeams') || "Failed to load teams");
-        } finally {
-          setTeamsLoadingMap(prev => ({ ...prev, [paymentPlayerId]: false }));
-        }
-      } catch (err: any) {
-        setPaymentError(err.message || tCommon("error"));
-      }
-    }
-  };
 
   if (loading) {
     return (
@@ -444,16 +305,7 @@ export function AdminPlayers() {
                                     return (
                                       <div 
                                         key={teamInfo.team_member_id} 
-                                        className="p-2 border rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                                        onClick={() => {
-                                          setPaymentDetails({
-                                            amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
-                                            date: teamInfo.payment_status.paid_at || null,
-                                            leagueName: teamInfo.league?.name || null,
-                                            teamName: teamInfo.team.name
-                                          });
-                                          setShowPaymentDetailsDialog(true);
-                                        }}
+                                        className="p-2 border rounded-md"
                                       >
                                         <div className="flex items-center justify-between">
                                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -462,80 +314,6 @@ export function AdminPlayers() {
                                                 {displayName}
                                               </div>
                                             </div>
-                                          </div>
-                                          <div className="flex items-center gap-2 min-w-0 ml-2">
-                                            {teamInfo.payment_status.paid ? (
-                                              <>
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setPaymentDetails({
-                                                      amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
-                                                      date: teamInfo.payment_status.paid_at || null,
-                                                      leagueName: teamInfo.league?.name || null,
-                                                      teamName: teamInfo.team.name
-                                                    });
-                                                    setShowPaymentDetailsDialog(true);
-                                                  }}
-                                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                                                >
-                                                  {teamInfo.payment_status.paid_amount ?? 0}€
-                                                  <Info className="w-3 h-3" />
-                                                </button>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <button
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setPaymentDetails({
-                                                          amount: teamInfo.payment_status.paid_amount ? parseFloat(String(teamInfo.payment_status.paid_amount)) : null,
-                                                          date: teamInfo.payment_status.paid_at || null,
-                                                          leagueName: teamInfo.league?.name || null,
-                                                          teamName: teamInfo.team.name
-                                                        });
-                                                        setShowPaymentDetailsDialog(true);
-                                                      }}
-                                                      className="inline-flex items-center gap-1 text-green-600 text-sm cursor-pointer hover:opacity-80 transition-opacity"
-                                                    >
-                                                      <Wallet className="w-4 h-4" />
-                                                    </button>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent side="top">{tCommon('paid')}</TooltipContent>
-                                                </Tooltip>
-                                              </>
-                                            ) : (
-                                              <div 
-                                                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setPaymentDetails({
-                                                    amount: null,
-                                                    date: null,
-                                                    leagueName: teamInfo.league?.name || null,
-                                                    teamName: teamInfo.team.name
-                                                  });
-                                                  setShowPaymentDetailsDialog(true);
-                                                }}
-                                              >
-                                                <span>{tCommon('notPaid')}</span>
-                                                <XCircle className="w-4 h-4 text-amber-600" />
-                                              </div>
-                                            )}
-                                            <Checkbox
-                                              checked={!!teamInfo.payment_status.paid}
-                                              onCheckedChange={(checked) => {
-                                                handleMarkPaid(
-                                                  player.id,
-                                                  teamInfo.team.id,
-                                                  player.id,
-                                                  teamInfo.team_member_id,
-                                                  !!teamInfo.payment_status.paid,
-                                                  !!checked
-                                                );
-                                              }}
-                                              id={`checkbox-paid-${player.id}-${teamInfo.team_member_id}`}
-                                              aria-label={tCommon('paid')}
-                                            />
                                           </div>
                                         </div>
                                       </div>
@@ -553,93 +331,6 @@ export function AdminPlayers() {
               })}
         </div>
       )}
-
-      {/* Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
-          <DialogHeader>
-            <DialogTitle>{tTeams("markPaid")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              autoFocus
-              type="number"
-              min={0.01}
-              step="any"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              placeholder={tTeams("amountPaid")}
-            />
-            {paymentError && (
-              <div className="text-destructive text-xs">{paymentError}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPaymentDialog(false);
-                setPaymentError("");
-                setPaymentAmount("");
-              }}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              onClick={handlePaymentDialogConfirm}
-              title={tTeams("markPaid")}
-              aria-label={tTeams("markPaid")}
-            >
-              {tTeams("markPaid")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Details Dialog */}
-      <Dialog open={showPaymentDetailsDialog} onOpenChange={setShowPaymentDetailsDialog}>
-        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
-          <DialogHeader>
-            <DialogTitle>{tTeams('paymentDetails')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {paymentDetails && (
-              <>
-                {paymentDetails.leagueName && (
-                  <div>
-                    <Label className="text-sm font-medium">{tLeagues('league') || "League"}</Label>
-                    <p className="text-base mt-1">{paymentDetails.leagueName}</p>
-                  </div>
-                )}
-                <div>
-                  <Label className="text-sm font-medium">{tTeams('team') || "Team"}</Label>
-                  <p className="text-base mt-1">{paymentDetails.teamName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">{tTeams('amountPaid')}</Label>
-                  <p className="text-lg font-semibold mt-1">{paymentDetails.amount ?? 0}€</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">{tTeams('paidDate')}</Label>
-                  {paymentDetails.date ? (
-                    <p className="text-base mt-1 flex items-center gap-2">
-                      <Info className="w-4 h-4" />
-                      {new Date(paymentDetails.date).toLocaleDateString()}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-1">-</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setShowPaymentDetailsDialog(false)}>
-              {tCommon('close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Player Detail Modal */}
       <Dialog open={!!selectedPlayer} onOpenChange={(open) => !open && setSelectedPlayer(null)}>
@@ -713,31 +404,6 @@ export function AdminPlayers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Unpaid Confirmation Dialog */}
-      <AlertDialog open={showUnpaidConfirm} onOpenChange={(open) => {
-        setShowUnpaidConfirm(open);
-        if (!open) {
-          setPendingUnpaidData(null);
-        }
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tTeams('markUnpaid') || "Mark as unpaid"}</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {tCommon('cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmUnpaid}
-              className="bg-black text-white hover:bg-black/90"
-            >
-              {tCommon('confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Profile Picture Modal */}
       {selectedPlayer && (

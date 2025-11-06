@@ -36,9 +36,7 @@ export const team_members = appSchema.table("team_members", {
   team_id: text("team_id").notNull(), // Foreign key to teams.id
   user_id: text("user_id").notNull(), // Foreign key to users.id
   joined_at: timestamp("joined_at").defaultNow().notNull(),
-  paid: boolean("paid").default(false).notNull(),
-  paid_at: timestamp("paid_at"),
-  paid_amount: numeric("paid_amount", { precision: 10, scale: 2 }),
+  // Payment fields removed - payments are now tracked in league_payments table
 }, (table) => ({
   // Unique constraint to prevent duplicate memberships
   teamUserUnique: unique("team_members_team_user_unique").on(table.team_id, table.user_id),
@@ -78,6 +76,21 @@ export const team_leagues = appSchema.table("team_leagues", {
   teamLeagueUnique: unique("team_leagues_team_league_unique").on(table.team_id, table.league_id),
 }));
 
+export const league_payments = appSchema.table("league_payments", {
+  id: text("id").primaryKey(),
+  user_id: text("user_id").notNull(), // Foreign key to users.id
+  team_id: text("team_id").notNull(), // Foreign key to teams.id
+  league_id: text("league_id").notNull(), // Foreign key to leagues.id
+  paid: boolean("paid").default(false).notNull(),
+  paid_at: timestamp("paid_at"),
+  paid_amount: numeric("paid_amount", { precision: 10, scale: 2 }),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate payments for same user-team-league combination
+  userTeamLeagueUnique: unique("league_payments_user_team_league_unique").on(table.user_id, table.team_id, table.league_id),
+}));
+
 // Export types
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
@@ -89,3 +102,5 @@ export type TeamChangeNotification = typeof team_change_notifications.$inferSele
 export type NewTeamChangeNotification = typeof team_change_notifications.$inferInsert;
 export type TeamLeague = typeof team_leagues.$inferSelect;
 export type NewTeamLeague = typeof team_leagues.$inferInsert;
+export type LeaguePayment = typeof league_payments.$inferSelect;
+export type NewLeaguePayment = typeof league_payments.$inferInsert;

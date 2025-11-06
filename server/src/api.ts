@@ -21,11 +21,13 @@ import {
   team_availability,
   team_change_notifications,
   team_leagues,
+  league_payments,
   type NewTeam,
   type NewTeamMember,
   type NewTeamAvailability,
   type NewTeamChangeNotification,
   type NewTeamLeague,
+  type NewLeaguePayment,
 } from "./schema/teams";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator";
@@ -685,9 +687,32 @@ adminRoutes.get("/teams", async (c) => {
       teamIdToMembers[row.member.team_id] = list;
     }
 
+    // Fetch availability for all teams
+    const availabilityRows = await db
+      .select()
+      .from(team_availability)
+      .where(inArray(team_availability.team_id, teamIds))
+      .orderBy(team_availability.day_of_week);
+
+    // Group availability by team
+    const teamIdToAvailability: Record<string, any[]> = {};
+    for (const row of availabilityRows) {
+      const list = teamIdToAvailability[row.team_id] || [];
+      list.push({
+        day_of_week: row.day_of_week,
+        is_available: row.is_available,
+        start_time: row.start_time,
+        end_time: row.end_time,
+      });
+      teamIdToAvailability[row.team_id] = list;
+    }
+
     // Shape response
     const response = teamRows.map((t) => ({
-      team: t,
+      team: {
+        ...t,
+        availability: teamIdToAvailability[t.id] || [],
+      },
       league: null,
       group: null,
       members: teamIdToMembers[t.id] || [],
@@ -701,33 +726,62 @@ adminRoutes.get("/teams", async (c) => {
   }
 });
 
-// Admin: Update member paid status/date/amount
+// Admin: Update member paid status/date/amount (per league)
 adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
   try {
     const teamId = c.req.param("teamId");
     const userId = c.req.param("userId");
     const body = await c.req.json();
-    const { paid, paid_at, paid_amount } = body as { paid: boolean; paid_at?: string; paid_amount?: number };
+    const { paid, paid_at, paid_amount, league_id } = body as { paid: boolean; paid_at?: string; paid_amount?: number; league_id?: string };
 
     if (typeof paid !== "boolean") {
       return c.json({ error: "'paid' boolean is required" }, 400);
+    }
+
+    if (!league_id) {
+      return c.json({ error: "'league_id' is required" }, 400);
     }
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
     // Verify membership exists
-    const existing = await db
+    const [membership] = await db
       .select()
       .from(team_members)
       .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)));
 
-    if (existing.length === 0) {
+    if (!membership) {
       return c.json({ error: "Team membership not found" }, 404);
     }
 
-    // Compute update
-    const updateValues: any = { paid };
+    // Verify team is in the specified league
+    const [teamLeague] = await db
+      .select()
+      .from(team_leagues)
+      .where(and(eq(team_leagues.team_id, teamId), eq(team_leagues.league_id, league_id)));
+
+    if (!teamLeague) {
+      return c.json({ error: "Team is not in the specified league" }, 404);
+    }
+
+    // Check if payment record exists
+    const [existingPayment] = await db
+      .select()
+      .from(league_payments)
+      .where(
+        and(
+          eq(league_payments.user_id, userId),
+          eq(league_payments.team_id, teamId),
+          eq(league_payments.league_id, league_id)
+        )
+      );
+
+    // Compute update values
+    const updateValues: any = {
+      paid,
+      updated_at: new Date(),
+    };
     if (paid) {
       updateValues.paid_at = paid_at ? new Date(paid_at) : new Date();
       updateValues.paid_amount = typeof paid_amount === "number" ? paid_amount : 0;
@@ -736,13 +790,37 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
       updateValues.paid_amount = null;
     }
 
-    const updated = await db
-      .update(team_members)
-      .set(updateValues)
-      .where(and(eq(team_members.team_id, teamId), eq(team_members.user_id, userId)))
-      .returning();
+    let result;
+    if (existingPayment) {
+      // Update existing payment record
+      result = await db
+        .update(league_payments)
+        .set(updateValues)
+        .where(
+          and(
+            eq(league_payments.user_id, userId),
+            eq(league_payments.team_id, teamId),
+            eq(league_payments.league_id, league_id)
+          )
+        )
+        .returning();
+    } else {
+      // Create new payment record
+      const paymentId = randomUUID();
+      result = await db
+        .insert(league_payments)
+        .values({
+          id: paymentId,
+          user_id: userId,
+          team_id: teamId,
+          league_id: league_id,
+          ...updateValues,
+          created_at: new Date(),
+        })
+        .returning();
+    }
 
-    return c.json({ member: updated[0] });
+    return c.json({ payment: result[0] });
   } catch (error) {
     console.error("Admin update paid status error:", error);
     const { message, status } = handleDatabaseError(error);
@@ -843,9 +921,6 @@ adminRoutes.get("/players/:playerId/teams", async (c) => {
     const playerTeams = await db
       .select({
         team_member_id: team_members.id,
-        paid: team_members.paid,
-        paid_at: team_members.paid_at,
-        paid_amount: team_members.paid_amount,
         team: teams,
         league: {
           id: leagues.id,
@@ -871,17 +946,55 @@ adminRoutes.get("/players/:playerId/teams", async (c) => {
         sql`${leagues.start_date} DESC NULLS LAST`
       );
 
+    // Get payment status for each team-league combination
+    const teamLeagueIds = playerTeams
+      .filter(row => row.league?.id)
+      .map(row => ({ teamId: row.team.id, leagueId: row.league!.id }));
+    
+    // Fetch payments for all team-league combinations
+    const payments = teamLeagueIds.length > 0
+      ? (await Promise.all(
+          teamLeagueIds.map(async ({ teamId, leagueId }) => {
+            const results = await db
+              .select()
+              .from(league_payments)
+              .where(
+                and(
+                  eq(league_payments.user_id, playerId),
+                  eq(league_payments.team_id, teamId),
+                  eq(league_payments.league_id, leagueId)
+                )
+              );
+            return results[0] || null;
+          })
+        )).filter(Boolean)
+      : [];
+
+    // Create a map of (team_id, league_id) -> payment
+    const paymentMap = new Map(
+      payments.map(p => [`${p.team_id}:${p.league_id}`, p])
+    );
+
     // Shape response
-    const response = playerTeams.map((row) => ({
-      team: row.team,
-      league: row.league?.id ? row.league : null,
-      payment_status: {
-        paid: row.paid,
-        paid_at: row.paid_at ? row.paid_at.toISOString() : null,
-        paid_amount: row.paid_amount ? parseFloat(row.paid_amount) : null,
-      },
-      team_member_id: row.team_member_id,
-    }));
+    const response = playerTeams.map((row) => {
+      const paymentKey = row.league?.id ? `${row.team.id}:${row.league.id}` : null;
+      const payment = paymentKey ? paymentMap.get(paymentKey) : null;
+      
+      return {
+        team: row.team,
+        league: row.league?.id ? row.league : null,
+        payment_status: payment ? {
+          paid: payment.paid,
+          paid_at: payment.paid_at ? payment.paid_at.toISOString() : null,
+          paid_amount: payment.paid_amount ? parseFloat(payment.paid_amount) : null,
+        } : {
+          paid: false,
+          paid_at: null,
+          paid_amount: null,
+        },
+        team_member_id: row.team_member_id,
+      };
+    });
 
     return c.json({
       teams: response,
@@ -946,11 +1059,42 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
       .leftJoin(users, eq(team_members.user_id, users.id))
       .where(inArray(team_members.team_id, teamIds));
 
-    // Group members by team
+    // Get payment status for all members in this league
+    const userIds = memberRows.map(row => row.member.user_id).filter(Boolean);
+    const payments = userIds.length > 0
+      ? await db
+          .select()
+          .from(league_payments)
+          .where(
+            and(
+              eq(league_payments.league_id, leagueId),
+              inArray(league_payments.user_id, userIds),
+              inArray(league_payments.team_id, teamIds)
+            )
+          )
+      : [];
+
+    // Create a map of (user_id, team_id) -> payment
+    const paymentMap = new Map(
+      payments.map(p => [`${p.user_id}:${p.team_id}`, p])
+    );
+
+    // Group members by team and add payment status
     const teamIdToMembers: Record<string, any[]> = {};
     for (const row of memberRows) {
       const list = teamIdToMembers[row.member.team_id] || [];
-      list.push({ member: row.member, user: row.user });
+      const paymentKey = row.member.user_id ? `${row.member.user_id}:${row.member.team_id}` : null;
+      const payment = paymentKey ? paymentMap.get(paymentKey) : null;
+      
+      // Add payment info to member object
+      const memberWithPayment = {
+        ...row.member,
+        paid: payment?.paid ?? false,
+        paid_at: payment?.paid_at ?? null,
+        paid_amount: payment?.paid_amount ?? null,
+      };
+      
+      list.push({ member: memberWithPayment, user: row.user });
       teamIdToMembers[row.member.team_id] = list;
     }
 
@@ -1328,33 +1472,37 @@ protectedRoutes.get("/teams", async (c) => {
         )`
       );
 
-    // Get payment status for the current user for each team
-    const teamIds = userTeams.map(t => t.team.id);
-    const userPaymentStatuses = teamIds.length > 0
-      ? await db
-          .select({
-            team_id: team_members.team_id,
-            paid: team_members.paid,
-            paid_at: team_members.paid_at,
-            paid_amount: team_members.paid_amount,
+    // Get payment status for the current user for each team's primary league
+    const teamLeaguePairs = userTeams
+      .filter(t => t.league?.id)
+      .map(t => ({ teamId: t.team.id, leagueId: t.league!.id }));
+    
+    const userPaymentStatuses = teamLeaguePairs.length > 0
+      ? await Promise.all(
+          teamLeaguePairs.map(async ({ teamId, leagueId }) => {
+            const results = await db
+              .select()
+              .from(league_payments)
+              .where(
+                and(
+                  eq(league_payments.user_id, user.id),
+                  eq(league_payments.team_id, teamId),
+                  eq(league_payments.league_id, leagueId)
+                )
+              );
+            return results[0] ? { teamId, payment: results[0] } : null;
           })
-          .from(team_members)
-          .where(
-            and(
-              inArray(team_members.team_id, teamIds),
-              eq(team_members.user_id, user.id)
-            )
-          )
+        ).then(results => results.filter(Boolean))
       : [];
 
     // Create a map of team_id -> payment status
     const paymentStatusMap = new Map(
-      userPaymentStatuses.map(status => [
-        status.team_id,
+      userPaymentStatuses.map((item: any) => [
+        item.teamId,
         {
-          paid: status.paid,
-          paid_at: status.paid_at ? status.paid_at.toISOString() : null,
-          paid_amount: status.paid_amount ? parseFloat(status.paid_amount) : null,
+          paid: item.payment.paid,
+          paid_at: item.payment.paid_at ? item.payment.paid_at.toISOString() : null,
+          paid_amount: item.payment.paid_amount ? parseFloat(item.payment.paid_amount) : null,
         }
       ])
     );

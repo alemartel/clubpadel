@@ -672,7 +672,7 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-1">
                           {t('availabilityWarningTitle')}
                         </p>
                         <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-line">
@@ -688,15 +688,18 @@ export function TeamDetail({ embedded, teamId: propTeamId, forceAdmin, onClose }
 {t('loadingAvailability')}
                   </div>
                 ) : teamAvailability.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-0 border border-border rounded-md overflow-hidden">
                     {teamAvailability
                       .filter(day => day.is_available)
                       .sort((a, b) => {
                         const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                         return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week);
                       })
-                      .map((day) => (
-                        <div key={day.day_of_week} className="flex items-center justify-between text-sm">
+                      .map((day, index, array) => (
+                        <div 
+                          key={day.day_of_week} 
+                          className={`flex items-center justify-between text-sm p-2 border-b border-border ${index === array.length - 1 ? 'border-b-0' : ''}`}
+                        >
                           <span className="font-medium">{getDayName(day.day_of_week)}</span>
                           <span className="text-muted-foreground">
                             {formatTime(day.start_time)} - {formatTime(day.end_time)}

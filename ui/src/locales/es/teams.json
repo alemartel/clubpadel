@@ -94,7 +94,7 @@
   "teamIncompleteMixedMissingMale": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugador masculino.",
   "teamIncompleteMixedMissingFemale": "El equipo está incompleto. Los equipos mixtos deben tener al menos 1 jugadora femenina.",
   "availabilityWarningTitle": "Requisitos de disponibilidad no cumplidos",
-  "availabilityWarningDescription": "Requisito mínimo:\n- 3 días entre semana,\n- Jugar a las 21:00 en un día entre semana o jugar un día de fin de semana de 9:00 a 12:00.\n\nSi tienes alguna pregunta, por favor contacta al administrador.",
+  "availabilityWarningDescription": "Requisito mínimo:\n- 3 días entre semana.\n- Jugar a las 21:00 en un día entre semana o jugar un día de fin de semana de 9:00 a 12:00.\n\nSi tienes alguna pregunta, por favor contacta al administrador.",
   "markPaid": "Marcar como pagado",
   "markUnpaid": "Marcar como no pagado",
   "amountPaid": "Cantidad pagada",

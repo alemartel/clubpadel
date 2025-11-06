@@ -5,6 +5,7 @@ import {
   League,
   NewLeague,
   UpdateLeague,
+  updateMemberPaid,
 } from "@/lib/serverComm";
 import {
   validateLeague,
@@ -45,6 +46,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { UserAvatar } from "@/components/user-avatar";
 import { Plus, Edit, Trash2, Calendar, Users, Shield, X, ChevronDown, ChevronUp, Search, Wallet, XCircle, Mars, Venus, Calendar as CalendarIcon, Info, Table2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -93,10 +95,21 @@ export function AdminLeagues() {
   const [selectedTeamInfo, setSelectedTeamInfo] = useState<{ teamId: string; leagueId: string } | null>(null);
   const editLeagueNameInputRef = useRef<HTMLInputElement>(null);
   
-  // Payment details modal state (read-only)
+  // Payment details modal state
   const [showPaymentDetailsDialog, setShowPaymentDetailsDialog] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<{ amount: number | null; date: string | null } | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{ amount: number | null; date: string | null; teamMembers?: Array<{ member: any; user: any }>; teamName?: string; leagueName?: string; teamId?: string; leagueId?: string } | null>(null);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+  
+  // Payment dialog state
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentTeamId, setPaymentTeamId] = useState<string | null>(null);
+  const [paymentUserId, setPaymentUserId] = useState<string | null>(null);
+  
+  // Unpaid confirmation dialog state
+  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const [pendingUnpaidData, setPendingUnpaidData] = useState<{ teamId: string; userId: string; leagueId: string } | null>(null);
 
   // Validation errors
   const [leagueErrors, setLeagueErrors] = useState<any[]>([]);
@@ -265,6 +278,112 @@ export function AdminLeagues() {
       toast.error(t('failedToLoadTeams') || "Failed to load teams");
     } finally {
       setTeamsLoadingMap(prev => ({ ...prev, [leagueId]: false }));
+    }
+  };
+
+  const handlePaymentToggle = (
+    teamId: string,
+    userId: string,
+    leagueId: string,
+    currentPaid: boolean,
+    desiredPaid: boolean
+  ) => {
+    if (!currentPaid && desiredPaid) {
+      // Going from unpaid to paid, open modal
+      setPaymentTeamId(teamId);
+      setPaymentUserId(userId);
+      setPaymentAmount("");
+      setPaymentError("");
+      setShowPaymentDialog(true);
+    } else if (currentPaid && !desiredPaid) {
+      // Going from paid to unpaid - show confirmation modal
+      setPendingUnpaidData({ teamId, userId, leagueId });
+      setShowUnpaidConfirm(true);
+    }
+  };
+
+  const handleConfirmUnpaid = async () => {
+    if (!pendingUnpaidData) return;
+    
+    try {
+      await updateMemberPaid(pendingUnpaidData.teamId, pendingUnpaidData.userId, pendingUnpaidData.leagueId, { paid: false });
+      toast.success(tTeams('memberMarkedUnpaid') || "Member marked as unpaid");
+      
+      // Refresh team data
+      if (pendingUnpaidData.leagueId) {
+        setLeagueTeamsMap(prev => {
+          const updated = { ...prev };
+          delete updated[pendingUnpaidData.leagueId!];
+          return updated;
+        });
+        await loadLeagueTeams(pendingUnpaidData.leagueId, true);
+      }
+      
+      // Update payment details if modal is open
+      if (paymentDetails && paymentDetails.teamMembers) {
+        const updatedMembers = paymentDetails.teamMembers.map(({ member, user }) => {
+          if (member.user_id === pendingUnpaidData.userId) {
+            return {
+              member: { ...member, paid: false, paid_amount: null, paid_at: null },
+              user
+            };
+          }
+          return { member, user };
+        });
+        setPaymentDetails({ ...paymentDetails, teamMembers: updatedMembers });
+      }
+      
+      setShowUnpaidConfirm(false);
+      setPendingUnpaidData(null);
+    } catch (err: any) {
+      console.error("Failed to update payment status:", err);
+      toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
+    }
+  };
+
+  const handlePaymentDialogConfirm = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setPaymentError(tTeams("amountPaid") + ": " + tCommon("pleaseFillAllFields"));
+      return;
+    }
+    if (paymentTeamId && paymentUserId && paymentDetails?.leagueId) {
+      try {
+        await updateMemberPaid(paymentTeamId, paymentUserId, paymentDetails.leagueId, { paid: true, paid_amount: amount });
+        toast.success(tTeams('memberMarkedPaid') || "Member marked as paid");
+        setShowPaymentDialog(false);
+        setPaymentError("");
+        setPaymentAmount("");
+        
+        // Find the league ID from payment details
+        const leagueId = paymentDetails?.leagueId;
+        if (leagueId) {
+          // Refresh team data
+          setLeagueTeamsMap(prev => {
+            const updated = { ...prev };
+            delete updated[leagueId];
+            return updated;
+          });
+          await loadLeagueTeams(leagueId, true);
+        }
+        
+        // Update payment details if modal is open
+        if (paymentDetails && paymentDetails.teamMembers) {
+          const updatedMembers = paymentDetails.teamMembers.map(({ member, user }) => {
+            if (member.user_id === paymentUserId) {
+              return {
+                member: { ...member, paid: true, paid_amount: amount.toString(), paid_at: new Date().toISOString() },
+                user
+              };
+            }
+            return { member, user };
+          });
+          setPaymentDetails({ ...paymentDetails, teamMembers: updatedMembers });
+        }
+      } catch (err: any) {
+        console.error("Failed to update payment status:", err);
+        toast.error(err.message || tTeams('failedToUpdatePayment') || "Failed to update payment status");
+      }
     }
   };
 
@@ -503,6 +622,31 @@ export function AdminLeagues() {
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1">
+                                    {(() => {
+                                      const allMembersPaid = item.members && item.members.length > 0 && item.members.every(({ member }: any) => member.paid);
+                                      return (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                                setPaymentDetails({
+                                                  amount: null,
+                                                  date: null,
+                                                  teamMembers: item.members || [],
+                                                  teamName: item.team.name,
+                                                  leagueName: league.name,
+                                                  teamId: item.team.id,
+                                                  leagueId: league.id
+                                                });
+                                                setShowPaymentDetailsDialog(true);
+                                          }}
+                                          className="h-8 w-8 p-0 border border-border"
+                                        >
+                                          <Wallet className={`w-4 h-4 ${allMembersPaid ? 'text-green-600' : 'text-amber-600'}`} />
+                                        </Button>
+                                      );
+                                    })()}
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -1108,25 +1252,122 @@ export function AdminLeagues() {
         <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
           <DialogHeader>
             <DialogTitle>{tTeams('paymentDetails') || "Payment Details"}</DialogTitle>
+            <DialogDescription className="sr-only !h-0 !m-0 !p-0 !overflow-hidden !leading-none !min-h-0" />
           </DialogHeader>
           <div className="space-y-4">
             {paymentDetails && (
               <>
-                <div>
-                  <Label className="text-sm font-medium">{tTeams('amountPaid') || "Amount Paid"}</Label>
-                  <p className="text-lg font-semibold mt-1">{paymentDetails.amount ?? 0}€</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">{tTeams('paidDate') || "Paid Date"}</Label>
-                  {paymentDetails.date ? (
-                    <p className="text-base mt-1 flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4" />
-                      {new Date(paymentDetails.date).toLocaleDateString()}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-1">-</p>
-                  )}
-                </div>
+                {paymentDetails.teamMembers ? (
+                  <>
+                    {paymentDetails.teamName && (
+                      <div>
+                        <Label className="text-sm font-medium">{tTeams('team') || "Team"}</Label>
+                        <p className="text-base mt-1">{paymentDetails.teamName}</p>
+                      </div>
+                    )}
+                    {paymentDetails.leagueName && (
+                      <div>
+                        <Label className="text-sm font-medium">{t('league') || "League"}</Label>
+                        <p className="text-base mt-1">{paymentDetails.leagueName}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">{tCommon('members') || "Members"}</Label>
+                      <div className="space-y-0 border border-border rounded-md overflow-hidden">
+                        {paymentDetails.teamMembers.map(({ member, user }: any, index: number, array: any[]) => (
+                          <div 
+                            key={member.id} 
+                            className={`p-3 border-b border-border ${index === array.length - 1 ? 'border-b-0' : ''}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0 flex-shrink sm:flex-1">
+                                {user && (
+                                  <>
+                                    <UserAvatar
+                                      user={{
+                                        photo_url: null,
+                                        profile_picture_url: user.profile_picture_url,
+                                        first_name: user.first_name,
+                                        last_name: user.last_name,
+                                        email: user.email,
+                                      }}
+                                      size="sm"
+                                    />
+                                    <div className="min-w-0 max-w-[100px] sm:max-w-none">
+                                      <div className="font-medium text-sm truncate">
+                                        {user.display_name || `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                                {!user && (
+                                  <div className="text-sm text-muted-foreground max-w-[100px] sm:max-w-none truncate">
+                                    {tCommon('unknownUser')} ({member.user_id.substring(0, 8)}...)
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                                {member.paid ? (
+                                  <>
+                                    <div className="text-right">
+                                      <div className="text-sm font-medium">{member.paid_amount ?? 0}€</div>
+                                      {member.paid_at && (
+                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <CalendarIcon className="w-3 h-3" />
+                                          {new Date(member.paid_at).toLocaleDateString()}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Wallet className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-sm text-muted-foreground">{tCommon('notPaid')}</span>
+                                    <Wallet className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                  </>
+                                )}
+                                <Checkbox
+                                  checked={!!member.paid}
+                                  onCheckedChange={(checked) => {
+                                    if (paymentDetails?.teamId && paymentDetails?.leagueId) {
+                                      handlePaymentToggle(
+                                        paymentDetails.teamId,
+                                        member.user_id,
+                                        paymentDetails.leagueId,
+                                        !!member.paid,
+                                        !!checked
+                                      );
+                                    }
+                                  }}
+                                  id={`checkbox-paid-${member.id}`}
+                                  aria-label={member.paid ? tCommon('paid') : tCommon('notPaid')}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium">{tTeams('amountPaid') || "Amount Paid"}</Label>
+                      <p className="text-lg font-semibold mt-1">{paymentDetails.amount ?? 0}€</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">{tTeams('paidDate') || "Paid Date"}</Label>
+                      {paymentDetails.date ? (
+                        <p className="text-base mt-1 flex items-center gap-2">
+                          <CalendarIcon className="w-4 h-4" />
+                          {new Date(paymentDetails.date).toLocaleDateString()}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-1">-</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -1137,6 +1378,74 @@ export function AdminLeagues() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
+          <DialogHeader>
+            <DialogTitle>{tTeams("markPaid")}</DialogTitle>
+            <DialogDescription className="sr-only !h-0 !m-0 !p-0 !overflow-hidden !leading-none !min-h-0" />
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              autoFocus
+              type="number"
+              min={0.01}
+              step="any"
+              value={paymentAmount}
+              onChange={e => setPaymentAmount(e.target.value)}
+              placeholder={tTeams("amountPaid")}
+            />
+            {paymentError && (
+              <div className="text-destructive text-xs">{paymentError}</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentDialog(false);
+                setPaymentError("");
+                setPaymentAmount("");
+              }}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              onClick={handlePaymentDialogConfirm}
+              title={tTeams("markPaid")}
+              aria-label={tTeams("markPaid")}
+            >
+              {tTeams("markPaid")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unpaid Confirmation Dialog */}
+      <AlertDialog open={showUnpaidConfirm} onOpenChange={(open) => {
+        setShowUnpaidConfirm(open);
+        if (!open) {
+          setPendingUnpaidData(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tTeams('markUnpaid') || "Mark as unpaid"}</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnpaid}
+              className="bg-black text-white hover:bg-black/90"
+            >
+              {tCommon('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Team Members Modal */}
       <Dialog
