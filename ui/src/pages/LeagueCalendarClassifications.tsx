@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { ArrowLeft, Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { api, type MatchWithTeams, type League } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
@@ -34,7 +34,6 @@ interface ClassificationEntry {
 
 export function LeagueCalendarClassifications() {
   const { leagueId } = useParams<{ leagueId: string }>();
-  const navigate = useNavigate();
   const { t } = useTranslation('leagues');
   const { t: tCommon } = useTranslation('common');
 
@@ -173,15 +172,7 @@ export function LeagueCalendarClassifications() {
 
   if (error && !league) {
     return (
-      <div className="p-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/admin/leagues')}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Leagues
-        </Button>
+      <div className="container mx-auto p-4">
         <div className="text-center text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-4">
           <p>{error}</p>
         </div>
@@ -191,31 +182,20 @@ export function LeagueCalendarClassifications() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin/leagues')}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">
-              {league?.name || 'League'} - Calendar & Classifications
-            </h1>
-            {league && (
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline">
-                  Level {league.level}
-                </Badge>
-                <Badge variant="outline">
-                  {league.gender === 'male' ? 'Masculine' : league.gender === 'female' ? 'Femenine' : 'Mixed'}
-                </Badge>
-              </div>
-            )}
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          {league?.name || 'League'}
+        </h1>
+        {league && (
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline">
+              Level {league.level}
+            </Badge>
+            <Badge variant="outline">
+              {league.gender === 'male' ? 'Masculine' : league.gender === 'female' ? 'Femenine' : 'Mixed'}
+            </Badge>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Generate Calendar Button (if no matches) */}

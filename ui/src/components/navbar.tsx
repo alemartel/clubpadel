@@ -16,9 +16,10 @@ export function Navbar() {
   const location = useLocation();
   const { t } = useTranslation('common');
 
-  // Check if we're on a team detail page or profile page
+  // Check if we're on a team detail page, profile page, or league calendar page
   const isTeamDetailPage = location.pathname.match(/^\/teams\/[^\/]+$/);
   const isProfilePage = location.pathname === "/profile";
+  const isLeagueCalendarPage = location.pathname.match(/^\/admin\/leagues\/[^\/]+\/calendar-classifications$/);
 
   const handleProfileClick = () => {
     navigate("/profile");
@@ -38,6 +39,8 @@ export function Navbar() {
       navigate("/teams");
     } else if (isProfilePage) {
       navigate("/");
+    } else if (isLeagueCalendarPage) {
+      navigate("/admin/leagues");
     } else {
       navigate(-1);
     }
@@ -49,7 +52,7 @@ export function Navbar() {
         <SidebarTrigger className="size-8">
           <Menu className="w-5 h-5" />
         </SidebarTrigger>
-        {(isTeamDetailPage || isProfilePage) ? (
+        {(isTeamDetailPage || isProfilePage || isLeagueCalendarPage) ? (
           <Button variant="ghost" size="sm" onClick={handleBack} className="ml-3 h-8">
             <ArrowLeft className="w-4 h-4" />
           </Button>
