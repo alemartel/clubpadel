@@ -30,12 +30,18 @@ interface ClassificationEntry {
   goal_difference: number;
   points: number;
   position: number;
+  walk_overs?: number;
+  sets_played?: number;
+  sets_won?: number;
+  games_played?: number;
+  games_won?: number;
 }
 
 export function LeagueCalendarClassifications() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const { t } = useTranslation('leagues');
   const { t: tCommon } = useTranslation('common');
+  const { t: tTeams } = useTranslation('teams');
 
   const [league, setLeague] = useState<League | null>(null);
   const [matches, setMatches] = useState<MatchWithTeams[]>([]);
@@ -121,7 +127,7 @@ export function LeagueCalendarClassifications() {
         await loadData();
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to generate calendar");
+      toast.error(err.message || t('failedToGenerateCalendar'));
       console.error("Error generating calendar:", err);
     } finally {
       setGenerating(false);
@@ -189,10 +195,10 @@ export function LeagueCalendarClassifications() {
         {league && (
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="outline">
-              Level {league.level}
+              {t('level')} {league.level}
             </Badge>
             <Badge variant="outline">
-              {league.gender === 'male' ? 'Masculine' : league.gender === 'female' ? 'Femenine' : 'Mixed'}
+              {league.gender === 'male' ? tTeams('masculine') : league.gender === 'female' ? tTeams('femenine') : tTeams('mixed')}
             </Badge>
           </div>
         )}
@@ -204,10 +210,10 @@ export function LeagueCalendarClassifications() {
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground mb-4">No calendar has been generated yet.</p>
+              <p className="text-muted-foreground mb-4">{t('noCalendarGenerated')}</p>
               <Button onClick={() => setShowGenerateDialog(true)}>
                 <Calendar className="w-4 h-4 mr-2" />
-                Generate Calendar
+                {t('generateCalendar')}
               </Button>
             </div>
           </CardContent>
@@ -310,33 +316,34 @@ export function LeagueCalendarClassifications() {
       {/* Classifications Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Table2 className="w-5 h-5" />
-            Classifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {classifications.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Table2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No classifications available yet.</p>
-              <p className="text-sm mt-2">Classifications will appear after match results are recorded.</p>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Table2 className="w-5 h-5" />
+              {t('classifications')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {classifications.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Table2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>{t('noClassificationsAvailable')}</p>
+                <p className="text-sm mt-2">{t('classificationsWillAppear')}</p>
+              </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2 font-semibold">Pos</th>
-                    <th className="text-left p-2 font-semibold">Team</th>
-                    <th className="text-center p-2 font-semibold">MP</th>
-                    <th className="text-center p-2 font-semibold">W</th>
-                    <th className="text-center p-2 font-semibold">D</th>
-                    <th className="text-center p-2 font-semibold">L</th>
-                    <th className="text-center p-2 font-semibold">GF</th>
-                    <th className="text-center p-2 font-semibold">GA</th>
-                    <th className="text-center p-2 font-semibold">GD</th>
-                    <th className="text-center p-2 font-semibold">Pts</th>
+                    <th className="text-left p-2 font-semibold">{t('pos')}</th>
+                    <th className="text-left p-2 font-semibold">{t('team')}</th>
+                    <th className="text-center p-2 font-semibold">{t('points')}</th>
+                    <th className="text-center p-2 font-semibold">{t('wo')}</th>
+                    <th className="text-center p-2 font-semibold">{t('matchesPlayed')}</th>
+                    <th className="text-center p-2 font-semibold">{t('matchesWon')}</th>
+                    <th className="text-center p-2 font-semibold">{t('matchesLost')}</th>
+                    <th className="text-center p-2 font-semibold">{t('setsPlayed')}</th>
+                    <th className="text-center p-2 font-semibold">{t('setsWon')}</th>
+                    <th className="text-center p-2 font-semibold">{t('gamesPlayed')}</th>
+                    <th className="text-center p-2 font-semibold">{t('gamesWon')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,14 +351,15 @@ export function LeagueCalendarClassifications() {
                     <tr key={entry.team_id} className="border-b hover:bg-accent/50">
                       <td className="p-2 font-medium">{entry.position}</td>
                       <td className="p-2">{entry.team_name}</td>
+                      <td className="p-2 text-center font-semibold">{entry.points}</td>
+                      <td className="p-2 text-center">{entry.walk_overs ?? 0}</td>
                       <td className="p-2 text-center">{entry.matches_played}</td>
                       <td className="p-2 text-center">{entry.wins}</td>
-                      <td className="p-2 text-center">{entry.draws}</td>
                       <td className="p-2 text-center">{entry.losses}</td>
-                      <td className="p-2 text-center">{entry.goals_for}</td>
-                      <td className="p-2 text-center">{entry.goals_against}</td>
-                      <td className="p-2 text-center">{entry.goal_difference >= 0 ? '+' : ''}{entry.goal_difference}</td>
-                      <td className="p-2 text-center font-semibold">{entry.points}</td>
+                      <td className="p-2 text-center">{entry.sets_played ?? 0}</td>
+                      <td className="p-2 text-center">{entry.sets_won ?? 0}</td>
+                      <td className="p-2 text-center">{entry.games_played ?? 0}</td>
+                      <td className="p-2 text-center">{entry.games_won ?? 0}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -365,7 +373,7 @@ export function LeagueCalendarClassifications() {
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generate Calendar</DialogTitle>
+            <DialogTitle>{t('generateCalendar')}</DialogTitle>
             <DialogDescription>
               Generate a round-robin schedule for all teams in this league. The system will consider team availability and avoid scheduling conflicts.
             </DialogDescription>
