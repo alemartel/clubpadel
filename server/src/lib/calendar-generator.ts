@@ -379,16 +379,21 @@ export class CalendarGenerator {
     for (let round = 0; round < Math.min(totalWeeks, numRounds); round++) {
       const weekMatches: Array<[string, string]> = [];
       
-      // Create matches for this round
-      for (let i = 0; i < Math.floor(teams.length / 2); i++) {
-        const homeTeam = teams[i];
-        const awayTeam = teams[teams.length - 1 - i];
-        weekMatches.push([homeTeam, awayTeam]);
+      // If odd number of teams, the last team in the rotation gets the bye
+      // This ensures the bye rotates as teams rotate
+      let byeTeamId: string | null = null;
+      if (isOdd) {
+        // The last team in the array gets the bye
+        byeTeamId = teams[teams.length - 1];
+        byes.push({ week: round + 1, teamId: byeTeamId });
       }
       
-      // If odd number of teams, the first team (fixed position) gets a bye
-      if (isOdd) {
-        byes.push({ week: round + 1, teamId: teams[0] });
+      // Create matches for this round (excluding the team with the bye if odd)
+      const teamsForMatches = isOdd ? teams.slice(0, -1) : teams;
+      for (let i = 0; i < Math.floor(teamsForMatches.length / 2); i++) {
+        const homeTeam = teamsForMatches[i];
+        const awayTeam = teamsForMatches[teamsForMatches.length - 1 - i];
+        weekMatches.push([homeTeam, awayTeam]);
       }
       
       console.log(`Round ${round + 1} matches:`, weekMatches);

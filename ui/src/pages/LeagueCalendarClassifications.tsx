@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle, Trash2, Info } from "lucide-react";
 import { api, type MatchWithTeams, type League } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
@@ -49,7 +50,7 @@ interface ClassificationEntry {
 
 export function LeagueCalendarClassifications() {
   const { leagueId } = useParams<{ leagueId: string }>();
-  const { t } = useTranslation('leagues');
+  const { t, currentLanguage } = useTranslation('leagues');
   const { t: tCommon } = useTranslation('common');
   const { t: tTeams } = useTranslation('teams');
 
@@ -66,7 +67,7 @@ export function LeagueCalendarClassifications() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithTeams | null>(null);
   const [assignDate, setAssignDate] = useState<Date | undefined>(undefined);
-  const [assignTime, setAssignTime] = useState<string>("10:00");
+  const [assignTime, setAssignTime] = useState<string>("09:00");
   const [assigning, setAssigning] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -127,12 +128,25 @@ export function LeagueCalendarClassifications() {
   const getTranslatedError = (errorMessage: string): string => {
     // Try to parse JSON error from API response
     try {
+      // Handle format: "API request failed: Bad Request - {"error":"..."}"
       const jsonMatch = errorMessage.match(/\{.*"error":"([^"]+)".*\}/);
       if (jsonMatch && jsonMatch[1]) {
         errorMessage = jsonMatch[1];
       }
+      // Also try to extract error from APIError format
+      const apiErrorMatch = errorMessage.match(/API request failed:.*?\{.*"error":"([^"]+)".*\}/);
+      if (apiErrorMatch && apiErrorMatch[1]) {
+        errorMessage = apiErrorMatch[1];
+      }
     } catch (e) {
       // If parsing fails, use the original message
+    }
+
+    // Handle player conflict error with date extraction
+    const playerConflictMatch = errorMessage.match(/Player conflict detected: A player from this match already has another match scheduled on (.+)/);
+    if (playerConflictMatch) {
+      const dateStr = playerConflictMatch[1];
+      return t('playerConflictDetected', { date: dateStr });
     }
 
     // Map error messages to translation keys
@@ -141,6 +155,7 @@ export function LeagueCalendarClassifications() {
       "League not found": t('leagueNotFound'),
       "Invalid start date format": t('invalidStartDateFormat'),
       "Start date is required": t('startDateRequired'),
+      "Match date cannot be before league start date": t('matchDateCannotBeBeforeLeagueStartDate'),
     };
 
     return errorMap[errorMessage] || errorMessage;
@@ -218,6 +233,62 @@ export function LeagueCalendarClassifications() {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  // Calculate week date range for a given week number
+  const getWeekDateRange = (weekNumber: number): { startDate: Date; endDate: Date } | null => {
+    if (!league?.start_date) return null;
+    
+    const leagueStartDate = new Date(league.start_date);
+    const weekStartDate = new Date(leagueStartDate);
+    weekStartDate.setDate(leagueStartDate.getDate() + (weekNumber - 1) * 7);
+    
+    const weekEndDate = new Date(weekStartDate);
+    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    
+    return { startDate: weekStartDate, endDate: weekEndDate };
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (date: Date): string => {
+    const locale = currentLanguage === 'es' ? 'es-ES' : 'en-US';
+    return date.toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  // Generate hour options (09-21) - same as TeamAvailabilityModal
+  const hourOptions = Array.from({ length: 13 }, (_, i) => {
+    const hour = i + 9; // 9 to 21
+    return String(hour).padStart(2, '0');
+  });
+
+  // Minute options (00, 30) - same as TeamAvailabilityModal
+  const minuteOptions = ['00', '30'];
+
+  const parseTime = (time: string): { hours: string; minutes: string } => {
+    if (!time) return { hours: '09', minutes: '00' };
+    const [hours, minutes] = time.split(':');
+    // Ensure minutes are either 00 or 30, default to 00
+    const validMinutes = minutes === '30' ? '30' : '00';
+    // Ensure hours are between 09-21, default to 09
+    const hourNum = parseInt(hours || '09', 10);
+    let validHours = String(Math.max(9, Math.min(21, hourNum))).padStart(2, '0');
+    return {
+      hours: validHours,
+      minutes: validMinutes
+    };
+  };
+
+  const formatTimeString = (hours: string, minutes: string): string => {
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  };
+
+  const handleTimeChange = (hours: string, minutes: string) => {
+    const newTime = formatTimeString(hours, minutes);
+    setAssignTime(newTime);
+  };
+
   // Group matches by week
   const matchesByWeek = matches.reduce((acc, matchData) => {
     const week = matchData.match.week_number;
@@ -266,7 +337,7 @@ export function LeagueCalendarClassifications() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">
+        <h1 className="text-xl sm:text-2xl font-bold">
           {league?.name || 'League'}
         </h1>
         {league && (
@@ -301,9 +372,9 @@ export function LeagueCalendarClassifications() {
       {matchesNeedingAssignment.length > 0 && (
         <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-              <AlertCircle className="w-5 h-5" />
-              Matches Needing Manual Assignment ({matchesNeedingAssignment.length})
+            <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-base">
+              <AlertCircle className="w-4 h-4" />
+              {t('matchesNeedingManualAssignment')} ({matchesNeedingAssignment.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,11 +384,11 @@ export function LeagueCalendarClassifications() {
                   key={matchData.match.id}
                   className="p-3 border border-yellow-300 dark:border-yellow-700 rounded-md bg-white dark:bg-yellow-900/20"
                 >
-                  <div className="font-medium">
+                  <div className="font-medium text-base">
                     {matchData.home_team.name} vs {matchData.away_team.name}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Week {matchData.match.week_number} - Date not assigned
+                    {t('week')} {matchData.match.week_number} - {t('dateNotAssigned')}
                   </div>
                   <Button
                     variant="outline"
@@ -326,11 +397,11 @@ export function LeagueCalendarClassifications() {
                     onClick={() => {
                       setSelectedMatch(matchData);
                       setAssignDate(undefined);
-                      setAssignTime("10:00");
+                      setAssignTime("09:00");
                       setShowAssignDialog(true);
                     }}
                   >
-                    Assign Date
+                    {t('assignDate')}
                   </Button>
                 </div>
               ))}
@@ -343,27 +414,16 @@ export function LeagueCalendarClassifications() {
       {matches.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Calendar
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {t('removeCalendar')}
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="w-4 h-4" />
+              {t('calendar')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               {weeks.map((week) => (
                 <div key={week} className="border-l-2 border-primary pl-4">
-                  <h3 className="font-semibold text-lg mb-3">Week {week}</h3>
+                  <h3 className="font-semibold text-base mb-3">{t('week')} {week}</h3>
                   <div className="space-y-3">
                     {/* Display bye weeks */}
                     {byesByWeek[week]?.map((bye) => (
@@ -386,9 +446,9 @@ export function LeagueCalendarClassifications() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="flex-1">
-                              <div className="font-medium">{matchData.home_team.name}</div>
+                              <div className="font-medium text-base">{matchData.home_team.name}</div>
                               <div className="text-sm text-muted-foreground">vs</div>
-                              <div className="font-medium">{matchData.away_team.name}</div>
+                              <div className="font-medium text-base">{matchData.away_team.name}</div>
                             </div>
                           </div>
                           {matchData.match.match_date && (
@@ -411,6 +471,17 @@ export function LeagueCalendarClassifications() {
               ))}
             </div>
           </CardContent>
+          <CardFooter className="justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('removeCalendar')}
+            </Button>
+          </CardFooter>
         </Card>
       )}
 
@@ -519,33 +590,77 @@ export function LeagueCalendarClassifications() {
 
       {/* Manual Date Assignment Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Match Date</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="p-4">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-center">{t('assignMatchDate')}</DialogTitle>
+            <DialogDescription className="text-center">
               {selectedMatch && (
-                <>Assign date and time for {selectedMatch.home_team.name} vs {selectedMatch.away_team.name}</>
+                <>{selectedMatch.home_team.name} vs {selectedMatch.away_team.name}</>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {selectedMatch && league && (() => {
+              const weekRange = getWeekDateRange(selectedMatch.match.week_number);
+              if (weekRange) {
+                return (
+                  <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md border border-border">
+                    <Info className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      {t('weekDateRange', {
+                        week: selectedMatch.match.week_number,
+                        startDate: formatDateForDisplay(weekRange.startDate),
+                        endDate: formatDateForDisplay(weekRange.endDate)
+                      })}
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <div className="space-y-2">
-              <Label htmlFor="assign-date">Date</Label>
+              <Label htmlFor="assign-date">{tCommon('date')}</Label>
               <DatePicker
-                date={assignDate}
-                onDateChange={setAssignDate}
+                value={assignDate}
+                onChange={setAssignDate}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assign-time">Time</Label>
-              <input
-                id="assign-time"
-                type="time"
-                value={assignTime}
-                onChange={(e) => setAssignTime(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                required
-              />
+              <Label>{tCommon('time')}</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={parseTime(assignTime).hours}
+                  onValueChange={(hours) => {
+                    const { minutes } = parseTime(assignTime);
+                    handleTimeChange(hours, minutes);
+                  }}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hourOptions.map(hour => (
+                      <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={parseTime(assignTime).minutes}
+                  onValueChange={(minutes) => {
+                    const { hours } = parseTime(assignTime);
+                    handleTimeChange(hours, minutes);
+                  }}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {minuteOptions.map(minute => (
+                      <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -559,12 +674,12 @@ export function LeagueCalendarClassifications() {
               }}
               disabled={assigning}
             >
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={async () => {
                 if (!leagueId || !selectedMatch || !assignDate || !assignTime) {
-                  toast.error("Please select both date and time");
+                  toast.error(t('pleaseSelectBothDateAndTime'));
                   return;
                 }
 
@@ -579,17 +694,18 @@ export function LeagueCalendarClassifications() {
                   );
 
                   if (response.error) {
-                    toast.error(response.error);
+                    toast.error(getTranslatedError(response.error));
                   } else {
-                    toast.success("Match date assigned successfully");
+                    toast.success(t('matchDateAssignedSuccessfully'));
                     setShowAssignDialog(false);
                     setSelectedMatch(null);
                     setAssignDate(undefined);
-                    setAssignTime("10:00");
+                    setAssignTime("09:00");
                     await loadData();
                   }
                 } catch (err: any) {
-                  toast.error(err.message || "Failed to assign match date");
+                  const errorMessage = err.message || t('failedToAssignMatchDate');
+                  toast.error(getTranslatedError(errorMessage));
                   console.error("Error assigning match date:", err);
                 } finally {
                   setAssigning(false);
@@ -600,12 +716,12 @@ export function LeagueCalendarClassifications() {
               {assigning ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Assigning...
+                  {t('assigning')}
                 </>
               ) : (
                 <>
                   <Calendar className="w-4 h-4 mr-2" />
-                  Assign Date
+                  {t('assignDate')}
                 </>
               )}
             </Button>

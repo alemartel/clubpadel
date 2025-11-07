@@ -146,6 +146,7 @@
   "noClassificationsAvailable": "No classifications available yet.",
   "classificationsWillAppear": "Classifications will appear after match results are recorded.",
   "noCalendarGenerated": "No calendar has been generated yet.",
+  "calendar": "Calendar",
   "level": "Level",
   "generateCalendar": "Generate calendar",
   "failedToGenerateCalendar": "Failed to generate calendar",
@@ -172,5 +173,18 @@
   "removeCalendarConfirm": "Are you sure you want to remove the calendar? This action cannot be undone.",
   "calendarRemovedSuccessfully": "Calendar removed successfully",
   "failedToRemoveCalendar": "Failed to remove calendar",
-  "removing": "Removing..."
+  "removing": "Removing...",
+  "matchesNeedingManualAssignment": "Matches needing manual assignment",
+  "dateNotAssigned": "Date not assigned",
+  "assignDate": "Assign date",
+  "assigning": "Assigning...",
+  "assignMatchDate": "Assign match date",
+  "assignDateAndTimeFor": "Assign date and time for",
+  "matchDateCannotBeBeforeLeagueStartDate": "Match date cannot be before league start date",
+  "playerConflictDetected": "Player conflict detected: A player from this match already has another match scheduled on {{date}}",
+  "weekDateRange": "This match belongs to week {{week}}. The recommended date range is {{startDate}} to {{endDate}}.",
+  "matchDateAssignedSuccessfully": "Match date assigned successfully",
+  "failedToAssignMatchDate": "Failed to assign match date",
+  "pleaseSelectBothDateAndTime": "Please select both date and time",
+  "week": "Week"
 }

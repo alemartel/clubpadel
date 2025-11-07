@@ -2587,11 +2587,25 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
       .where(eq(bye_weeks.league_id, leagueId))
       .orderBy(bye_weeks.week_number);
 
-    const byesWithTeams = leagueByes.map(row => ({
-      team_id: row.bye.team_id,
-      team_name: row.team.name,
-      week_number: row.bye.week_number,
-    }));
+    // Create a set of teams that have matches in each week
+    // Key: `${team_id}-${week_number}`, Value: true
+    const teamsWithMatches = new Set<string>();
+    assignedMatches.forEach(match => {
+      teamsWithMatches.add(`${match.home_team_id}-${match.week_number}`);
+      teamsWithMatches.add(`${match.away_team_id}-${match.week_number}`);
+    });
+
+    // Filter out bye weeks where the team actually has a match that week
+    const byesWithTeams = leagueByes
+      .filter(row => {
+        const key = `${row.bye.team_id}-${row.bye.week_number}`;
+        return !teamsWithMatches.has(key);
+      })
+      .map(row => ({
+        team_id: row.bye.team_id,
+        team_name: row.team.name,
+        week_number: row.bye.week_number,
+      }));
 
     return c.json({
       matches: matchesWithTeams,

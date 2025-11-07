@@ -131,6 +131,7 @@
   "noClassificationsAvailable": "Aún no hay clasificaciones disponibles.",
   "classificationsWillAppear": "Las clasificaciones aparecerán después de que se registren los resultados de los partidos.",
   "noCalendarGenerated": "Aún no se ha generado ningún calendario.",
+  "calendar": "Calendario",
   "level": "Nivel",
   "generateCalendar": "Generar calendario",
   "failedToGenerateCalendar": "Error al generar el calendario",
@@ -157,5 +158,18 @@
   "removeCalendarConfirm": "¿Estás seguro de que quieres eliminar el calendario? Esta acción no se puede deshacer.",
   "calendarRemovedSuccessfully": "Calendario eliminado exitosamente",
   "failedToRemoveCalendar": "Error al eliminar el calendario",
-  "removing": "Eliminando..."
+  "removing": "Eliminando...",
+  "matchesNeedingManualAssignment": "Partidos que requieren asignación manual",
+  "dateNotAssigned": "Fecha no asignada",
+  "assignDate": "Asignar fecha",
+  "assigning": "Asignando...",
+  "assignMatchDate": "Asignar fecha del partido",
+  "assignDateAndTimeFor": "Asignar fecha y hora para",
+  "matchDateCannotBeBeforeLeagueStartDate": "La fecha del partido no puede ser anterior a la fecha de inicio de la liga",
+  "playerConflictDetected": "Conflicto de jugador detectado: Un jugador de este partido ya tiene otro partido programado el {{date}}",
+  "weekDateRange": "Este partido pertenece a la semana {{week}}. El rango de fechas recomendado es del {{startDate}} al {{endDate}}.",
+  "matchDateAssignedSuccessfully": "Fecha del partido asignada exitosamente",
+  "failedToAssignMatchDate": "Error al asignar la fecha del partido",
+  "pleaseSelectBothDateAndTime": "Por favor selecciona tanto la fecha como la hora",
+  "week": "Semana"
 }
