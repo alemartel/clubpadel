@@ -119,6 +119,7 @@
   "generateAndManageSchedules": "Generate and manage match schedules for this league",
   "clearing": "Clearing...",
   "generate": "Generate",
+  "generating": "Generating...",
   "atLeastTwoTeamsRequired": "At least 2 teams are required to generate a calendar",
   "deleteTeamConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove all team members.",
   "levelAndGenderRequired": "Level and gender are required",
@@ -158,5 +159,18 @@
   "setsPlayed": "SJ",
   "setsWon": "SG",
   "gamesPlayed": "JJ",
-  "gamesWon": "JG"
+  "gamesWon": "JG",
+  "startDate": "Start Date",
+  "pleaseSelectStartDate": "Please select a start date",
+  "calendarGeneratedSuccessfully": "Calendar generated successfully",
+  "startDateMustBeInFuture": "Start date must be in the future",
+  "leagueNotFound": "League not found",
+  "invalidStartDateFormat": "Invalid start date format",
+  "startDateRequired": "Start date is required",
+  "rest": "Rest",
+  "removeCalendar": "Remove Calendar",
+  "removeCalendarConfirm": "Are you sure you want to remove the calendar? This action cannot be undone.",
+  "calendarRemovedSuccessfully": "Calendar removed successfully",
+  "failedToRemoveCalendar": "Failed to remove calendar",
+  "removing": "Removing..."
 }

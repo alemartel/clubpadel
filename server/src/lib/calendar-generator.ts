@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { eq, and, or, sql, inArray } from "drizzle-orm";
 import { teams, team_availability, team_members } from "../schema/teams";
-import { leagues, matches as matchesTable, type NewMatch } from "../schema/leagues";
+import { leagues, matches as matchesTable, bye_weeks, type NewMatch, type NewByeWeek } from "../schema/leagues";
 import type { DatabaseConnection } from "./db";
 
 // Constants for calendar generation
@@ -33,8 +33,15 @@ export interface GeneratedMatch {
   needsManualAssignment: boolean;
 }
 
+export interface ByeWeek {
+  team_id: string;
+  team_name: string;
+  week_number: number;
+}
+
 export interface CalendarGenerationResult {
   matches: GeneratedMatch[];
+  byes: ByeWeek[];
   total_weeks: number;
   start_date: Date;
   end_date: Date;
@@ -81,7 +88,7 @@ export class CalendarGenerator {
       
       // 5. Generate matches with availability matching
       console.log("Step 5: Scheduling matches");
-      const generatedMatches = await this.scheduleMatches(
+      const { matches: generatedMatches, byes: generatedByes } = await this.scheduleMatches(
         teamPairs,
         teamAvailability,
         startDate,
@@ -103,9 +110,10 @@ export class CalendarGenerator {
         endDate.setDate(endDate.getDate() + (totalWeeks * 7));
       }
 
-      console.log(`Calendar generation completed. Generated ${generatedMatches.length} matches.`);
+      console.log(`Calendar generation completed. Generated ${generatedMatches.length} matches and ${generatedByes.length} bye weeks.`);
       return {
         matches: generatedMatches,
+        byes: generatedByes,
         total_weeks: totalWeeks,
         start_date: startDate,
         end_date: endDate,
@@ -194,7 +202,7 @@ export class CalendarGenerator {
       if (row.day_of_week) {
         teamMap.get(row.team_id)!.availability.push({
           day_of_week: row.day_of_week,
-          is_available: row.is_available,
+          is_available: row.is_available ?? false,
           start_time: row.start_time || "09:00:00",
           end_time: row.end_time || "18:00:00",
         });
@@ -234,7 +242,7 @@ export class CalendarGenerator {
     startDate: Date,
     totalWeeks: number,
     matchesPerWeek: number
-  ): Promise<GeneratedMatch[]> {
+  ): Promise<{ matches: GeneratedMatch[]; byes: ByeWeek[] }> {
     const matches: GeneratedMatch[] = [];
     const teamMap = new Map(teamAvailability.map(t => [t.team_id, t]));
 
@@ -243,7 +251,17 @@ export class CalendarGenerator {
     teamAvailability.forEach(t => teamHomeAwayStatus.set(t.team_id, null));
 
     // Create a proper round-robin schedule
-    const schedule = this.createRoundRobinSchedule(teamAvailability.map(t => t.team_id), totalWeeks);
+    const { schedule, byes: scheduleByes } = this.createRoundRobinSchedule(teamAvailability.map(t => t.team_id), totalWeeks);
+
+    // Convert schedule byes to ByeWeek format
+    const byes: ByeWeek[] = scheduleByes.map(bye => {
+      const team = teamMap.get(bye.teamId);
+      return {
+        team_id: bye.teamId,
+        team_name: team?.team_name || "Unknown Team",
+        week_number: bye.week,
+      };
+    });
 
     // Schedule matches week by week
     for (let week = 1; week <= totalWeeks; week++) {
@@ -251,7 +269,6 @@ export class CalendarGenerator {
       weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
       
       const weekMatches = schedule[week - 1] || [];
-      const scheduledTimes = new Set<string>(); // Track scheduled times to prevent conflicts
 
       for (const [team1Id, team2Id] of weekMatches) {
         const team1 = teamMap.get(team1Id)!;
@@ -298,14 +315,13 @@ export class CalendarGenerator {
         teamHomeAwayStatus.set(homeTeamId, 'home');
         teamHomeAwayStatus.set(awayTeamId, 'away');
         
-        // Find best available day and time for this match, avoiding conflicts
+        // Find best available day and time for this match
         const result = await this.findBestMatchTimeWithConflictAvoidance(
           homeTeam,
           awayTeam,
           homeTeamId,
           awayTeamId,
-          weekStart,
-          scheduledTimes
+          weekStart
         );
 
         if (result.needsManualAssignment) {
@@ -324,10 +340,6 @@ export class CalendarGenerator {
           };
           matches.push(match);
         } else {
-          // Add this time slot to avoid conflicts
-          const timeKey = `${result.matchDate.toISOString().split('T')[0]}_${result.matchTime}`;
-          scheduledTimes.add(timeKey);
-
           const match: GeneratedMatch = {
             id: randomUUID(),
             league_id: "", // Will be set by saveMatches method
@@ -346,11 +358,12 @@ export class CalendarGenerator {
       }
     }
 
-    return matches;
+    return { matches, byes };
   }
 
-  private createRoundRobinSchedule(teamIds: string[], totalWeeks: number): Array<Array<[string, string]>> {
+  private createRoundRobinSchedule(teamIds: string[], totalWeeks: number): { schedule: Array<Array<[string, string]>>; byes: Array<{ week: number; teamId: string }> } {
     const schedule: Array<Array<[string, string]>> = [];
+    const byes: Array<{ week: number; teamId: string }> = [];
     const n = teamIds.length;
     
     console.log(`Creating round-robin schedule for ${n} teams:`, teamIds);
@@ -373,6 +386,11 @@ export class CalendarGenerator {
         weekMatches.push([homeTeam, awayTeam]);
       }
       
+      // If odd number of teams, the first team (fixed position) gets a bye
+      if (isOdd) {
+        byes.push({ week: round + 1, teamId: teams[0] });
+      }
+      
       console.log(`Round ${round + 1} matches:`, weekMatches);
       schedule.push(weekMatches);
       
@@ -387,7 +405,7 @@ export class CalendarGenerator {
       }
     }
     
-    console.log(`Created round-robin schedule with ${schedule.length} rounds`);
+    console.log(`Created round-robin schedule with ${schedule.length} rounds, ${byes.length} bye weeks`);
     
     // Validate that no team appears twice in the same week
     for (let week = 0; week < schedule.length; week++) {
@@ -408,107 +426,55 @@ export class CalendarGenerator {
       console.log(`Week ${week + 1} validation: ${teamsInWeek.size} unique teams`);
     }
     
-    return schedule;
+    return { schedule, byes };
   }
 
   /**
-   * Check if any player from either team has a match conflict on the proposed date
+   * Check if a team meets the minimum availability requirements:
+   * 1. Minimum 3 weekdays available
+   * 2. At least 1 weekday at 21:00 or 1 weekend day from 9:00 to 12:00
    */
-  private async checkPlayerMatchConflicts(
-    team1Id: string,
-    team2Id: string,
-    proposedDate: Date
-  ): Promise<boolean> {
-    try {
-      // Get all players from both teams
-      const team1Members = await this.db
-        .select({ user_id: team_members.user_id })
-        .from(team_members)
-        .where(eq(team_members.team_id, team1Id));
-
-      const team2Members = await this.db
-        .select({ user_id: team_members.user_id })
-        .from(team_members)
-        .where(eq(team_members.team_id, team2Id));
-
-      const allPlayerIds = new Set([
-        ...team1Members.map(m => m.user_id),
-        ...team2Members.map(m => m.user_id)
-      ]);
-
-      if (allPlayerIds.size === 0) {
-        return false; // No players, no conflict
-      }
-
-      // Check for existing matches on the same date involving any of these players
-      const dateStr = proposedDate.toISOString().split('T')[0];
-      const dateStart = new Date(dateStr);
-      dateStart.setHours(0, 0, 0, 0);
-      const dateEnd = new Date(dateStr);
-      dateEnd.setHours(23, 59, 59, 999);
-
-      // Get all matches on this date
-      const existingMatches = await this.db
-        .select()
-        .from(matchesTable)
-        .where(
-          and(
-            sql`DATE(${matchesTable.match_date}) = DATE(${sql.raw(`'${dateStr}'`)})`,
-            sql`${matchesTable.match_date} IS NOT NULL`,
-            sql`${matchesTable.match_date} < ${sql.raw(`'2100-01-01'::timestamp`)}` // Exclude placeholder dates
-          )
-        );
-
-      if (existingMatches.length === 0) {
-        return false; // No existing matches, no conflict
-      }
-
-      // Batch fetch all team members for all existing matches in one query
-      const existingMatchTeamIds = new Set<string>();
-      existingMatches.forEach(match => {
-        existingMatchTeamIds.add(match.home_team_id);
-        existingMatchTeamIds.add(match.away_team_id);
-      });
-
-      // Get all team members for all existing match teams in one query
-      const allExistingTeamMembers = existingMatchTeamIds.size > 0 ? await this.db
-        .select({
-          team_id: team_members.team_id,
-          user_id: team_members.user_id
-        })
-        .from(team_members)
-        .where(inArray(team_members.team_id, Array.from(existingMatchTeamIds))) : [];
-
-      // Build a map of team_id -> Set of player IDs
-      const teamPlayersMap = new Map<string, Set<string>>();
-      for (const member of allExistingTeamMembers) {
-        if (!teamPlayersMap.has(member.team_id)) {
-          teamPlayersMap.set(member.team_id, new Set());
-        }
-        teamPlayersMap.get(member.team_id)!.add(member.user_id);
-      }
-
-      // Check if any existing match involves players from our teams
-      for (const match of existingMatches) {
-        const homeTeamPlayers = teamPlayersMap.get(match.home_team_id) || new Set();
-        const awayTeamPlayers = teamPlayersMap.get(match.away_team_id) || new Set();
-        const existingMatchPlayers = new Set([...homeTeamPlayers, ...awayTeamPlayers]);
-
-        // Check for intersection
-        for (const playerId of allPlayerIds) {
-          if (existingMatchPlayers.has(playerId)) {
-            return true; // Conflict found
-          }
-        }
-      }
-
-      return false; // No conflicts
-    } catch (error) {
-      console.error('Error checking player match conflicts:', error);
-      // On error, log and throw to prevent silent failures
-      // This is safer than returning false and potentially creating conflicts
-      throw new Error(`Failed to check player match conflicts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  private meetsMinimumAvailabilityRequirements(team: TeamAvailability): boolean {
+    if (!team.availability || team.availability.length === 0) {
+      return false;
     }
+
+    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const weekends = ['saturday', 'sunday'];
+    
+    // Count available weekdays
+    const availableWeekdays = team.availability.filter(day => 
+      weekdays.includes(day.day_of_week.toLowerCase()) && day.is_available
+    );
+    
+    // Check if we have minimum 3 weekdays
+    const hasMinimumWeekdays = availableWeekdays.length >= 3;
+    
+    // Check if any weekday plays until 9:00 PM or later (21:00)
+    const hasLateWeekday = availableWeekdays.some(day => {
+      if (!day.end_time) return false;
+      const endTimeStr = String(day.end_time);
+      const [hours] = endTimeStr.split(':').map(Number);
+      return hours >= 21; // 9:00 PM = 21:00
+    });
+    
+    // Check if any weekend day is available from 9:00 AM to 12:00 PM
+    const availableWeekends = team.availability.filter(day => 
+      weekends.includes(day.day_of_week.toLowerCase()) && day.is_available
+    );
+    
+    const hasValidWeekend = availableWeekends.some(day => {
+      if (!day.start_time || !day.end_time) return false;
+      const startTimeStr = String(day.start_time);
+      const endTimeStr = String(day.end_time);
+      const [startHours] = startTimeStr.split(':').map(Number);
+      const [endHours] = endTimeStr.split(':').map(Number);
+      // Weekend day from 9:00 AM (9) to at least 12:00 PM (12)
+      return startHours <= 9 && endHours >= 12;
+    });
+    
+    // Requirements: 3+ weekdays AND (late weekday OR valid weekend)
+    return hasMinimumWeekdays && (hasLateWeekday || hasValidWeekend);
   }
 
   private async findBestMatchTimeWithConflictAvoidance(
@@ -516,8 +482,7 @@ export class CalendarGenerator {
     awayTeam: TeamAvailability,
     homeTeamId: string,
     awayTeamId: string,
-    weekStart: Date,
-    scheduledTimes: Set<string>
+    weekStart: Date
   ): Promise<{ matchDate: Date; matchTime: string; needsManualAssignment: boolean }> {
     const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     
@@ -530,7 +495,69 @@ export class CalendarGenerator {
       throw new Error("Invalid week start date provided");
     }
     
-    // Find common available days
+    // Check if both teams meet minimum availability requirements
+    const homeMeetsRequirements = this.meetsMinimumAvailabilityRequirements(homeTeam);
+    const awayMeetsRequirements = this.meetsMinimumAvailabilityRequirements(awayTeam);
+    
+    // Find common available days with overlapping time ranges
+    // A day is "compatible" if both teams are available on that day AND their time ranges overlap
+    const findCompatibleDays = () => {
+      const compatible: Array<{ day: string; homeSlot: { start_time: string; end_time: string }; awaySlot: { start_time: string; end_time: string } }> = [];
+      
+      for (const homeSlot of homeTeam.availability) {
+        if (!homeSlot.is_available || !homeSlot.day_of_week) continue;
+        
+        const homeDay = homeSlot.day_of_week.toLowerCase();
+        if (!daysOfWeek.includes(homeDay)) {
+          console.warn(`Invalid day of week: ${homeSlot.day_of_week} for team ${homeTeam.team_name}`);
+          continue;
+        }
+        
+        const homeStart = homeSlot.start_time || "09:00:00";
+        const homeEnd = homeSlot.end_time || "18:00:00";
+        const [homeStartHours, homeStartMinutes] = String(homeStart).split(':').map(Number);
+        const [homeEndHours, homeEndMinutes] = String(homeEnd).split(':').map(Number);
+        const homeStartMinutesTotal = homeStartHours * 60 + (homeStartMinutes || 0);
+        const homeEndMinutesTotal = homeEndHours * 60 + (homeEndMinutes || 0);
+        
+        for (const awaySlot of awayTeam.availability) {
+          if (!awaySlot.is_available || !awaySlot.day_of_week) continue;
+          
+          const awayDay = awaySlot.day_of_week.toLowerCase();
+          if (awayDay !== homeDay) continue; // Must be same day
+          
+          if (!daysOfWeek.includes(awayDay)) {
+            console.warn(`Invalid day of week: ${awaySlot.day_of_week} for team ${awayTeam.team_name}`);
+            continue;
+          }
+          
+          const awayStart = awaySlot.start_time || "09:00:00";
+          const awayEnd = awaySlot.end_time || "18:00:00";
+          const [awayStartHours, awayStartMinutes] = String(awayStart).split(':').map(Number);
+          const [awayEndHours, awayEndMinutes] = String(awayEnd).split(':').map(Number);
+          const awayStartMinutesTotal = awayStartHours * 60 + (awayStartMinutes || 0);
+          const awayEndMinutesTotal = awayEndHours * 60 + (awayEndMinutes || 0);
+          
+          // Check if time ranges overlap
+          // Overlap exists if: homeStart < awayEnd AND awayStart < homeEnd
+          if (homeStartMinutesTotal < awayEndMinutesTotal && awayStartMinutesTotal < homeEndMinutesTotal) {
+            compatible.push({
+              day: homeDay,
+              homeSlot: { start_time: homeStart, end_time: homeEnd },
+              awaySlot: { start_time: awayStart, end_time: awayEnd }
+            });
+            break; // Found a compatible slot for this day, no need to check more away slots
+          }
+        }
+      }
+      
+      return compatible;
+    };
+    
+    const compatibleDaysWithTimes = findCompatibleDays();
+    const commonDays = compatibleDaysWithTimes.map(c => c.day);
+    
+    // Also get available days for each team (for fallback logic)
     const homeAvailableDays = homeTeam.availability
       .filter(a => a.is_available && a.day_of_week)
       .map(a => {
@@ -555,17 +582,39 @@ export class CalendarGenerator {
       })
       .filter(day => day !== null) as string[];
 
-    const commonDays = homeAvailableDays.filter(day => 
-      awayAvailableDays.includes(day)
-    );
+    // If both teams don't meet minimum availability requirements AND have no common days, mark for manual assignment
+    if (!homeMeetsRequirements && !awayMeetsRequirements && commonDays.length === 0) {
+      console.warn(`Both teams (${homeTeam.team_name} and ${awayTeam.team_name}) don't meet minimum availability requirements and have no common days, marking for manual assignment`);
+      return {
+        matchDate: new Date(weekStart), // Placeholder date
+        matchTime: DEFAULT_MATCH_TIME,
+        needsManualAssignment: true
+      };
+    }
 
     // Calculate availability counts for priority logic
     const homeAvailableCount = homeAvailableDays.length;
     const awayAvailableCount = awayAvailableDays.length;
-    const MIN_AVAILABILITY_REQUIREMENT = 2; // Minimum days required
+    const MIN_AVAILABILITY_REQUIREMENT = 2; // Minimum days required (for fallback logic)
+
+    // Check if both teams meet minimum requirement (for fallback logic)
+    const homeMeetsMinimum = homeAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
+    const awayMeetsMinimum = awayAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
+
+    // If both teams don't meet minimum requirement AND have no common days, mark for manual assignment
+    if (!homeMeetsMinimum && !awayMeetsMinimum && commonDays.length === 0) {
+      console.warn(`Both teams (${homeTeam.team_name} and ${awayTeam.team_name}) don't meet minimum availability requirement and have no common days, marking for manual assignment`);
+      return {
+        matchDate: new Date(weekStart), // Placeholder date
+        matchTime: DEFAULT_MATCH_TIME,
+        needsManualAssignment: true
+      };
+    }
 
     // Try to find a time slot that doesn't conflict with player matches
-    for (const day of commonDays) {
+    // Use compatible days with time overlap information
+    for (const compatible of compatibleDaysWithTimes) {
+      const day = compatible.day;
       const dayIndex = daysOfWeek.indexOf(day);
       const matchDate = new Date(weekStart);
       // Calculate days until the target day of week
@@ -575,31 +624,48 @@ export class CalendarGenerator {
       }
       matchDate.setDate(weekStart.getDate() + daysUntilDay);
       
-      // Check for player match conflicts before scheduling
-      const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
-      if (hasConflict) {
-        continue; // Skip this date, try next
+      // Calculate overlapping time window
+      const [homeStartHours, homeStartMinutes] = String(compatible.homeSlot.start_time).split(':').map(Number);
+      const [homeEndHours, homeEndMinutes] = String(compatible.homeSlot.end_time).split(':').map(Number);
+      const [awayStartHours, awayStartMinutes] = String(compatible.awaySlot.start_time).split(':').map(Number);
+      const [awayEndHours, awayEndMinutes] = String(compatible.awaySlot.end_time).split(':').map(Number);
+      
+      const homeStartMinutesTotal = homeStartHours * 60 + (homeStartMinutes || 0);
+      const homeEndMinutesTotal = homeEndHours * 60 + (homeEndMinutes || 0);
+      const awayStartMinutesTotal = awayStartHours * 60 + (awayStartMinutes || 0);
+      const awayEndMinutesTotal = awayEndHours * 60 + (awayEndMinutes || 0);
+      
+      // Find the overlap window
+      const overlapStart = Math.max(homeStartMinutesTotal, awayStartMinutesTotal);
+      const overlapEnd = Math.min(homeEndMinutesTotal, awayEndMinutesTotal);
+      
+      // Generate possible times within the overlap window (every hour)
+      const possibleTimes: string[] = [];
+      for (let minutes = overlapStart; minutes <= overlapEnd - 60; minutes += 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        possibleTimes.push(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`);
       }
       
-      // Try different times to avoid time slot conflicts
-      const possibleTimes = ["10:00:00", "11:00:00", "12:00:00", "13:00:00", "14:00:00", "15:00:00", "16:00:00", "17:00:00"];
+      // If no hourly slots fit, try the start of the overlap window
+      if (possibleTimes.length === 0 && overlapEnd > overlapStart) {
+        const hours = Math.floor(overlapStart / 60);
+        const mins = overlapStart % 60;
+        possibleTimes.push(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`);
+      }
       
-      for (const time of possibleTimes) {
-        const timeKey = `${matchDate.toISOString().split('T')[0]}_${time}`;
-        if (!scheduledTimes.has(timeKey)) {
-          return {
-            matchDate,
-            matchTime: time,
-            needsManualAssignment: false
-          };
-        }
+      // Use the first available time within the overlap window
+      if (possibleTimes.length > 0) {
+        return {
+          matchDate,
+          matchTime: possibleTimes[0],
+          needsManualAssignment: false
+        };
       }
     }
 
-    // No conflict-free date found - apply priority logic
+    // No compatible days found - apply priority logic
     // Priority 1: Team that meets minimum availability requirement
-    const homeMeetsMinimum = homeAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
-    const awayMeetsMinimum = awayAvailableCount >= MIN_AVAILABILITY_REQUIREMENT;
 
     if (homeMeetsMinimum && !awayMeetsMinimum) {
       // Home team meets minimum, try to schedule on their available days
@@ -610,14 +676,11 @@ export class CalendarGenerator {
         if (daysUntilDay === 0) daysUntilDay = 7;
         matchDate.setDate(weekStart.getDate() + daysUntilDay);
         
-        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
-        if (!hasConflict) {
-          return {
-            matchDate,
-            matchTime: DEFAULT_MATCH_TIME,
-            needsManualAssignment: false
-          };
-        }
+        return {
+          matchDate,
+          matchTime: DEFAULT_MATCH_TIME,
+          needsManualAssignment: false
+        };
       }
     } else if (awayMeetsMinimum && !homeMeetsMinimum) {
       // Away team meets minimum, try to schedule on their available days
@@ -628,14 +691,11 @@ export class CalendarGenerator {
         if (daysUntilDay === 0) daysUntilDay = 7;
         matchDate.setDate(weekStart.getDate() + daysUntilDay);
         
-        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
-        if (!hasConflict) {
-          return {
-            matchDate,
-            matchTime: DEFAULT_MATCH_TIME,
-            needsManualAssignment: false
-          };
-        }
+        return {
+          matchDate,
+          matchTime: DEFAULT_MATCH_TIME,
+          needsManualAssignment: false
+        };
       }
     }
 
@@ -648,14 +708,11 @@ export class CalendarGenerator {
         if (daysUntilDay === 0) daysUntilDay = 7;
         matchDate.setDate(weekStart.getDate() + daysUntilDay);
         
-        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
-        if (!hasConflict) {
-          return {
-            matchDate,
-            matchTime: DEFAULT_MATCH_TIME,
-            needsManualAssignment: false
-          };
-        }
+        return {
+          matchDate,
+          matchTime: DEFAULT_MATCH_TIME,
+          needsManualAssignment: false
+        };
       }
     } else if (awayAvailableCount > 0) {
       for (const day of awayAvailableDays) {
@@ -665,14 +722,11 @@ export class CalendarGenerator {
         if (daysUntilDay === 0) daysUntilDay = 7;
         matchDate.setDate(weekStart.getDate() + daysUntilDay);
         
-        const hasConflict = await this.checkPlayerMatchConflicts(homeTeamId, awayTeamId, matchDate);
-        if (!hasConflict) {
-          return {
-            matchDate,
-            matchTime: DEFAULT_MATCH_TIME,
-            needsManualAssignment: false
-          };
-        }
+        return {
+          matchDate,
+          matchTime: DEFAULT_MATCH_TIME,
+          needsManualAssignment: false
+        };
       }
     }
 
@@ -795,6 +849,22 @@ export class CalendarGenerator {
     });
 
     await this.db.insert(matchesTable).values(matchRecords);
+  }
+
+  async saveByeWeeks(
+    byes: ByeWeek[],
+    leagueId: string
+  ): Promise<void> {
+    if (byes.length === 0) return;
+    
+    const byeRecords: NewByeWeek[] = byes.map(bye => ({
+      id: randomUUID(),
+      league_id: leagueId,
+      team_id: bye.team_id,
+      week_number: bye.week_number,
+    }));
+
+    await this.db.insert(bye_weeks).values(byeRecords);
   }
 
   async updateLeagueDates(

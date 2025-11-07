@@ -542,10 +542,10 @@ export function AdminLeagues() {
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {leagues.map((league) => (
             <Card key={league.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pt-4 pb-3">
+              <CardHeader className="p-4">
                 <CardTitle className="text-lg sm:text-xl">{league.name}</CardTitle>
               </CardHeader>
-              <CardContent className="pb-4">
+              <CardContent className="p-4 pt-0">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
@@ -801,7 +801,7 @@ export function AdminLeagues() {
                   </Collapsible>
                 </div>
               </CardContent>
-              <CardFooter className="flex gap-2 pt-0">
+              <CardFooter className="flex gap-2 p-4 pt-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1472,36 +1472,41 @@ export function AdminLeagues() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] overflow-y-auto p-4 [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background">
-          <DialogTitle className="sr-only">{tTeams('teamDetails')}</DialogTitle>
-          {selectedTeamInfo && (
-            <TeamDetail
-              teamId={selectedTeamInfo.teamId}
-              embedded={true}
-              forceAdmin={true}
-              onClose={() => {
-                // Refresh teams for the league if needed
-                if (selectedTeamInfo?.leagueId) {
-                  const leagueId = selectedTeamInfo.leagueId;
-                  setSelectedTeamInfo(null);
-                  // Force refresh by clearing cache and reloading
-                  setLeagueTeamsMap(prev => {
-                    const updated = { ...prev };
-                    delete updated[leagueId];
-                    return updated;
-                  });
-                  setTeamsLoadingMap(prev => {
-                    const updated = { ...prev };
-                    delete updated[leagueId];
-                    return updated;
-                  });
-                  loadLeagueTeams(leagueId, true);
-                } else {
-                  setSelectedTeamInfo(null);
-                }
-              }}
-            />
-          )}
+        <DialogContent className="max-w-3xl min-h-[60vh] max-h-[90vh] p-0 overflow-hidden flex flex-col [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:bg-background [&_[data-slot=dialog-close]]:!fixed [&_[data-slot=dialog-close]]:!top-4 [&_[data-slot=dialog-close]]:!right-4 [&_[data-slot=dialog-close]]:!z-[60]">
+          <div className="overflow-y-auto p-4 flex-1">
+            <DialogHeader className="hidden">
+              <DialogTitle className="sr-only">{tTeams('teamDetails')}</DialogTitle>
+              <DialogDescription className="sr-only !h-0 !m-0 !p-0 !overflow-hidden !leading-none !min-h-0" />
+            </DialogHeader>
+            {selectedTeamInfo && (
+              <TeamDetail
+                teamId={selectedTeamInfo.teamId}
+                embedded={true}
+                forceAdmin={true}
+                onClose={() => {
+                  // Refresh teams for the league if needed
+                  if (selectedTeamInfo?.leagueId) {
+                    const leagueId = selectedTeamInfo.leagueId;
+                    setSelectedTeamInfo(null);
+                    // Force refresh by clearing cache and reloading
+                    setLeagueTeamsMap(prev => {
+                      const updated = { ...prev };
+                      delete updated[leagueId];
+                      return updated;
+                    });
+                    setTeamsLoadingMap(prev => {
+                      const updated = { ...prev };
+                      delete updated[leagueId];
+                      return updated;
+                    });
+                    loadLeagueTeams(leagueId, true);
+                  } else {
+                    setSelectedTeamInfo(null);
+                  }
+                }}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

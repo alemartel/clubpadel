@@ -12,6 +12,7 @@ import { users, levelEnum } from "./schema/users";
 import {
   leagues,
   matches,
+  bye_weeks,
   type NewLeague,
   type NewMatch,
 } from "./schema/leagues";
@@ -2480,9 +2481,12 @@ adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
     const generator = new CalendarGenerator(db);
     const result = await generator.generateCalendar(leagueId, startDate);
 
-    console.log(`Calendar generation completed. Saving ${result.matches.length} matches to database`);
+    console.log(`Calendar generation completed. Saving ${result.matches.length} matches and ${result.byes.length} bye weeks to database`);
     // Save matches to database
     await generator.saveMatches(result.matches, leagueId);
+    
+    // Save bye weeks to database
+    await generator.saveByeWeeks(result.byes, leagueId);
 
     console.log("Updating league dates");
     // Update league dates
@@ -2490,6 +2494,7 @@ adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
 
     return c.json({
       matches: result.matches,
+      byes: result.byes,
       total_weeks: result.total_weeks,
       start_date: result.start_date,
       end_date: result.end_date,
@@ -2509,6 +2514,9 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Placeholder date for matches needing manual assignment
+    const placeholderDate = new Date('2099-12-31');
 
     // Get all matches for the league
     // We get all matches (including placeholder dates) and separate them later
@@ -2565,9 +2573,30 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
       away_team: teamMap.get(match.away_team_id) || { id: match.away_team_id, name: "Unknown Team" },
     }));
 
+    // Get bye weeks for this league
+    const leagueByes = await db
+      .select({
+        bye: bye_weeks,
+        team: {
+          id: teams.id,
+          name: teams.name,
+        },
+      })
+      .from(bye_weeks)
+      .innerJoin(teams, eq(bye_weeks.team_id, teams.id))
+      .where(eq(bye_weeks.league_id, leagueId))
+      .orderBy(bye_weeks.week_number);
+
+    const byesWithTeams = leagueByes.map(row => ({
+      team_id: row.bye.team_id,
+      team_name: row.team.name,
+      week_number: row.bye.week_number,
+    }));
+
     return c.json({
       matches: matchesWithTeams,
       needsAssignment: needsAssignmentWithTeams,
+      byes: byesWithTeams,
       message: "Calendar retrieved successfully",
     });
   } catch (error) {
@@ -2941,7 +2970,7 @@ adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
   }
 });
 
-// Clear calendar endpoint for testing
+// Clear calendar endpoint
 adminRoutes.delete("/leagues/:leagueId/calendar", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
@@ -2949,6 +2978,19 @@ adminRoutes.delete("/leagues/:leagueId/calendar", async (c) => {
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Delete all bye weeks for this league (if table exists)
+    try {
+      await db
+        .delete(bye_weeks)
+        .where(eq(bye_weeks.league_id, leagueId));
+      console.log(`Deleted bye weeks for league ${leagueId}`);
+    } catch (error: any) {
+      // If table doesn't exist, that's okay
+      if (!error.message?.includes('does not exist')) {
+        console.warn(`Error deleting bye weeks: ${error.message}`);
+      }
+    }
 
     // Delete all matches for this league
     const deletedMatches = await db

@@ -11,9 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Table2, Loader2, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
 import { api, type MatchWithTeams, type League } from "@/lib/serverComm";
 import { useTranslation } from "@/hooks/useTranslation";
 import { toast } from "sonner";
@@ -45,6 +55,7 @@ export function LeagueCalendarClassifications() {
 
   const [league, setLeague] = useState<League | null>(null);
   const [matches, setMatches] = useState<MatchWithTeams[]>([]);
+  const [byes, setByes] = useState<Array<{ team_id: string; team_name: string; week_number: number }>>([]);
   const [classifications, setClassifications] = useState<ClassificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +68,8 @@ export function LeagueCalendarClassifications() {
   const [assignDate, setAssignDate] = useState<Date | undefined>(undefined);
   const [assignTime, setAssignTime] = useState<string>("10:00");
   const [assigning, setAssigning] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (leagueId) {
@@ -90,6 +103,10 @@ export function LeagueCalendarClassifications() {
         // Handle matches needing assignment (from API response)
         const needsAssignment = calendarResponse.needsAssignment || [];
         setMatchesNeedingAssignment(needsAssignment);
+        
+        // Handle bye weeks (from API response)
+        const loadedByes = calendarResponse.byes || [];
+        setByes(loadedByes);
       }
 
       // Load classifications
@@ -107,9 +124,31 @@ export function LeagueCalendarClassifications() {
     }
   };
 
+  const getTranslatedError = (errorMessage: string): string => {
+    // Try to parse JSON error from API response
+    try {
+      const jsonMatch = errorMessage.match(/\{.*"error":"([^"]+)".*\}/);
+      if (jsonMatch && jsonMatch[1]) {
+        errorMessage = jsonMatch[1];
+      }
+    } catch (e) {
+      // If parsing fails, use the original message
+    }
+
+    // Map error messages to translation keys
+    const errorMap: Record<string, string> = {
+      "Start date must be in the future": t('startDateMustBeInFuture'),
+      "League not found": t('leagueNotFound'),
+      "Invalid start date format": t('invalidStartDateFormat'),
+      "Start date is required": t('startDateRequired'),
+    };
+
+    return errorMap[errorMessage] || errorMessage;
+  };
+
   const handleGenerateCalendar = async () => {
     if (!leagueId || !startDate) {
-      toast.error("Please select a start date");
+      toast.error(t('pleaseSelectStartDate'));
       return;
     }
 
@@ -119,18 +158,44 @@ export function LeagueCalendarClassifications() {
       const response = await api.generateLeagueCalendar(leagueId, startDateString);
 
       if (response.error) {
-        toast.error(response.error);
+        toast.error(getTranslatedError(response.error));
       } else {
-        toast.success("Calendar generated successfully");
+        toast.success(t('calendarGeneratedSuccessfully'));
         setShowGenerateDialog(false);
         setStartDate(undefined);
         await loadData();
       }
     } catch (err: any) {
-      toast.error(err.message || t('failedToGenerateCalendar'));
+      const errorMessage = err.message || t('failedToGenerateCalendar');
+      toast.error(getTranslatedError(errorMessage));
       console.error("Error generating calendar:", err);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleDeleteCalendar = async () => {
+    if (!leagueId) return;
+    
+    try {
+      setDeleting(true);
+      const response = await api.clearLeagueCalendar(leagueId);
+      
+      if (response.error) {
+        toast.error(response.error || t('failedToRemoveCalendar'));
+        return;
+      }
+      
+      toast.success(t('calendarRemovedSuccessfully'));
+      setShowDeleteDialog(false);
+      
+      // Reload data to reflect the deletion
+      await loadData();
+    } catch (err: any) {
+      console.error("Failed to remove calendar:", err);
+      toast.error(err.message || t('failedToRemoveCalendar'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -163,9 +228,21 @@ export function LeagueCalendarClassifications() {
     return acc;
   }, {} as Record<number, MatchWithTeams[]>);
 
-  const weeks = Object.keys(matchesByWeek)
-    .map(Number)
-    .sort((a, b) => a - b);
+  // Group byes by week
+  const byesByWeek = byes.reduce((acc, bye) => {
+    const week = bye.week_number;
+    if (!acc[week]) {
+      acc[week] = [];
+    }
+    acc[week].push(bye);
+    return acc;
+  }, {} as Record<number, Array<{ team_id: string; team_name: string; week_number: number }>>);
+
+  // Get all weeks (from matches and byes)
+  const allWeeks = new Set<number>();
+  Object.keys(matchesByWeek).forEach(w => allWeeks.add(Number(w)));
+  Object.keys(byesByWeek).forEach(w => allWeeks.add(Number(w)));
+  const weeks = Array.from(allWeeks).sort((a, b) => a - b);
 
   if (loading) {
     return (
@@ -266,10 +343,21 @@ export function LeagueCalendarClassifications() {
       {matches.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Calendar
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Calendar
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t('removeCalendar')}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -277,7 +365,20 @@ export function LeagueCalendarClassifications() {
                 <div key={week} className="border-l-2 border-primary pl-4">
                   <h3 className="font-semibold text-lg mb-3">Week {week}</h3>
                   <div className="space-y-3">
-                    {matchesByWeek[week].map((matchData) => (
+                    {/* Display bye weeks */}
+                    {byesByWeek[week]?.map((bye) => (
+                      <div
+                        key={`bye-${bye.team_id}-${week}`}
+                        className="flex items-center justify-between p-4 border border-dashed rounded-lg bg-muted/50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground italic">{bye.team_name}</span>
+                          <span className="text-sm text-muted-foreground">- {t('rest')}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Display matches */}
+                    {(matchesByWeek[week] || []).map((matchData) => (
                       <div
                         key={matchData.match.id}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -374,16 +475,14 @@ export function LeagueCalendarClassifications() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('generateCalendar')}</DialogTitle>
-            <DialogDescription>
-              Generate a round-robin schedule for all teams in this league. The system will consider team availability and avoid scheduling conflicts.
-            </DialogDescription>
+            <DialogDescription className="sr-only !h-0 !m-0 !p-0 !overflow-hidden !leading-none !min-h-0" />
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date">Start Date</Label>
+              <Label htmlFor="start-date">{t('startDate')}</Label>
               <DatePicker
-                date={startDate}
-                onDateChange={setStartDate}
+                value={startDate}
+                onChange={setStartDate}
               />
             </div>
           </div>
@@ -396,7 +495,7 @@ export function LeagueCalendarClassifications() {
               }}
               disabled={generating}
             >
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={handleGenerateCalendar}
@@ -405,12 +504,12 @@ export function LeagueCalendarClassifications() {
               {generating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
+                  {t('generating')}
                 </>
               ) : (
                 <>
                   <Calendar className="w-4 h-4 mr-2" />
-                  Generate
+                  {t('generate')}
                 </>
               )}
             </Button>
@@ -513,6 +612,37 @@ export function LeagueCalendarClassifications() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Calendar Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('removeCalendar')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('removeCalendarConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCalendar}
+              disabled={deleting}
+              className="bg-black text-white hover:bg-black/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t('removing')}
+                </>
+              ) : (
+                tCommon('confirm')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

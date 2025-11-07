@@ -24,14 +24,15 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   className,
   disabled = false,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, t } = useTranslation();
 
   const locale = currentLanguage === "es" ? es : enUS;
+  const defaultPlaceholder = placeholder || t('pickADate');
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -47,7 +48,7 @@ export function DatePicker({
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP", { locale }) : <span>{placeholder}</span>}
+          {value ? format(value, "PPP", { locale }) : <span>{defaultPlaceholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

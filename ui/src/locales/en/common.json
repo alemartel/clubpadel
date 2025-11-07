@@ -32,6 +32,7 @@
   "email": "Email",
   "phone": "Phone",
   "date": "Date",
+  "pickADate": "Pick a date",
   "time": "Time",
   "status": "Status",
   "actions": "Actions",

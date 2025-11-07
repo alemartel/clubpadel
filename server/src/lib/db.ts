@@ -4,7 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import postgres from 'postgres';
 import * as schema from '../schema/users';
 
-type DatabaseConnection = ReturnType<typeof drizzle> | ReturnType<typeof createDrizzlePostgres>;
+export type DatabaseConnection = ReturnType<typeof drizzle> | ReturnType<typeof createDrizzlePostgres>;
 
 let cachedConnection: DatabaseConnection | null = null;
 let cachedConnectionString: string | null = null;

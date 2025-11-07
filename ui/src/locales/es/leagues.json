@@ -104,6 +104,7 @@
   "generateAndManageSchedules": "Genera y gestiona horarios de partidos para esta liga",
   "clearing": "Limpiando...",
   "generate": "Generar",
+  "generating": "Generando...",
   "atLeastTwoTeamsRequired": "Se requieren al menos 2 equipos para generar un calendario",
   "deleteTeamConfirm": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer y eliminará todos los miembros del equipo.",
   "levelAndGenderRequired": "El nivel y el género son requeridos",
@@ -143,5 +144,18 @@
   "setsPlayed": "SJ",
   "setsWon": "SG",
   "gamesPlayed": "JJ",
-  "gamesWon": "JG"
+  "gamesWon": "JG",
+  "startDate": "Fecha de inicio",
+  "pleaseSelectStartDate": "Por favor selecciona una fecha de inicio",
+  "calendarGeneratedSuccessfully": "Calendario generado exitosamente",
+  "startDateMustBeInFuture": "La fecha de inicio debe ser en el futuro",
+  "leagueNotFound": "Liga no encontrada",
+  "invalidStartDateFormat": "Formato de fecha de inicio inválido",
+  "startDateRequired": "La fecha de inicio es requerida",
+  "rest": "Descansa",
+  "removeCalendar": "Eliminar Calendario",
+  "removeCalendarConfirm": "¿Estás seguro de que quieres eliminar el calendario? Esta acción no se puede deshacer.",
+  "calendarRemovedSuccessfully": "Calendario eliminado exitosamente",
+  "failedToRemoveCalendar": "Error al eliminar el calendario",
+  "removing": "Eliminando..."
 }
