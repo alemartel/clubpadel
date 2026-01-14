@@ -95,13 +95,9 @@ export function PaymentWarning({ teams, isAdmin, serverUser }: PaymentWarningPro
   // Get player first name for payment info (Bizum concept only uses first name)
   const getPlayerFirstName = () => {
     if (!serverUser) return '';
+    // ServerUser has `first_name` per the repository's type
     if (serverUser.first_name) return serverUser.first_name;
-    // If no first_name, try to extract from display_name
-    if (serverUser.display_name) {
-      const parts = serverUser.display_name.split(' ');
-      return parts[0] || '';
-    }
-    // Fallback to email if nothing else available
+    // Fallback to email local part if no first_name
     return serverUser.email?.split('@')[0] || '';
   };
 
@@ -169,4 +165,3 @@ export function PaymentWarning({ teams, isAdmin, serverUser }: PaymentWarningPro
     </>
   );
 }
-
