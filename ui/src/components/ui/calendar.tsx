@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
 } from "lucide-react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
+import type { Month } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -41,7 +42,7 @@ function Calendar({
         formatMonthDropdown: (date) => {
           // Use locale if provided, otherwise default
           if (locale && locale.localize && locale.localize.month) {
-            return locale.localize.month(date.getMonth(), { width: 'short' });
+            return locale.localize.month(date.getMonth() as Month, { width: 'short' });
           }
           return date.toLocaleString("default", { month: "short" });
         },
