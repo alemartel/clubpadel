@@ -3,7 +3,50 @@ import {
   getAuth,
   connectAuthEmulator,
 } from "firebase/auth";
-import firebaseConfig from "./firebase-config.json";
+import type { FirebaseOptions } from "firebase/app";
+
+// Get Firebase config from environment variables
+// For local development, set these in a .env file
+// For Vercel production, set these as environment variables in the Vercel dashboard
+function getFirebaseConfig(): FirebaseOptions {
+  const envConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  };
+
+  // Validate that all required env vars are present
+  if (
+    !envConfig.apiKey ||
+    !envConfig.authDomain ||
+    !envConfig.projectId ||
+    !envConfig.storageBucket ||
+    !envConfig.messagingSenderId ||
+    !envConfig.appId
+  ) {
+    throw new Error(
+      "Firebase configuration not found. Please set VITE_FIREBASE_* environment variables.\n" +
+      "For local development, create a .env file with:\n" +
+      "  VITE_FIREBASE_API_KEY=your-api-key\n" +
+      "  VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com\n" +
+      "  VITE_FIREBASE_PROJECT_ID=your-project-id\n" +
+      "  VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com\n" +
+      "  VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id\n" +
+      "  VITE_FIREBASE_APP_ID=your-app-id\n" +
+      "  VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id (optional)\n" +
+      "\n" +
+      "For Vercel production, set these as environment variables in the Vercel dashboard."
+    );
+  }
+
+  return envConfig as FirebaseOptions;
+}
+
+const firebaseConfig = getFirebaseConfig();
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
