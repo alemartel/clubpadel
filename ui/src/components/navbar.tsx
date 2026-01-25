@@ -57,7 +57,7 @@ export function Navbar() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
         ) : (
-          <span className="font-semibold ml-3">Club Padel</span>
+          <span className="font-semibold ml-3">My Padel Center</span>
         )}
       </div>
       <div className="flex items-center gap-3 ml-auto">

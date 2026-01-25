@@ -48,7 +48,7 @@ export function Home() {
     <div className="fixed inset-0 w-full h-full">
       <img 
         src="/landing.jpg" 
-        alt="Club Padel" 
+        alt="My Padel Center" 
         className="w-full h-full object-cover"
       />
       <div className={getContainerClasses()}>
