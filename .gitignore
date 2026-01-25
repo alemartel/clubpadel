@@ -10,10 +10,15 @@ build
 .wrangler
 .dev.vars
 
-# Environment files
+# Environment files (secrets – do not commit)
 *.local
+.env
+server/.env
+ui/.env
 
 !.env.example
+!server/.env.example
+!ui/.env.example
 
 # Generated configuration files (created by CLI setup)
 
