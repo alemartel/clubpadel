@@ -1,6 +1,7 @@
 /**
  * Database health check utilities
  */
+import { getApiBaseUrl } from "./serverComm";
 
 export interface DatabaseHealthStatus {
   isHealthy: boolean;
@@ -24,8 +25,7 @@ class DatabaseHealthChecker {
    */
   async checkHealth(): Promise<DatabaseHealthStatus> {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8787";
-      const response = await fetch(`${API_BASE_URL}/api/v1/db-test`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/db-test`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

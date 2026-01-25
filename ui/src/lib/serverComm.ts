@@ -1,7 +1,16 @@
 import { getAuth } from "firebase/auth";
 import { app } from "./firebase";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+/** Production API base URL (frontend at www.mypadelcenter.com, API at mypadelcenter-api.vercel.app). Override with VITE_API_URL. */
+const PRODUCTION_API_URL = "https://mypadelcenter-api.vercel.app";
+
+export function getApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV) return "http://localhost:8787";
+  return PRODUCTION_API_URL;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
