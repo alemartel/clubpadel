@@ -141,23 +141,43 @@ If you encounter issues:
 
 ### Working with the Database
 
-This project uses [Drizzle ORM](https://orm.drizzle.team) with a Neon Postgres database. The database schema is defined in TypeScript under `src/schema/`.
+This project uses **[Drizzle ORM](https://orm.drizzle.team)** with a Neon Postgres database (not Prisma). The schema is defined in TypeScript under `src/schema/`.
+
+**Note:** Commands like `prisma migrate dev` / `prisma migrate deploy` do **not** apply here. Use the Drizzle workflow below.
 
 ### Setting Up Your Database
 
-1. Get your database connection string from Neon:
+1. Get your database connection string from the Neon dashboard. It usually looks like:
    ```
-   DATABASE_URL=postgres://user:password@your-neon-host/dbname
-   ```
-
-2. Add it to your `.dev.vars`:
-   ```
-   DATABASE_URL=your-connection-string
+   postgresql://user:password@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require
    ```
 
-3. Push the schema to your database:
+2. Set `DATABASE_URL` to that value in `server/.env` (for Node/scripts) and/or `server/.dev.vars` (for Wrangler).
+
+3. Apply migrations or push schema:
    ```bash
-   npx dotenv-cli -e .dev.vars -- pnpm db:push
+   # Load .env then run migrations (applies journaled migrations from drizzle/)
+   npx dotenv-cli -e .env -- pnpm db:migrate
+   ```
+   For deployment / CI: ensure `DATABASE_URL` is set, then run `pnpm db:migrate`.
+
+   **New empty database?** Our `drizzle/meta/_journal.json` only lists migrations 0000–0006. To create the full current schema on a brand-new DB (e.g. new Neon project), use **push** once:
+   ```bash
+   npx dotenv-cli -e .env -- pnpm db:push
+   ```
+   After that, use `db:migrate` for any new migrations you generate with `db:generate`. (drizzle-kit 0.20 has no `migrate` CLI; `pnpm db:migrate` runs a script that uses drizzle-orm’s migrator.)
+
+### When You Change the Schema
+
+1. Generate a new migration from your schema changes:
+   ```bash
+   pnpm db:generate
+   ```
+   (You can pass a name: `pnpm drizzle-kit generate --name=add_foo_column`.)
+
+2. Apply it locally:
+   ```bash
+   npx dotenv-cli -e .env -- pnpm db:migrate
    ```
 
-This command will create or update your database tables to match your schema. Run it whenever you make changes to files in `src/schema/`. 
+3. Commit the new files under `drizzle/` and run `pnpm db:migrate` in deploy/CI so production gets the same migrations. 

@@ -4,7 +4,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { userRoleEnum, levelEnum, genderEnum } from "./enums.js";
+import { userRoleEnum, levelEnum, genderEnum } from "./enums";
 
 // Create private schema for application tables
 export const appSchema = pgSchema("app");
