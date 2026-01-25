@@ -188,7 +188,29 @@ app.get("/", (c) => c.json({ status: "ok", message: "API is running" }));
 // API routes
 const api = new Hono();
 
-// Public routes go here (if any)
+// Paths that do not require Firebase Auth (read-only public data)
+function isPublicPath(method: string, path: string): boolean {
+  if (method !== "GET") return false;
+  if (path === "/leagues") return true;
+  if (/^\/leagues\/[^/]+$/.test(path)) return true;
+  return false;
+}
+
+// Require Firebase Auth for all API routes except public paths and mounted routers (/protected, /admin handle their own auth)
+api.use("*", async (c, next) => {
+  const method = c.req.method;
+  const path = c.req.path;
+
+  if (path.startsWith("/protected") || path.startsWith("/admin")) {
+    return next();
+  }
+  if (isPublicPath(method, path)) {
+    return next();
+  }
+  return authMiddleware(c, next);
+});
+
+// Public routes (no auth required)
 api.get("/hello", (c) => {
   return c.json({
     message: "Hello from Hono!",

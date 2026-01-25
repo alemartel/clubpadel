@@ -32,7 +32,7 @@ The API uses Firebase Authentication. To set up Firebase:
 3. Copy your project ID from the project settings
 4. Add it to your environment variables as `FIREBASE_PROJECT_ID`
 
-The API uses Firebase's public JWKS endpoint to verify tokens, so no additional credentials are needed.
+The API uses Firebase's public JWKS endpoint to verify tokens, so no additional credentials are needed. For local development with the Firebase Auth emulator, set `FIREBASE_AUTH_EMULATOR_HOST` (e.g. `localhost:5503`) in your env; the server will then verify emulator-issued tokens.
 
 ## Development Server Configuration
 
@@ -70,18 +70,33 @@ Your API will be available at `http://localhost:8787` (or your configured port).
 
 This is different from traditional Node.js applications that require a separate build step to compile TypeScript to JavaScript.
 
-## API Authentication
+## API Authentication (Firebase Auth)
 
-All routes under `/api/v1/protected/*` require authentication. To authenticate requests:
+The backend is protected with **Firebase Auth**. All API routes under `/api/v1` require a valid Firebase ID token unless they are explicitly public.
 
-1. Include the Firebase ID token in the Authorization header:
+### Public routes (no auth)
+
+- `GET /` – health check
+- `GET /api/v1/leagues` – list leagues
+- `GET /api/v1/leagues/:id` – get a league by id
+
+All other `/api/v1` routes (including `/api/v1/hello`, `/api/v1/db-test`, `/api/v1/protected/*`, `/api/v1/admin/*`) require authentication.
+
+### How to authenticate
+
+1. Get a Firebase ID token on the client (e.g. `auth.currentUser.getIdToken()`).
+2. Send it in the `Authorization` header:
    ```
    Authorization: Bearer <firebase-id-token>
    ```
+3. The server verifies the token (via Firebase JWKS in production, or emulator in development) and loads or creates the user in the database. The user is available in handlers as `c.get("user")`.
 
-2. The token will be verified and the user information will be available in protected routes.
+### Route groups
 
-Example protected route: `/api/v1/protected/me` returns the current user's information.
+- **Protected** (`/api/v1/protected/*`) – any authenticated user (player or admin).
+- **Admin** (`/api/v1/admin/*`) – authenticated user with `role === "admin"`.
+
+Example: `GET /api/v1/protected/me` returns the current user's information.
 
 ## Deployment
 
