@@ -189,11 +189,13 @@ app.get("/", (c) => c.json({ status: "ok", message: "API is running" }));
 const api = new Hono();
 
 // Paths that do not require Firebase Auth (read-only public data)
+// Path may be relative (/db-test) or full (/api/v1/db-test) depending on deployment
 function isPublicPath(method: string, path: string): boolean {
   if (method !== "GET") return false;
-  if (path === "/leagues") return true;
-  if (/^\/leagues\/[^/]+$/.test(path)) return true;
-  if (path === "/db-test") return true; // health check used by frontend
+  const p = path.replace(/^\/api\/v1/, "") || "/";
+  if (p === "/leagues") return true;
+  if (/^\/leagues\/[^/]+$/.test(p)) return true;
+  if (p === "/db-test") return true; // health check used by frontend
   return false;
 }
 
