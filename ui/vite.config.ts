@@ -13,7 +13,7 @@ const parseCliArgs = () => {
   
   return {
     port: portIndex !== -1 ? parseInt(args[portIndex + 1]) : 5173,
-    apiUrl: apiUrlIndex !== -1 ? args[apiUrlIndex + 1] : 'http://localhost:5500',
+    apiUrl: apiUrlIndex !== -1 ? args[apiUrlIndex + 1] : 'http://localhost:8787',
     firebaseAuthPort: firebaseAuthPortIndex !== -1 ? args[firebaseAuthPortIndex + 1] : '5503',
     useFirebaseEmulator: useFirebaseEmulatorIndex !== -1 ? args[useFirebaseEmulatorIndex + 1] : 'false'
   };
@@ -22,19 +22,30 @@ const parseCliArgs = () => {
 const { port, apiUrl, firebaseAuthPort, useFirebaseEmulator } = parseCliArgs();
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: port
-  },
-  define: {
-    'import.meta.env.VITE_API_URL': `"${apiUrl}"`,
-    'import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT': `"${firebaseAuthPort}"`,
-    'import.meta.env.VITE_USE_FIREBASE_EMULATOR': `"${useFirebaseEmulator}"`
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+// Use function form so we only inject VITE_API_URL in dev (avoid baking localhost into production build)
+export default defineConfig(({ command }) => {
+  const devApiUrl = process.env.VITE_API_URL || apiUrl;
+  const defineApiUrl =
+    command === 'serve'
+      ? { 'import.meta.env.VITE_API_URL': JSON.stringify(devApiUrl) }
+      : process.env.VITE_API_URL
+        ? { 'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL) }
+        : {};
+
+  return {
+    plugins: [react(), tailwindcss()],
+    server: {
+      port: port
     },
-  }
+    define: {
+      ...defineApiUrl,
+      'import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT': `"${firebaseAuthPort}"`,
+      'import.meta.env.VITE_USE_FIREBASE_EMULATOR': `"${useFirebaseEmulator}"`
+    },
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    }
+  };
 })
