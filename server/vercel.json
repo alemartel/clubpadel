@@ -1,7 +1,2 @@
 {
-  "functions": {
-    "src/index.ts": {
-      "runtime": "nodejs20.x"
-    }
-  }
 }
