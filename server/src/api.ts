@@ -2909,13 +2909,15 @@ adminRoutes.get("/team-change-notifications", async (c) => {
       .innerJoin(users, eq(team_change_notifications.user_id, users.id))
       .innerJoin(teams, eq(team_change_notifications.team_id, teams.id));
 
-    // Apply filter
+    // Apply filter (always call .where() so the query builder type is consistent)
     if (filter === "read") {
       baseQuery = baseQuery.where(eq(team_change_notifications.read, true));
     } else if (filter === "unread") {
       baseQuery = baseQuery.where(eq(team_change_notifications.read, false));
+    } else {
+      // filter === "all" - use always-true condition so type has .where() applied
+      baseQuery = baseQuery.where(sql`1 = 1`);
     }
-    // If filter === "all", no additional WHERE clause
 
     // Order by date descending (newest first)
     const notifications = await baseQuery.orderBy(desc(team_change_notifications.created_at));
