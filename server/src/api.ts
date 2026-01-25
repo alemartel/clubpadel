@@ -1308,7 +1308,7 @@ adminRoutes.delete("/leagues/:leagueId/teams/:teamId", async (c) => {
         .orderBy(desc(leagues.created_at))
         .limit(1);
 
-      const newLeagueId = otherLeague?.league?.id || null;
+      const newLeagueId = otherLeague?.leagues?.id || null;
       await db
         .update(teams)
         .set({
@@ -1637,12 +1637,13 @@ protectedRoutes.get("/teams/:id", async (c) => {
     // Only include passcode if user is team creator or team member (not for arbitrary users)
     const isTeamCreator = teamData.team.created_by === user.id;
     const isTeamMember = !!membership;
-    const teamResponse = { ...teamData.team };
-    
-    if (!isTeamCreator && !isTeamMember && user.role !== "admin") {
-      // Remove passcode from response if user is neither creator nor member
-      delete teamResponse.passcode;
-    }
+    const teamResponse =
+      !isTeamCreator && !isTeamMember && user.role !== "admin"
+        ? (() => {
+            const { passcode: _passcode, ...rest } = teamData.team;
+            return rest;
+          })()
+        : { ...teamData.team };
 
     return c.json({
       team: {
@@ -2206,8 +2207,8 @@ async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid:
         .innerJoin(team_members, eq(users.id, team_members.user_id))
         .where(eq(team_members.team_id, team.id));
 
-      const maleCount = memberGenders.filter(m => m.gender === "male").length;
-      const femaleCount = memberGenders.filter(m => m.gender === "female").length;
+      const maleCount = memberGenders.filter((m: { gender: string | null }) => m.gender === "male").length;
+      const femaleCount = memberGenders.filter((m: { gender: string | null }) => m.gender === "female").length;
 
       // Calculate new counts after adding this player
       const newMaleCount = targetUser.gender === "male" ? maleCount + 1 : maleCount;
@@ -2233,7 +2234,8 @@ async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid:
     .where(eq(team_members.user_id, user.id));
 
   const conflictingTeam = existingMemberships.find(
-    (membership) => membership.team_level === team.level && membership.team_gender === team.gender
+    (membership: { team_id: string; team_level: string; team_gender: string; team_name: string }) =>
+      membership.team_level === team.level && membership.team_gender === team.gender
   );
 
   if (conflictingTeam) {

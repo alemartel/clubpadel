@@ -29,11 +29,12 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const db = await getDatabase(databaseUrl);
 
     // First, try to find user by Firebase ID
-    let [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, firebaseUser.id))
-      .limit(1);
+    let user: User | null =
+      (await db
+        .select()
+        .from(users)
+        .where(eq(users.id, firebaseUser.id))
+        .limit(1))[0] ?? null;
     
     // If user doesn't exist by ID, try to find by email
     if (!user && firebaseUser.email) {
