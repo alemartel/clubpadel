@@ -2891,7 +2891,7 @@ adminRoutes.get("/team-change-notifications", async (c) => {
     const db = await getDatabase(databaseUrl);
 
     // Build base query with joins
-    let baseQuery = db
+    const baseQuery = db
       .select({
         id: team_change_notifications.id,
         player_name: sql<string>`COALESCE(
@@ -2909,18 +2909,16 @@ adminRoutes.get("/team-change-notifications", async (c) => {
       .innerJoin(users, eq(team_change_notifications.user_id, users.id))
       .innerJoin(teams, eq(team_change_notifications.team_id, teams.id));
 
-    // Apply filter (always call .where() so the query builder type is consistent)
-    if (filter === "read") {
-      baseQuery = baseQuery.where(eq(team_change_notifications.read, true));
-    } else if (filter === "unread") {
-      baseQuery = baseQuery.where(eq(team_change_notifications.read, false));
-    } else {
-      // filter === "all" - use always-true condition so type has .where() applied
-      baseQuery = baseQuery.where(sql`1 = 1`);
-    }
+    // Apply filter; use a single expression so the filtered query has a consistent type
+    const filteredQuery =
+      filter === "read"
+        ? baseQuery.where(eq(team_change_notifications.read, true))
+        : filter === "unread"
+          ? baseQuery.where(eq(team_change_notifications.read, false))
+          : baseQuery.where(sql`1 = 1`);
 
     // Order by date descending (newest first)
-    const notifications = await baseQuery.orderBy(desc(team_change_notifications.created_at));
+    const notifications = await filteredQuery.orderBy(desc(team_change_notifications.created_at));
 
     return c.json({
       notifications: notifications.map(n => ({
