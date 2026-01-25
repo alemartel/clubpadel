@@ -193,6 +193,7 @@ function isPublicPath(method: string, path: string): boolean {
   if (method !== "GET") return false;
   if (path === "/leagues") return true;
   if (/^\/leagues\/[^/]+$/.test(path)) return true;
+  if (path === "/db-test") return true; // health check used by frontend
   return false;
 }
 
