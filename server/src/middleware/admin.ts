@@ -1,5 +1,5 @@
 import { MiddlewareHandler } from "hono";
-import { User } from "../schema/users";
+import { User } from "../schema/users.js";
 
 declare module "hono" {
   interface ContextVariableMap {

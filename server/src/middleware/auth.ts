@@ -1,12 +1,12 @@
 import { MiddlewareHandler } from "hono";
-import { verifyFirebaseToken } from "../lib/firebase-auth";
-import { getDatabase } from "../lib/db";
+import { verifyFirebaseToken } from "../lib/firebase-auth.js";
+import { getDatabase } from "../lib/db.js";
 import { eq } from "drizzle-orm";
-import { User, users } from "../schema/users";
-import { team_members, team_change_notifications } from "../schema/teams";
-import { teams } from "../schema/teams";
-import { leagues } from "../schema/leagues";
-import { getFirebaseProjectId, getDatabaseUrl } from "../lib/env";
+import { User, users } from "../schema/users.js";
+import { team_members, team_change_notifications } from "../schema/teams.js";
+import { teams } from "../schema/teams.js";
+import { leagues } from "../schema/leagues.js";
+import { getFirebaseProjectId, getDatabaseUrl } from "../lib/env.js";
 
 declare module "hono" {
   interface ContextVariableMap {

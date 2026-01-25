@@ -7,9 +7,9 @@ import {
   integer,
   unique,
 } from "drizzle-orm/pg-core";
-import { appSchema } from "./users";
-import { genderEnum, levelEnum } from "./enums";
-import { teams } from "./teams";
+import { appSchema } from "./users.js";
+import { genderEnum, levelEnum } from "./enums.js";
+import { teams } from "./teams.js";
 
 export const leagues = appSchema.table("leagues", {
   id: text("id").primaryKey(),

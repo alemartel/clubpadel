@@ -8,8 +8,8 @@ import {
   time,
   numeric,
 } from "drizzle-orm/pg-core";
-import { appSchema, users } from "./users";
-import { leagues, levelEnum, genderEnum } from "./leagues";
+import { appSchema, users } from "./users.js";
+import { leagues, levelEnum, genderEnum } from "./leagues.js";
 
 export const teams = appSchema.table("teams", {
   id: text("id").primaryKey(),

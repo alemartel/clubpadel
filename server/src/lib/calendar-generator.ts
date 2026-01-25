@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import { eq, and, or, sql, inArray } from "drizzle-orm";
-import { teams, team_availability, team_members } from "../schema/teams";
-import { leagues, matches as matchesTable, bye_weeks, type NewMatch, type NewByeWeek } from "../schema/leagues";
-import type { DatabaseConnection } from "./db";
+import { teams, team_availability, team_members } from "../schema/teams.js";
+import { leagues, matches as matchesTable, bye_weeks, type NewMatch, type NewByeWeek } from "../schema/leagues.js";
+import type { DatabaseConnection } from "./db.js";
 
 // Constants for calendar generation
 const DEFAULT_MATCH_TIME = "10:00:00";

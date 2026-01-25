@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { isDevelopment, getEnv } from './env';
+import { isDevelopment, getEnv } from './env.js';
 
 type FirebaseUser = {
   id: string;

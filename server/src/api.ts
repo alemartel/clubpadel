@@ -3,19 +3,19 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { randomUUID, randomBytes } from "crypto";
-import { authMiddleware } from "./middleware/auth";
-import { adminMiddleware } from "./middleware/admin";
-import { getDatabase, testDatabaseConnection } from "./lib/db";
-import { setEnvContext, clearEnvContext, getDatabaseUrl } from "./lib/env";
-import * as schema from "./schema/users";
-import { users, levelEnum } from "./schema/users";
+import { authMiddleware } from "./middleware/auth.js";
+import { adminMiddleware } from "./middleware/admin.js";
+import { getDatabase, testDatabaseConnection } from "./lib/db.js";
+import { setEnvContext, clearEnvContext, getDatabaseUrl } from "./lib/env.js";
+import * as schema from "./schema/users.js";
+import { users, levelEnum } from "./schema/users.js";
 import {
   leagues,
   matches,
   bye_weeks,
   type NewLeague,
   type NewMatch,
-} from "./schema/leagues";
+} from "./schema/leagues.js";
 import {
   teams,
   team_members,
@@ -29,9 +29,9 @@ import {
   type NewTeamChangeNotification,
   type NewTeamLeague,
   type NewLeaguePayment,
-} from "./schema/teams";
+} from "./schema/teams.js";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
-import { CalendarGenerator } from "./lib/calendar-generator";
+import { CalendarGenerator } from "./lib/calendar-generator.js";
 
 type Env = {
   RUNTIME?: string;
