@@ -37,7 +37,7 @@ export function Landing() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
-            backgroundImage: 'url(/MyPadelCenter_banner.png)',
+            backgroundImage: 'url(/banner003.png)',
           }}
         />
         {/* Overlay for better text readability */}
