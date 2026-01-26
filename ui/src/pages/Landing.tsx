@@ -31,41 +31,38 @@ export function Landing() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section id="inicio" className="bg-[#0F172A] text-white py-20">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-2 gap-12 items-center">
-            <div>
+      {/* Hero Section with Banner */}
+      <section id="inicio" className="relative w-full h-[600px] overflow-hidden">
+        {/* Banner Image Background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ 
+            backgroundImage: 'url(/MyPadelCenter_banner.png)',
+          }}
+        />
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+        
+        {/* Content Overlay */}
+        <div className="relative z-10 h-full flex items-center">
+          <div className="max-w-7xl mx-auto px-8 w-full">
+            <div className="max-w-2xl">
               <h1 
-                className="text-5xl font-bold mb-6 leading-tight"
+                className="text-5xl font-bold mb-6 leading-tight text-white drop-shadow-lg"
                 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
               >
                 Adiós al caos de WhatsApp en tu club de pádel
               </h1>
-              <p className="text-xl text-[#334155] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <p className="text-xl text-white/90 mb-8 drop-shadow-md" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Automatiza reservas, pagos y organización. Recupera el control.
               </p>
               <Link
                 to="/themirrorclub"
-                className="inline-block bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-8 py-4 rounded-[14px] font-semibold text-lg hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
+                className="inline-block bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-8 py-4 rounded-[14px] font-semibold text-lg hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.3)]"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 Solicitar Demo Gratis
               </Link>
-            </div>
-            <div className="relative">
-              <div className="bg-gradient-to-br from-[#10B981]/20 to-[#059669]/20 rounded-[16px] p-8 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-                <div className="aspect-video bg-white/10 rounded-[12px] flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-lg mx-auto mb-4 flex items-center justify-center">
-                      <span className="text-white font-bold text-2xl">MP</span>
-                    </div>
-                    <p className="text-white/80" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      Vista previa de la aplicación
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
