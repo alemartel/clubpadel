@@ -81,7 +81,7 @@ export function AdminPlayers() {
   // Redirect if not admin
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate("/", { state: { error: t('adminAccessRequired') } });
+      navigate("/themirrorclub", { state: { error: t('adminAccessRequired') } });
     }
   }, [isAdmin, loading, navigate, t]);
 

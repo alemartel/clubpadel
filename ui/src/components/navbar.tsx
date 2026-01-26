@@ -38,7 +38,7 @@ export function Navbar() {
     if (isTeamDetailPage) {
       navigate("/teams");
     } else if (isProfilePage) {
-      navigate("/");
+      navigate("/themirrorclub");
     } else if (isLeagueCalendarPage) {
       navigate("/admin/leagues");
     } else {

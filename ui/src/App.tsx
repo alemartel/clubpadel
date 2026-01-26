@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { AppSidebar } from "@/components/appSidebar";
 import { DatabaseError } from "@/components/database-error";
 import { Home } from "@/pages/Home";
+import { Landing } from "@/pages/Landing";
 import { Settings } from "@/pages/Settings";
 import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
@@ -42,7 +43,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return (
-      <Navigate to="/" replace state={{ error: "Admin access required" }} />
+      <Navigate to="/themirrorclub" replace state={{ error: "Admin access required" }} />
     );
   }
 
@@ -63,7 +64,7 @@ function TeamCreationRoute({ children }: { children: React.ReactNode }) {
 
   if (!canCreateTeams) {
     return (
-      <Navigate to="/" replace state={{ error: "You need a validated level to create teams" }} />
+      <Navigate to="/themirrorclub" replace state={{ error: "You need a validated level to create teams" }} />
     );
   }
 
@@ -80,15 +81,15 @@ function AuthRedirectHandler() {
     // Only redirect if:
     // 1. User is authenticated
     // 2. Not loading
-    // 3. Not on home page
+    // 3. Not on themirrorclub page
     // 4. This is a fresh login (not a page refresh)
-    if (!loading && user && location.pathname !== "/") {
+    if (!loading && user && location.pathname !== "/themirrorclub" && location.pathname !== "/") {
       // Check if this is a fresh login by looking at sessionStorage
       const hasRedirectedThisSession = sessionStorage.getItem('hasRedirectedThisSession');
       
       if (!hasRedirectedThisSession) {
-        // This is a fresh login, redirect to home
-        navigate("/", { replace: true });
+        // This is a fresh login, redirect to themirrorclub
+        navigate("/themirrorclub", { replace: true });
         sessionStorage.setItem('hasRedirectedThisSession', 'true');
       }
     }
@@ -108,11 +109,13 @@ const DB_ERROR_DELAY_MS = 3000;
 
 function AppContent() {
   const { user, loading, databaseHealth, checkDatabaseHealth } = useAuth();
+  const location = useLocation();
   const [showDbError, setShowDbError] = useState(false);
   const errorSinceRef = useRef<number | null>(null);
   const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const inDbErrorState = !databaseHealth.isHealthy || !databaseHealth.isConnected;
+  const isLandingPage = location.pathname === "/";
 
   useEffect(() => {
     if (inDbErrorState) {
@@ -160,99 +163,113 @@ function AppContent() {
         )}
         
         {!user ? (
-          <div className="relative min-h-screen">
-            <div 
-              className="absolute inset-0 bg-cover bg-no-repeat"
-              style={{ 
-                backgroundImage: 'url(/login-background.jpg)',
-                backgroundPosition: 'center center'
-              }}
-            />
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="relative z-10">
-              <Navbar />
-              <main className="flex flex-col items-center justify-center flex-1 p-4 min-h-[calc(100vh-3rem)]">
-                <Routes>
-                  <Route path="/register" element={<Register />} />
-                  <Route path="*" element={<LoginForm />} />
-                </Routes>
-              </main>
+          isLandingPage ? (
+            <Routes>
+              <Route path="/" element={<Landing />} />
+            </Routes>
+          ) : (
+            <div className="relative min-h-screen">
+              <div 
+                className="absolute inset-0 bg-cover bg-no-repeat"
+                style={{ 
+                  backgroundImage: 'url(/login-background.jpg)',
+                  backgroundPosition: 'center center'
+                }}
+              />
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="relative z-10">
+                <Navbar />
+                <main className="flex flex-col items-center justify-center flex-1 p-4 min-h-[calc(100vh-3rem)]">
+                  <Routes>
+                    <Route path="/register" element={<Register />} />
+                    <Route path="*" element={<LoginForm />} />
+                  </Routes>
+                </main>
+              </div>
             </div>
-          </div>
+          )
         ) : (
           <>
-            <Navbar />
-            <div className="flex flex-1">
-            <AuthRedirectHandler />
-            <AppSidebar />
-            <SidebarInset className="flex-1">
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/register" element={<Navigate to="/" replace />} />
-                  <Route
-                    path="/settings"
-                    element={
-                      <AdminRoute>
-                        <Settings />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route
-                    path="/admin/leagues"
-                    element={
-                      <AdminRoute>
-                        <AdminLeagues />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/leagues/:leagueId/calendar-classifications"
-                    element={
-                      <AdminRoute>
-                        <LeagueCalendarClassifications />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/teams"
-                    element={
-                      <AdminRoute>
-                        <AdminTeams />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/players"
-                    element={
-                      <AdminRoute>
-                        <AdminPlayers />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/control-panel"
-                    element={
-                      <AdminRoute>
-                        <ControlPanel />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route path="/teams" element={<MyTeams />} />
-                  <Route
-                    path="/teams/create"
-                    element={
-                      <TeamCreationRoute>
-                        <CreateTeam />
-                      </TeamCreationRoute>
-                    }
-                  />
-                  <Route path="/teams/:id" element={<TeamDetail />} />
-                </Routes>
-              </main>
-            </SidebarInset>
-            </div>
+            {isLandingPage ? (
+              <Routes>
+                <Route path="/" element={<Landing />} />
+              </Routes>
+            ) : (
+              <>
+                <Navbar />
+                <div className="flex flex-1">
+                <AuthRedirectHandler />
+                <AppSidebar />
+                <SidebarInset className="flex-1">
+                  <main className="flex-1">
+                    <Routes>
+                      <Route path="/themirrorclub" element={<Home />} />
+                      <Route path="/register" element={<Navigate to="/themirrorclub" replace />} />
+                      <Route
+                        path="/settings"
+                        element={
+                          <AdminRoute>
+                            <Settings />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route
+                        path="/admin/leagues"
+                        element={
+                          <AdminRoute>
+                            <AdminLeagues />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/leagues/:leagueId/calendar-classifications"
+                        element={
+                          <AdminRoute>
+                            <LeagueCalendarClassifications />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/teams"
+                        element={
+                          <AdminRoute>
+                            <AdminTeams />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/players"
+                        element={
+                          <AdminRoute>
+                            <AdminPlayers />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/control-panel"
+                        element={
+                          <AdminRoute>
+                            <ControlPanel />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route path="/teams" element={<MyTeams />} />
+                      <Route
+                        path="/teams/create"
+                        element={
+                          <TeamCreationRoute>
+                            <CreateTeam />
+                          </TeamCreationRoute>
+                        }
+                      />
+                      <Route path="/teams/:id" element={<TeamDetail />} />
+                    </Routes>
+                  </main>
+                </SidebarInset>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
