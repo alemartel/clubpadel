@@ -18,7 +18,7 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
       {/* Navigation Bar */}
-      <nav className="bg-[#0F172A] text-white px-4 py-4 sticky top-0 z-50">
+      <nav className="bg-black text-white px-4 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
@@ -30,11 +30,13 @@ export function Landing() {
               <Menu className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MP</span>
-              </div>
-              <span className="font-bold text-xl" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                MyPadelCenter
+              <span 
+                className="font-bold text-xl px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm" 
+                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+              >
+                <span className="text-white">My</span>
+                <span className="text-[#10B981]">Padel</span>
+                <span className="text-white">Center</span>
               </span>
             </div>
           </div>
@@ -102,16 +104,16 @@ export function Landing() {
       </Sheet>
 
       {/* Hero Section with Banner */}
-      <section id="inicio" className="relative w-full h-[600px] overflow-hidden">
+      <section id="inicio" className="relative w-full h-[600px] overflow-hidden scroll-mt-12">
         {/* Banner Image Background */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
-            backgroundImage: 'url(/banner003.png)',
+            backgroundImage: 'url(/landing.jpg)',
           }}
         />
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60" />
         
         {/* Content Overlay */}
         <div className="relative z-10 h-full flex items-center">
@@ -123,7 +125,7 @@ export function Landing() {
               >
                 Llevamos el pádel al siguiente nivel
               </h1>
-              <p className="text-xl text-white/90 mb-8 drop-shadow-md" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <p className="text-xl text-white mb-8 drop-shadow-md" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Automatización, control y una experiencia que marca la diferencia.
               </p>
               <a
@@ -139,7 +141,7 @@ export function Landing() {
       </section>
 
       {/* Todo en uno Section */}
-      <section id="caracteristicas" className="py-[60px] bg-white">
+      <section id="caracteristicas" className="py-[60px] bg-white scroll-mt-12">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
@@ -218,7 +220,7 @@ export function Landing() {
       </section>
 
       {/* Prensa generativa con Inteligencia Artificial Section */}
-      <section id="prensa-generativa" className="py-[60px] bg-[#F1F5F9]">
+      <section id="prensa-generativa" className="py-[60px] bg-[#F1F5F9] scroll-mt-12">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
@@ -267,7 +269,7 @@ export function Landing() {
       </section>
 
       {/* Contacto Section */}
-      <section id="contacto" className="py-[60px] bg-[#0F172A] text-white">
+      <section id="contacto" className="py-[60px] bg-[#0F172A] text-white scroll-mt-12">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold mb-12 text-center"
@@ -277,7 +279,7 @@ export function Landing() {
           </h2>
           <div className="max-w-2xl mx-auto space-y-8">
             <p className="text-white text-lg text-center" style={{ fontFamily: 'Inter, sans-serif' }}>
-              ¿Listo para transformar la gestión de tu club de pádel? Contáctanos y descubre cómo podemos ayudarte.
+            ¿Te atreves a pasar al siguiente nivel? Contáctanos y descubre cómo podemos ayudarte.
             </p>
             <div className="bg-white/5 p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <form className="space-y-6">
