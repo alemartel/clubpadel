@@ -19,14 +19,13 @@ export function Landing() {
             <a href="#inicio" className="hover:text-[#10B981] transition-colors">Inicio</a>
             <a href="#caracteristicas" className="hover:text-[#10B981] transition-colors">Características</a>
             <a href="#para-quien" className="hover:text-[#10B981] transition-colors">Para Quién</a>
-            <a href="#contacto" className="hover:text-[#10B981] transition-colors">Contacto</a>
-            <Link
-              to="/themirrorclub"
+            <a
+              href="#contacto"
               className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-2 rounded-[12px] font-semibold hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
               style={{ fontFamily: 'Inter, sans-serif' }}
             >
               Solicitar Demo
-            </Link>
+            </a>
           </div>
         </div>
       </nav>
