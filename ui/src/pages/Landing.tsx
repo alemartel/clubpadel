@@ -68,7 +68,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* El Problema Section */}
+      {/* Todo en uno Section */}
       <section id="caracteristicas" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
@@ -147,36 +147,33 @@ export function Landing() {
         </div>
       </section>
 
-      {/* La Solución Section */}
+      {/* Prensa generativa con Inteligencia Artificial Section */}
       <section className="py-20 bg-[#F1F5F9]">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-2 gap-12 items-center">
-            <div>
+          <h2 
+            className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
+            style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+          >
+            Prensa generativa con Inteligencia Artificial
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+            <div className="order-2 md:order-1">
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] mb-8">
-                <div className="aspect-[9/16] bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] flex items-center justify-center">
-                  <Smartphone className="w-24 h-24 text-[#10B981]" />
+                <div className="aspect-[3/4] bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] flex items-center justify-center">
+                  <Smartphone className="w-16 h-16 text-[#10B981]" />
                 </div>
               </div>
             </div>
-            <div>
-              <h2 
-                className="text-4xl font-bold text-[#0F172A] mb-6"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                La Solución
-              </h2>
+            <div className="order-3 md:order-2 md:mt-8">
               <p className="text-xl text-[#334155] mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Automatiza reservas, pagos y organización. Recupera el control.
+              Convierte cada partido en contenido de valor para jugadores y redes sociales.
               </p>
-              <div className="space-y-4">
+              <div className="space-y-4 mb-8">
                 {[
-                  "Gestión manual mejorada",
-                  "Reservas en el club",
-                  "Pagos claros y controlados",
-                  "Reservas estimadas",
-                  "Reserva flexible de pistas",
-                  "Ligas sociales",
-                  "Uso optimizado de pistas"
+                  "Crónicas automáticas de partidos y jornadas",
+                  "Titulares y resúmenes generados por IA",
+                  "Contenido optimizado para redes sociales",
+                  "Video-resumen de la jornada"
                 ].map((benefit, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-[#10B981] rounded-full flex items-center justify-center flex-shrink-0">
@@ -187,6 +184,12 @@ export function Landing() {
                     </span>
                   </div>
                 ))}
+              </div>
+              {/* Space for image below text content */}
+              <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
+                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] flex items-center justify-center">
+                  {/* Image will be placed here */}
+                </div>
               </div>
             </div>
           </div>
@@ -202,7 +205,7 @@ export function Landing() {
           >
             Para quién es esto
           </h2>
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] text-center">
               <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mx-auto mb-6">
                 <Users className="w-8 h-8 text-white" />
@@ -258,32 +261,10 @@ export function Landing() {
           >
             Contacto
           </h2>
-          <div className="grid grid-cols-2 gap-12">
-            <div>
-              <p className="text-[#334155] mb-8 text-lg" style={{ fontFamily: 'Inter, sans-serif' }}>
-                ¿Listo para transformar la gestión de tu club de pádel? Contáctanos y descubre cómo podemos ayudarte.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-[#10B981]" />
-                  <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    +34 696 180 000
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-[#10B981]" />
-                  <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    +34 637 009 800
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-[#10B981]" />
-                  <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    info@mypadelcenter.com
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="max-w-2xl mx-auto space-y-8">
+            <p className="text-white text-lg text-center" style={{ fontFamily: 'Inter, sans-serif' }}>
+              ¿Listo para transformar la gestión de tu club de pádel? Contáctanos y descubre cómo podemos ayudarte.
+            </p>
             <div className="bg-white/5 p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <form className="space-y-6">
                 <div>
