@@ -1,5 +1,6 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
+import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 
 export function Landing() {
   return (
@@ -74,49 +75,72 @@ export function Landing() {
             className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
             style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
           >
-            El Problema
+            Todo en uno
           </h2>
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mb-6">
-                <ClipboardList className="w-8 h-8 text-white" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                  <LigasIcon className="text-white" size={20} />
+                </div>
+                <h3 
+                  className="text-2xl font-bold text-[#0F172A]"
+                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                >
+                  Ligas
+                </h3>
               </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Gestión manual
-              </h3>
               <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Reservas y organización manuales que consumen tiempo y generan errores constantes.
+              Calendarios automáticos y control total de la competición durante toda la temporada.
               </p>
             </div>
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mb-6">
-                <DollarSign className="w-8 h-8 text-white" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                  <AmericanosIcon className="text-white" size={20} />
+                </div>
+                <h3 
+                  className="text-2xl font-bold text-[#0F172A]"
+                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                >
+                  Americanos
+                </h3>
               </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Pagos sin control
-              </h3>
               <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Pagos manuales y automáticos sin seguimiento adecuado, generando descontrol financiero.
+              Eventos rápidos, flexibles y muy participativos con rotaciones automáticas y una experiencia fluida.
               </p>
             </div>
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mb-6">
-                <X className="w-8 h-8 text-white" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                  <TorneosIcon className="text-white" size={20} />
+                </div>
+                <h3 
+                  className="text-2xl font-bold text-[#0F172A]"
+                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                >
+                  Torneos
+                </h3>
               </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Pistas vacías
-              </h3>
               <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Pistas sin optimizar que permanecen vacías por falta de organización y atractivo.
+              Gestión completa con cuadros automatizados, seguimiento de partidos en tiempo real.
+              </p>
+            </div>
+            <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                  <PlayoffsIcon className="text-white" size={20} />
+                </div>
+                <h3 
+                  className="text-2xl font-bold text-[#0F172A]"
+                  style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                >
+                  Playoffs
+                </h3>
+              </div>
+              <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
+              El cierre perfecto.
+              Fases finales automáticas, cruces claros y máxima emoción hasta el último partido.
               </p>
             </div>
           </div>
