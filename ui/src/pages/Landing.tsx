@@ -1,25 +1,48 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from "react";
 
 export function Landing() {
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
       {/* Navigation Bar */}
-      <nav className="bg-[#0F172A] text-white px-8 py-4 sticky top-0 z-50">
+      <nav className="bg-[#0F172A] text-white px-4 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">MP</span>
+          <div className="flex items-center gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">MP</span>
+              </div>
+              <span className="font-bold text-xl" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                MyPadelCenter
+              </span>
             </div>
-            <span className="font-bold text-xl" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              MyPadelCenter
-            </span>
           </div>
-          <div className="flex items-center gap-8">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
             <a href="#inicio" className="hover:text-[#10B981] transition-colors">Inicio</a>
-            <a href="#caracteristicas" className="hover:text-[#10B981] transition-colors">Características</a>
-            <a href="#para-quien" className="hover:text-[#10B981] transition-colors">Para Quién</a>
+            <a href="#caracteristicas" className="hover:text-[#10B981] transition-colors">Todo en uno</a>
+            <a href="#prensa-generativa" className="hover:text-[#10B981] transition-colors">Prensa generativa</a>
             <a
               href="#contacto"
               className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-2 rounded-[12px] font-semibold hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
@@ -30,6 +53,53 @@ export function Landing() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Sidebar */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="bg-[#0F172A] text-white w-[280px]">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-white">Menú</SheetTitle>
+          </SheetHeader>
+          <nav className="flex flex-col gap-6 px-4">
+            <a
+              href="#inicio"
+              onClick={handleNavClick}
+              className="text-lg hover:text-[#10B981] transition-colors"
+            >
+              Inicio
+            </a>
+            <a
+              href="#caracteristicas"
+              onClick={handleNavClick}
+              className="text-lg hover:text-[#10B981] transition-colors"
+            >
+              Todo en uno
+            </a>
+            <a
+              href="#prensa-generativa"
+              onClick={handleNavClick}
+              className="text-lg hover:text-[#10B981] transition-colors"
+            >
+              Prensa generativa
+            </a>
+            <a
+              href="#contacto"
+              onClick={handleNavClick}
+              className="text-lg hover:text-[#10B981] transition-colors"
+            >
+              Contacto
+            </a>
+            <a
+              href="#contacto"
+              onClick={handleNavClick}
+              className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-3 rounded-[12px] font-semibold text-center hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Solicitar Demo
+            </a>
+          </nav>
+        </SheetContent>
+      </Sheet>
 
       {/* Hero Section with Banner */}
       <section id="inicio" className="relative w-full h-[600px] overflow-hidden">
@@ -51,25 +121,25 @@ export function Landing() {
                 className="text-5xl font-bold mb-6 leading-tight text-white drop-shadow-lg"
                 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
               >
-                Adiós al caos de WhatsApp en tu club de pádel
+                Llevamos el pádel al siguiente nivel
               </h1>
               <p className="text-xl text-white/90 mb-8 drop-shadow-md" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Automatiza reservas, pagos y organización. Recupera el control.
+                Automatización, control y una experiencia que marca la diferencia.
               </p>
-              <Link
-                to="/themirrorclub"
+              <a
+                href="#contacto"
                 className="inline-block bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-8 py-4 rounded-[14px] font-semibold text-lg hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.3)]"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 Solicitar Demo Gratis
-              </Link>
+              </a>
             </div>
           </div>
         </div>
       </section>
 
       {/* Todo en uno Section */}
-      <section id="caracteristicas" className="py-20 bg-white">
+      <section id="caracteristicas" className="py-[60px] bg-white">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
@@ -148,7 +218,7 @@ export function Landing() {
       </section>
 
       {/* Prensa generativa con Inteligencia Artificial Section */}
-      <section className="py-20 bg-[#F1F5F9]">
+      <section id="prensa-generativa" className="py-[60px] bg-[#F1F5F9]">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
@@ -196,64 +266,8 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Para quién es esto Section */}
-      <section id="para-quien" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-8">
-          <h2 
-            className="text-4xl font-bold text-[#0F172A] mb-12 text-center"
-            style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-          >
-            Para quién es esto
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] text-center">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mx-auto mb-6">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Clubes Privados
-              </h3>
-              <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Para clubes privados que organizan partidos y necesitan una gestión profesional.
-              </p>
-            </div>
-            <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] text-center">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mx-auto mb-6">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Ligas Sociales
-              </h3>
-              <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Para ligas sociales que buscan organizar competiciones de manera eficiente.
-              </p>
-            </div>
-            <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] text-center">
-              <div className="w-16 h-16 bg-[#334155] rounded-[12px] flex items-center justify-center mx-auto mb-6">
-                <Building2 className="w-8 h-8 text-white" />
-              </div>
-              <h3 
-                className="text-2xl font-bold text-[#0F172A] mb-4"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                Entidades Públicas
-              </h3>
-              <p className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Para entidades públicas que requieren servicios profesionales de gestión.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Contacto Section */}
-      <section id="contacto" className="py-20 bg-[#0F172A] text-white">
+      <section id="contacto" className="py-[60px] bg-[#0F172A] text-white">
         <div className="max-w-7xl mx-auto px-8">
           <h2 
             className="text-4xl font-bold mb-12 text-center"
