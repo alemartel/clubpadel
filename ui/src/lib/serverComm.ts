@@ -5,12 +5,25 @@ import { app } from "./firebase";
 const PRODUCTION_API_URL = "https://mypadelcenter-api.vercel.app";
 
 export function getApiBaseUrl(): string {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (import.meta.env.DEV) return "http://localhost:8787";
+  // Always prioritize VITE_API_URL if explicitly set (from .env or vite.config.ts)
+  // Check for both existence and non-empty string
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  if (envApiUrl && typeof envApiUrl === 'string' && envApiUrl.trim() !== '') {
+    console.log('🌐 Using API URL from VITE_API_URL:', envApiUrl);
+    return envApiUrl;
+  }
+  // Only use localhost if VITE_API_URL is not set AND we're in dev mode
+  if (import.meta.env.DEV) {
+    console.log('🌐 Using local API URL (dev mode, no VITE_API_URL set):', "http://localhost:8787");
+    return "http://localhost:8787";
+  }
+  // Fallback to production URL
+  console.log('🌐 Using production API URL:', PRODUCTION_API_URL);
   return PRODUCTION_API_URL;
 }
 
 const API_BASE_URL = getApiBaseUrl();
+console.log('🔗 Final API Base URL:', API_BASE_URL);
 
 class APIError extends Error {
   constructor(public status: number, message: string) {

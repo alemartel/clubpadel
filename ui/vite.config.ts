@@ -1,7 +1,7 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, loadEnv } from "vite"
 
 // Parse CLI arguments for dynamic configuration
 const parseCliArgs = () => {
@@ -23,13 +23,16 @@ const { port, apiUrl, firebaseAuthPort, useFirebaseEmulator } = parseCliArgs();
 
 // https://vite.dev/config/
 // Use function form so we only inject VITE_API_URL in dev (avoid baking localhost into production build)
-export default defineConfig(({ command }) => {
-  const devApiUrl = process.env.VITE_API_URL || apiUrl;
+export default defineConfig(({ command, mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
+  const env = loadEnv(mode, process.cwd(), '');
+  const devApiUrl = env.VITE_API_URL || apiUrl;
   const defineApiUrl =
     command === 'serve'
       ? { 'import.meta.env.VITE_API_URL': JSON.stringify(devApiUrl) }
-      : process.env.VITE_API_URL
-        ? { 'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL) }
+      : env.VITE_API_URL
+        ? { 'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL) }
         : {};
 
   return {
