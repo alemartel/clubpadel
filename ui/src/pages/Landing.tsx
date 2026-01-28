@@ -1,4 +1,4 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -18,33 +18,35 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
       {/* Navigation Bar */}
-      <nav className="bg-black text-white px-4 py-4 sticky top-0 z-50">
+      <nav className="bg-[#EFF0F6] text-[#0F172A] px-4 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="md:hidden p-2 hover:bg-black/10 rounded-lg transition-colors"
               aria-label="Open menu"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6 text-[#0F172A]" />
             </button>
             <div className="flex items-center gap-2">
-              <span 
-                className="font-bold text-xl px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm" 
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                <span className="text-white">My</span>
-                <span className="text-[#10B981]">Padel</span>
-                <span className="text-white">Center</span>
-              </span>
+              <img 
+                src="/Icon_transparent.png" 
+                alt="MyPadelCenter Icon" 
+                className="h-8 w-8 object-contain"
+              />
+              <img 
+                src="/Name_lightwhiteback.png" 
+                alt="MyPadelCenter" 
+                className="h-6 object-contain"
+              />
             </div>
           </div>
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#inicio" className="hover:text-[#10B981] transition-colors">Inicio</a>
-            <a href="#caracteristicas" className="hover:text-[#10B981] transition-colors">Todo en uno</a>
-            <a href="#prensa-generativa" className="hover:text-[#10B981] transition-colors">Prensa generativa</a>
+            <a href="#inicio" className="text-[#0F172A] hover:text-[#10B981] transition-colors">Inicio</a>
+            <a href="#caracteristicas" className="text-[#0F172A] hover:text-[#10B981] transition-colors">Todo en uno</a>
+            <a href="#prensa-generativa" className="text-[#0F172A] hover:text-[#10B981] transition-colors">Prensa generativa</a>
             <a
               href="#contacto"
               className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-2 rounded-[12px] font-semibold hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
@@ -323,7 +325,7 @@ export function Landing() {
       {/* Footer */}
       <footer className="bg-[#0F172A] text-white py-8">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Privacidad / MyPadelCenter
@@ -331,6 +333,37 @@ export function Landing() {
               <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Términos e información
               </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.instagram.com/mypadelcenter.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#334155] hover:text-[#10B981] transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a
+                href="https://www.tiktok.com/@mypadelcenter"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#334155] hover:text-[#10B981] transition-colors"
+                aria-label="TikTok"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                </svg>
+              </a>
+              <a
+                href="https://www.youtube.com/@MyPadelCenter"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#334155] hover:text-[#10B981] transition-colors"
+                aria-label="YouTube"
+              >
+                <Youtube className="w-5 h-5" />
+              </a>
             </div>
           </div>
         </div>
