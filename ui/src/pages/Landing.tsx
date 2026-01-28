@@ -1,4 +1,4 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -7,43 +7,91 @@ import { useState, useRef, useEffect } from "react";
 
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showPlayButton, setShowPlayButton] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    const container = containerRef.current;
+    if (!video || !container) return;
+
+    // Set video properties - not muted
+    video.muted = false;
+    video.preload = "auto";
+
+    // Handle video play/pause events
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setShowPlayButton(false);
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
+      setShowPlayButton(true);
+    };
+
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && isPlaying) {
+            // Resume playing if video was already playing
             video.play().catch((error) => {
-              console.error("Error playing video:", error);
+              console.log("Video play error:", error);
             });
-          } else {
+          } else if (!entry.isIntersecting) {
             video.pause();
           }
         });
       },
       {
-        threshold: 0.5, // Play when at least 50% of the video is visible
+        threshold: 0.25, // Play when at least 25% of the video is visible
+        rootMargin: "0px",
       }
     );
 
-    observer.observe(video);
+    observer.observe(container);
 
     return () => {
       observer.disconnect();
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
     };
-  }, []);
+  }, [isPlaying]);
+
+  const handlePlayClick = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch((error) => {
+        console.error("Error playing video:", error);
+      });
+    }
+  };
 
   return (
-    <video
-      ref={videoRef}
-      src="/VideoDemoLanding4_5.mp4"
-      loop
-      playsInline
-      className="w-full h-full object-cover"
-    />
+    <div ref={containerRef} className="w-full h-full relative">
+      <video
+        ref={videoRef}
+        src="/VideoDemoLanding4_5.mp4"
+        loop
+        playsInline
+        className="w-full h-full object-cover"
+      />
+      {showPlayButton && (
+        <button
+          onClick={handlePlayClick}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
+          aria-label="Play video"
+        >
+          <div className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:bg-white transition-colors">
+            <Play className="w-10 h-10 text-[#10B981] ml-1" fill="currentColor" />
+          </div>
+        </button>
+      )}
+    </div>
   );
 }
 
