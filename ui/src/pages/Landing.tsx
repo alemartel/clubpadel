@@ -36,7 +36,7 @@ export function Landing() {
                 className="h-8 w-8 object-contain"
               />
               <img 
-                src="/Name_lightwhiteback.png" 
+                src="/Name_lightwhiteback_mini.png" 
                 alt="MyPadelCenter" 
                 className="h-6 object-contain"
               />
