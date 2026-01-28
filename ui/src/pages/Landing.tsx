@@ -2,6 +2,7 @@ import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useRef, useEffect } from "react";
 
@@ -98,6 +99,7 @@ function VideoPlayer() {
 export function Landing() {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -351,7 +353,7 @@ export function Landing() {
               </div>
               {/* Space for image below text content */}
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden">
+                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden cursor-pointer" onClick={() => setImageModalOpen(true)}>
                   <img 
                     src="/DemoRRSS.png" 
                     alt="Demo de redes sociales" 
@@ -359,6 +361,19 @@ export function Landing() {
                   />
                 </div>
               </div>
+              
+              {/* Image Modal */}
+              <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+                <DialogContent className="!max-w-[85vw] !w-[85vw] p-0 bg-transparent border-none">
+                  <div className="relative w-full flex items-center justify-center overflow-auto max-h-[95vh]">
+                    <img 
+                      src="/DemoRRSS.png" 
+                      alt="Demo de redes sociales" 
+                      className="w-full h-auto rounded-lg"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
