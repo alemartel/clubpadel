@@ -247,7 +247,7 @@ export function Landing() {
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                  <LigasIcon className="text-white" size={20} />
+                  <LigasIcon className="text-white" size={28} />
                 </div>
                 <h3 
                   className="text-2xl font-bold text-[#0F172A]"
@@ -263,7 +263,7 @@ export function Landing() {
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                  <AmericanosIcon className="text-white" size={20} />
+                  <AmericanosIcon className="text-white" size={28} />
                 </div>
                 <h3 
                   className="text-2xl font-bold text-[#0F172A]"
@@ -279,7 +279,7 @@ export function Landing() {
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                  <TorneosIcon className="text-white" size={20} />
+                  <TorneosIcon className="text-white" size={28} />
                 </div>
                 <h3 
                   className="text-2xl font-bold text-[#0F172A]"
@@ -295,7 +295,7 @@ export function Landing() {
             <div className="bg-[#F1F5F9] p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-[#334155] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                  <PlayoffsIcon className="text-white" size={20} />
+                  <PlayoffsIcon className="text-white" size={28} />
                 </div>
                 <h3 
                   className="text-2xl font-bold text-[#0F172A]"
