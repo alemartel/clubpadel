@@ -3,7 +3,49 @@ import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+
+function VideoPlayer() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video.play().catch((error) => {
+              console.error("Error playing video:", error);
+            });
+          } else {
+            video.pause();
+          }
+        });
+      },
+      {
+        threshold: 0.5, // Play when at least 50% of the video is visible
+      }
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      src="/VideoDemoLanding4_5.mp4"
+      loop
+      playsInline
+      className="w-full h-full object-cover"
+    />
+  );
+}
 
 export function Landing() {
   const isMobile = useIsMobile();
@@ -234,14 +276,7 @@ export function Landing() {
             <div className="order-2 md:order-1">
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] mb-8">
                 <div className="aspect-[4/5] bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden">
-                  <video
-                    src="/VideoDemoLanding4_5.mp4"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
+                  <VideoPlayer />
                 </div>
               </div>
             </div>
