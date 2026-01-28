@@ -56,19 +56,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     lastChecked: new Date(),
   });
 
-  // Database health monitoring
+  // Database health monitoring - check once after 3 seconds on load
   useEffect(() => {
     const unsubscribe = databaseHealthChecker.subscribe(setDatabaseHealth);
     
-    // Start periodic health checks
-    databaseHealthChecker.startPeriodicCheck(30000); // Check every 30 seconds
-    
-    // Initial health check
-    databaseHealthChecker.checkHealth();
+    // Check once after 3 seconds on load
+    const timeoutId = setTimeout(() => {
+      databaseHealthChecker.checkHealth();
+    }, 3000);
 
     return () => {
       unsubscribe();
-      databaseHealthChecker.stopPeriodicCheck();
+      clearTimeout(timeoutId);
     };
   }, []);
 

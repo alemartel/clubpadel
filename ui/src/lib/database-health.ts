@@ -40,18 +40,22 @@ class DatabaseHealthChecker {
           lastChecked: new Date(),
         };
       } else {
+        const errorMsg = `Database connection failed: ${response.status} ${response.statusText}`;
+        console.error('[Database Health Check]', errorMsg);
         this.status = {
           isHealthy: false,
           isConnected: false,
-          error: `Database connection failed: ${response.status} ${response.statusText}`,
+          error: errorMsg,
           lastChecked: new Date(),
         };
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown database error';
+      console.error('[Database Health Check]', errorMsg, error);
       this.status = {
         isHealthy: false,
         isConnected: false,
-        error: error instanceof Error ? error.message : 'Unknown database error',
+        error: errorMsg,
         lastChecked: new Date(),
       };
     }

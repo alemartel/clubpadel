@@ -3,7 +3,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LoginForm } from "@/components/login-form";
 import { Navbar } from "@/components/navbar";
 import { AppSidebar } from "@/components/appSidebar";
-import { DatabaseError } from "@/components/database-error";
 import { Home } from "@/pages/Home";
 import { Landing } from "@/pages/Landing";
 import { Settings } from "@/pages/Settings";
@@ -25,7 +24,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -105,46 +104,10 @@ function AuthRedirectHandler() {
   return null; // This component doesn't render anything
 }
 
-const DB_ERROR_DELAY_MS = 3000;
-
 function AppContent() {
-  const { user, loading, databaseHealth, checkDatabaseHealth } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
-  const [showDbError, setShowDbError] = useState(false);
-  const errorSinceRef = useRef<number | null>(null);
-  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const inDbErrorState = !databaseHealth.isHealthy || !databaseHealth.isConnected;
   const isLandingPage = location.pathname === "/";
-
-  useEffect(() => {
-    if (inDbErrorState) {
-      const now = Date.now();
-      if (errorSinceRef.current === null) {
-        errorSinceRef.current = now;
-      }
-      const elapsed = now - errorSinceRef.current;
-      if (elapsed >= DB_ERROR_DELAY_MS) {
-        setShowDbError(true);
-      } else {
-        if (delayTimerRef.current) clearTimeout(delayTimerRef.current);
-        delayTimerRef.current = setTimeout(() => {
-          delayTimerRef.current = null;
-          setShowDbError(true);
-        }, DB_ERROR_DELAY_MS - elapsed);
-      }
-    } else {
-      errorSinceRef.current = null;
-      if (delayTimerRef.current) {
-        clearTimeout(delayTimerRef.current);
-        delayTimerRef.current = null;
-      }
-      setShowDbError(false);
-    }
-    return () => {
-      if (delayTimerRef.current) clearTimeout(delayTimerRef.current);
-    };
-  }, [inDbErrorState]);
 
   if (loading) {
     return (
@@ -155,13 +118,6 @@ function AppContent() {
   return (
     <SidebarProvider>
       <div className="flex flex-col w-full min-h-screen bg-background">
-        {/* Database Error Banner - only show after 5s in error state */}
-        {showDbError && (
-          <div className="p-4">
-            <DatabaseError onRetry={checkDatabaseHealth} />
-          </div>
-        )}
-        
         {!user ? (
           isLandingPage ? (
             <Routes>
