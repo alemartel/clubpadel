@@ -233,8 +233,15 @@ export function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
             <div className="order-2 md:order-1">
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] mb-8">
-                <div className="aspect-[3/4] bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] flex items-center justify-center">
-                  <Smartphone className="w-16 h-16 text-[#10B981]" />
+                <div className="aspect-[4/5] bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden">
+                  <video
+                    src="/VideoDemoLanding4_5.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
@@ -246,8 +253,8 @@ export function Landing() {
                 {[
                   "Crónicas automáticas de partidos y jornadas",
                   "Titulares y resúmenes generados por IA",
-                  "Contenido optimizado para redes sociales",
-                  "Video-resumen de la jornada"
+                  "Video-resumen de la jornada",
+                  "Contenido optimizado para redes sociales"
                 ].map((benefit, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-[#10B981] rounded-full flex items-center justify-center flex-shrink-0">
@@ -261,8 +268,12 @@ export function Landing() {
               </div>
               {/* Space for image below text content */}
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] flex items-center justify-center">
-                  {/* Image will be placed here */}
+                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden">
+                  <img 
+                    src="/DemoRRSS.png" 
+                    alt="Demo de redes sociales" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
