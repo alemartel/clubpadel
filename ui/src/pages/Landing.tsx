@@ -2,7 +2,7 @@ import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useRef, useEffect } from "react";
 
@@ -364,15 +364,18 @@ export function Landing() {
               
               {/* Image Modal */}
               <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
-                <DialogContent className="!max-w-[85vw] !w-[85vw] p-0 bg-transparent border-none">
-                  <div className="relative w-full flex items-center justify-center overflow-auto max-h-[95vh]">
-                    <img 
-                      src="/DemoRRSS.png" 
-                      alt="Demo de redes sociales" 
-                      className="w-full h-auto rounded-lg"
-                    />
-                  </div>
-                </DialogContent>
+                <DialogPortal>
+                  <DialogOverlay className="bg-black/80" />
+                  <DialogContent className="!max-w-[90vw] !max-h-[90vh] !w-auto !h-auto p-0 bg-transparent border-none [&_button]:text-white [&_button]:hover:text-white [&_svg]:text-white">
+                    <div className="relative flex items-center justify-center">
+                      <img 
+                        src="/DemoRRSS.png" 
+                        alt="Demo de redes sociales" 
+                        className="max-w-[90vw] max-h-[90vh] w-auto h-auto rounded-lg object-contain"
+                      />
+                    </div>
+                  </DialogContent>
+                </DialogPortal>
               </Dialog>
             </div>
           </div>
