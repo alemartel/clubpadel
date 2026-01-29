@@ -4,38 +4,11 @@ import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/i
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    const container = containerRef.current;
-    if (!video || !container) return;
-
-    video.preload = "auto";
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            video.play().catch((error) => {
-              console.log("Video play error:", error);
-            });
-          } else {
-            video.pause();
-          }
-        });
-      },
-      { threshold: 0.25, rootMargin: "0px" }
-    );
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
 
   const handleUnmuteClick = () => {
     const video = videoRef.current;
@@ -48,7 +21,7 @@ function VideoPlayer() {
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full relative">
+    <div className="w-full h-full relative">
       <video
         ref={videoRef}
         src="/VideoDemoPrensaLanding_4_5.mp4"
