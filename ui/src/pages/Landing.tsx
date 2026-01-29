@@ -444,15 +444,7 @@ export function Landing() {
       {/* Footer */}
       <footer className="bg-[#0F172A] text-white py-8">
         <div className="max-w-7xl mx-auto px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Privacidad / MyPadelCenter
-              </span>
-              <span className="text-[#334155]" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Términos e información
-              </span>
-            </div>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
             <div className="flex items-center gap-4">
               <a
                 href="https://www.instagram.com/mypadelcenter.app/"
