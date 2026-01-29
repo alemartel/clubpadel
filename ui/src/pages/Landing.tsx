@@ -1,4 +1,4 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, Play } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, VolumeX } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -9,66 +9,39 @@ import { useState, useRef, useEffect } from "react";
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showPlayButton, setShowPlayButton] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // Set video properties - not muted
-    video.muted = false;
     video.preload = "auto";
-
-    // Handle video play/pause events
-    const handlePlay = () => {
-      setIsPlaying(true);
-      setShowPlayButton(false);
-    };
-
-    const handlePause = () => {
-      setIsPlaying(false);
-      setShowPlayButton(true);
-    };
-
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handlePause);
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && isPlaying) {
-            // Resume playing if video was already playing
+          if (entry.isIntersecting) {
             video.play().catch((error) => {
               console.log("Video play error:", error);
             });
-          } else if (!entry.isIntersecting) {
+          } else {
             video.pause();
           }
         });
       },
-      {
-        threshold: 0.25, // Play when at least 25% of the video is visible
-        rootMargin: "0px",
-      }
+      { threshold: 0.25, rootMargin: "0px" }
     );
 
     observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
-    return () => {
-      observer.disconnect();
-      video.removeEventListener("play", handlePlay);
-      video.removeEventListener("pause", handlePause);
-    };
-  }, [isPlaying]);
-
-  const handlePlayClick = () => {
+  const handleUnmuteClick = () => {
     const video = videoRef.current;
     if (video) {
-      video.play().catch((error) => {
-        console.error("Error playing video:", error);
-      });
+      video.muted = false;
+      setIsMuted(false);
     }
   };
 
@@ -76,20 +49,21 @@ function VideoPlayer() {
     <div ref={containerRef} className="w-full h-full relative">
       <video
         ref={videoRef}
-        src="/VideoDemoLanding4_5.mp4"
+        src="/VideoDemoPrensaLanding_4_5.mp4"
         loop
         playsInline
+        muted={isMuted}
+        autoPlay
         className="w-full h-full object-cover"
       />
-      {showPlayButton && (
+      {isMuted && (
         <button
-          onClick={handlePlayClick}
-          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
-          aria-label="Play video"
+          onClick={handleUnmuteClick}
+          className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 hover:bg-black/70 rounded-full text-white text-sm font-medium transition-colors group"
+          aria-label="Activar audio"
         >
-          <div className="w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:bg-white transition-colors">
-            <Play className="w-10 h-10 text-[#10B981] ml-1" fill="currentColor" />
-          </div>
+          <VolumeX className="w-5 h-5" />
+          <span>Activar audio</span>
         </button>
       )}
     </div>
@@ -366,12 +340,12 @@ export function Landing() {
               <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
                 <DialogPortal>
                   <DialogOverlay className="bg-black/80" />
-                  <DialogContent className="!max-w-[90vw] !max-h-[90vh] !w-auto !h-auto p-0 bg-transparent border-none [&_button]:text-white [&_button]:hover:text-white [&_svg]:text-white">
+                  <DialogContent className="!max-w-[95vw] !max-h-[95vh] !w-auto !h-auto p-0 bg-transparent border-none [&_button]:text-white [&_button]:hover:text-white [&_svg]:text-white">
                     <div className="relative flex items-center justify-center">
                       <img 
                         src="/DemoRRSS.png" 
                         alt="Demo de redes sociales" 
-                        className="max-w-[90vw] max-h-[90vh] w-auto h-auto rounded-lg object-contain"
+                        className="max-w-[95vw] max-h-[95vh] w-auto h-auto rounded-lg object-contain"
                       />
                     </div>
                   </DialogContent>
