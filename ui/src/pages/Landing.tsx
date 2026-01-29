@@ -41,6 +41,8 @@ function VideoPlayer() {
     const video = videoRef.current;
     if (video) {
       video.muted = false;
+      video.currentTime = 0;
+      video.play().catch((error) => console.log("Video play error:", error));
       setIsMuted(false);
     }
   };
