@@ -1,4 +1,4 @@
-import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, VolumeX } from "lucide-react";
+import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, VolumeX, Volume2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -34,6 +34,14 @@ function VideoPlayer() {
     }
   };
 
+  const handleMuteClick = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      setIsMuted(true);
+    }
+  };
+
   return (
     <div className="w-full h-full relative">
       <video
@@ -45,16 +53,23 @@ function VideoPlayer() {
         autoPlay
         className="w-full h-full object-cover"
       />
-      {isMuted && (
-        <button
-          onClick={handleUnmuteClick}
-          className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 hover:bg-black/70 rounded-full text-white text-sm font-medium transition-colors group"
-          aria-label="Activar audio"
-        >
-          <VolumeX className="w-5 h-5" />
-          <span>Activar audio</span>
-        </button>
-      )}
+      <button
+        onClick={isMuted ? handleUnmuteClick : handleMuteClick}
+        className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 hover:bg-black/70 rounded-full text-white text-sm font-medium transition-colors group"
+        aria-label={isMuted ? "Activar audio" : "Silenciar"}
+      >
+        {isMuted ? (
+          <>
+            <Volume2 className="w-5 h-5" />
+            <span>Activar audio</span>
+          </>
+        ) : (
+          <>
+            <VolumeX className="w-5 h-5" />
+            <span>Silenciar</span>
+          </>
+        )}
+      </button>
     </div>
   );
 }
