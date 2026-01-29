@@ -45,7 +45,7 @@ function VideoPlayer() {
     <div className="w-full h-full relative">
       <video
         ref={videoRef}
-        src="/VideoDemoPrensaLanding_4_5.mp4"
+        src="/VideoDemoPrensaLanding720_4_5.mp4"
         loop
         playsInline
         muted={isMuted}
