@@ -80,6 +80,24 @@ async function fetchWithAuth(
   return response;
 }
 
+/** Submit landing contact form (no auth). Sends email to info.mypadelcenter@gmail.com. */
+export async function submitContactForm(data: {
+  name: string;
+  email: string;
+  message: string;
+}): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new APIError(res.status, (json as { error?: string }).error ?? "Error al enviar el mensaje");
+  }
+  return json as { ok: boolean };
+}
+
 // API endpoints
 export async function getCurrentUser() {
   const response = await fetchWithAuth("/api/v1/protected/me");

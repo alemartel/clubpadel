@@ -1,9 +1,8 @@
 import { Check, ClipboardList, DollarSign, X, Smartphone, Users, Building2, Mail, Phone, Trophy, Menu, Instagram, Youtube, VolumeX, Volume2 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/icons";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { submitContactForm } from "@/lib/serverComm";
 import { useState, useRef, useEffect } from "react";
 
 function VideoPlayer() {
@@ -77,7 +76,37 @@ function VideoPlayer() {
 export function Landing() {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactLoading, setContactLoading] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactError(null);
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
+      setContactError("Por favor complete todos los campos.");
+      return;
+    }
+    setContactLoading(true);
+    try {
+      await submitContactForm({
+        name: contactName.trim(),
+        email: contactEmail.trim(),
+        message: contactMessage.trim(),
+      });
+      setContactSubmitted(true);
+      setContactName("");
+      setContactEmail("");
+      setContactMessage("");
+    } catch (err) {
+      setContactError(err instanceof Error ? err.message : "Error al enviar. Inténtelo de nuevo.");
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -331,7 +360,7 @@ export function Landing() {
               </div>
               {/* Space for image below text content */}
               <div className="bg-white p-6 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden cursor-pointer" onClick={() => setImageModalOpen(true)}>
+                <div className="aspect-video bg-gradient-to-br from-[#10B981]/10 to-[#059669]/10 rounded-[12px] overflow-hidden">
                   <img 
                     src="/DemoRRSS.png" 
                     alt="Demo de redes sociales" 
@@ -339,22 +368,6 @@ export function Landing() {
                   />
                 </div>
               </div>
-              
-              {/* Image Modal */}
-              <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
-                <DialogPortal>
-                  <DialogOverlay className="bg-black/80" />
-                  <DialogContent className="!max-w-[95vw] !max-h-[95vh] !w-auto !h-auto p-0 bg-transparent border-none [&_button]:text-white [&_button]:hover:text-white [&_svg]:text-white">
-                    <div className="relative flex items-center justify-center">
-                      <img 
-                        src="/DemoRRSS.png" 
-                        alt="Demo de redes sociales" 
-                        className="max-w-[95vw] max-h-[95vh] w-auto h-auto rounded-lg object-contain"
-                      />
-                    </div>
-                  </DialogContent>
-                </DialogPortal>
-              </Dialog>
             </div>
           </div>
         </div>
@@ -374,39 +387,55 @@ export function Landing() {
             ¿Te atreves a pasar al siguiente nivel? Contáctanos y descubre cómo podemos ayudarte.
             </p>
             <div className="bg-white/5 p-8 rounded-[16px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]">
-              <form className="space-y-6">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Nombre"
-                    className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981]"
+              {contactSubmitted ? (
+                <p className="text-center text-lg text-white py-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  Gracias por su mensaje, en breve nos pondremos en contacto con usted.
+                </p>
+              ) : (
+                <form className="space-y-6" onSubmit={handleContactSubmit}>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Nombre"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981]"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981]"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    />
+                  </div>
+                  <div>
+                    <textarea
+                      placeholder="Mensaje"
+                      rows={4}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981] resize-none"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    />
+                  </div>
+                  {contactError && (
+                    <p className="text-red-300 text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>{contactError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={contactLoading}
+                    className="block w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-3 rounded-[12px] font-semibold text-center hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] disabled:opacity-70 disabled:cursor-not-allowed"
                     style={{ fontFamily: 'Inter, sans-serif' }}
-                  />
-                </div>
-                <div>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981]"
-                    style={{ fontFamily: 'Inter, sans-serif' }}
-                  />
-                </div>
-                <div>
-                  <textarea
-                    placeholder="Mensaje"
-                    rows={4}
-                    className="w-full bg-white/10 border border-white/20 rounded-[12px] px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#10B981] resize-none"
-                    style={{ fontFamily: 'Inter, sans-serif' }}
-                  />
-                </div>
-                <Link
-                  to="/themirrorclub"
-                  className="block w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-white px-6 py-3 rounded-[12px] font-semibold text-center hover:opacity-90 transition-opacity shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]"
-                  style={{ fontFamily: 'Inter, sans-serif' }}
-                >
-                  Solicitar Demo
-                </Link>
-              </form>
+                  >
+                    {contactLoading ? "Enviando…" : "Solicitar Demo"}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>

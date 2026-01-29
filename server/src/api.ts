@@ -6,7 +6,7 @@ import { randomUUID, randomBytes } from "crypto";
 import { authMiddleware } from "./middleware/auth.js";
 import { adminMiddleware } from "./middleware/admin.js";
 import { getDatabase, testDatabaseConnection } from "./lib/db.js";
-import { setEnvContext, clearEnvContext, getDatabaseUrl } from "./lib/env.js";
+import { setEnvContext, clearEnvContext, getDatabaseUrl, getEnv } from "./lib/env.js";
 import * as schema from "./schema/users.js";
 import { users, levelEnum } from "./schema/users.js";
 import {
@@ -32,6 +32,7 @@ import {
 } from "./schema/teams.js";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator.js";
+import nodemailer from "nodemailer";
 
 type Env = {
   RUNTIME?: string;
@@ -191,11 +192,14 @@ const api = new Hono();
 // Paths that do not require Firebase Auth (read-only public data)
 // Path may be relative (/db-test) or full (/api/v1/db-test) depending on deployment
 function isPublicPath(method: string, path: string): boolean {
-  if (method !== "GET") return false;
   const p = path.replace(/^\/api\/v1/, "") || "/";
-  if (p === "/leagues") return true;
-  if (/^\/leagues\/[^/]+$/.test(p)) return true;
-  if (p === "/db-test") return true; // health check used by frontend
+  if (method === "GET") {
+    if (p === "/leagues") return true;
+    if (/^\/leagues\/[^/]+$/.test(p)) return true;
+    if (p === "/db-test") return true; // health check used by frontend
+    return false;
+  }
+  if (method === "POST" && p === "/contact") return true;
   return false;
 }
 
@@ -218,6 +222,46 @@ api.get("/hello", (c) => {
   return c.json({
     message: "Hello from Hono!",
   });
+});
+
+// Contact form - sends email to info.mypadelcenter@gmail.com via Gmail SMTP
+const CONTACT_EMAIL_TO = "info.mypadelcenter@gmail.com";
+api.post("/contact", async (c) => {
+  try {
+    const body = await c.req.json<{ name?: string; email?: string; message?: string }>();
+    const name = typeof body.name === "string" ? body.name.trim().substring(0, 255) : "";
+    const email = typeof body.email === "string" ? body.email.trim().substring(0, 255) : "";
+    const message = typeof body.message === "string" ? body.message.trim().substring(0, 2000) : "";
+    if (!name || !email || !message) {
+      return c.json(createErrorResponse("Nombre, email y mensaje son obligatorios", 400), 400);
+    }
+    const gmailUser = getEnv("GMAIL_USER");
+    const gmailAppPassword = getEnv("GMAIL_APP_PASSWORD");
+    if (!gmailUser || !gmailAppPassword) {
+      console.error("[contact] GMAIL_USER or GMAIL_APP_PASSWORD is not set");
+      return c.json(createErrorResponse("Servicio de contacto no configurado", 503), 503);
+    }
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: gmailUser,
+        pass: gmailAppPassword,
+      },
+    });
+    const toEmail = getEnv("CONTACT_EMAIL_TO") || CONTACT_EMAIL_TO;
+    await transporter.sendMail({
+      from: `MyPadelCenter Landing <${gmailUser}>`,
+      to: toEmail,
+      subject: `[MyPadelCenter] Solicitud de demo: ${name}`,
+      text: `Nombre: ${name}\nEmail: ${email}\n\nMensaje:\n${message}`,
+    });
+    return c.json({ ok: true, message: "Mensaje enviado correctamente" });
+  } catch (error) {
+    console.error("[contact] Error:", error);
+    return c.json(createErrorResponse("Error al enviar el mensaje", 500), 500);
+  }
 });
 
 // Database test route - public for testing
