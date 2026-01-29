@@ -4,11 +4,25 @@ import { LigasIcon, AmericanosIcon, TorneosIcon, PlayoffsIcon } from "@/assets/i
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
+
+  // Start playing as soon as the video is in the DOM (muted for autoplay policy)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.preload = "auto";
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.log("Video autoplay:", err);
+      });
+    }
+  }, []);
 
   const handleUnmuteClick = () => {
     const video = videoRef.current;
