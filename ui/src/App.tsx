@@ -42,7 +42,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return (
-      <Navigate to="/themirrorclub" replace state={{ error: "Admin access required" }} />
+      <Navigate to="/inplay" replace state={{ error: "Admin access required" }} />
     );
   }
 
@@ -63,7 +63,7 @@ function TeamCreationRoute({ children }: { children: React.ReactNode }) {
 
   if (!canCreateTeams) {
     return (
-      <Navigate to="/themirrorclub" replace state={{ error: "You need a validated level to create teams" }} />
+      <Navigate to="/inplay" replace state={{ error: "You need a validated level to create teams" }} />
     );
   }
 
@@ -82,13 +82,13 @@ function AuthRedirectHandler() {
     // 2. Not loading
     // 3. Not on themirrorclub page
     // 4. This is a fresh login (not a page refresh)
-    if (!loading && user && location.pathname !== "/themirrorclub" && location.pathname !== "/") {
+    if (!loading && user && location.pathname !== "/inplay" && location.pathname !== "/") {
       // Check if this is a fresh login by looking at sessionStorage
       const hasRedirectedThisSession = sessionStorage.getItem('hasRedirectedThisSession');
       
       if (!hasRedirectedThisSession) {
         // This is a fresh login, redirect to themirrorclub
-        navigate("/themirrorclub", { replace: true });
+        navigate("/inplay", { replace: true });
         sessionStorage.setItem('hasRedirectedThisSession', 'true');
       }
     }
@@ -159,8 +159,8 @@ function AppContent() {
                 <SidebarInset className="flex-1">
                   <main className="flex-1">
                     <Routes>
-                      <Route path="/themirrorclub" element={<Home />} />
-                      <Route path="/register" element={<Navigate to="/themirrorclub" replace />} />
+                      <Route path="/inplay" element={<Home />} />
+                      <Route path="/register" element={<Navigate to="/inplay" replace />} />
                       <Route
                         path="/settings"
                         element={

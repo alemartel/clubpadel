@@ -23,6 +23,7 @@ export function LoginForm() {
     setErrorType(null)
     try {
       await signInWithEmailAndPassword(auth, email, password)
+      navigate('/inplay', { replace: true })
     } catch (err: any) {
       if (err.code === 'auth/user-not-found') {
         setErrorType('user-not-found')

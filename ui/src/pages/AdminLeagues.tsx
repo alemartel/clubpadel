@@ -117,7 +117,7 @@ export function AdminLeagues() {
   // Redirect if not admin
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate("/themirrorclub", { state: { error: t('adminAccessRequired') } });
+      navigate("/inplay", { state: { error: t('adminAccessRequired') } });
     }
   }, [isAdmin, loading, navigate]);
 

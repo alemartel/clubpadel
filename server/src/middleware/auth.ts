@@ -50,7 +50,7 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
       } else {
         // User doesn't exist at all - create new user
         // Check if this is the admin email
-        const adminEmails = ["martelmarrero@gmail.com"];
+        const adminEmails = ["admin@mypadelcenter.com"];
         const isAdmin = firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase());
         
         await db
