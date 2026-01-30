@@ -4,9 +4,7 @@ import { signOut } from "firebase/auth";
 import { Menu, LogOut, ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
-import { ModeToggle } from "@/components/mode-toggle";
 import { UserAvatar } from "@/components/user-avatar";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -47,7 +45,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b border-transparent shrink-0 bg-background/60 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 flex items-center h-12 px-2 border-b border-border shrink-0 bg-[#F1F5F9] text-foreground backdrop-blur-sm [&_button]:text-foreground [&_button:hover]:bg-black/5 [&_button:hover]:text-foreground [&_[data-sidebar-trigger]]:text-foreground">
       <div className="flex items-center">
         <SidebarTrigger className="size-8">
           <Menu className="w-5 h-5" />
@@ -57,12 +55,21 @@ export function Navbar() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
         ) : (
-          <span className="font-semibold ml-3">My Padel Center</span>
+          <div className="flex items-center gap-2 ml-3">
+            <img
+              src="/Icon_transparent.png"
+              alt="My Padel Center"
+              className="h-6 w-6 object-contain"
+            />
+            <img
+              src="/Name_lightwhiteback_mini.png"
+              alt="My Padel Center"
+              className="h-6 object-contain"
+            />
+          </div>
         )}
       </div>
       <div className="flex items-center gap-3 ml-auto">
-        <LanguageSwitcher />
-        <ModeToggle />
         {user && serverUser && (
           <UserAvatar
             user={{

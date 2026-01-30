@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, Users, Loader2 } from "lucide-react";
+import { Calendar, Users, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 
 type EventStatus = null | "participant_without_team" | "participant_in_team";
@@ -349,18 +349,29 @@ export function Events() {
                     {t("noMatchingPlayers") || "No matching players"}
                   </p>
                 ) : (
-                  partnerResults.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-muted ${
-                        selectedPartnerId === p.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedPartnerId(selectedPartnerId === p.id ? null : p.id)}
-                    >
-                      {getPartnerDisplayName(p)}
-                    </button>
-                  ))
+                  partnerResults.map((p) => {
+                    const isSelected = selectedPartnerId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-2.5 border-b last:border-b-0 flex items-center justify-between gap-2 transition-colors ${
+                          isSelected
+                            ? "bg-primary/10 border-l-4 border-l-primary"
+                            : "hover:bg-muted border-l-4 border-l-transparent"
+                        }`}
+                        onClick={() => setSelectedPartnerId(isSelected ? null : p.id)}
+                      >
+                        <span className="min-w-0 truncate">{getPartnerDisplayName(p)}</span>
+                        {isSelected && (
+                          <span className="flex items-center gap-1 shrink-0 text-primary text-sm font-medium">
+                            <Check className="w-4 h-4" />
+                            {t("selected")}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
             )}

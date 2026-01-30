@@ -257,8 +257,9 @@ function App() {
     <AuthProvider>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        defaultTheme="light"
+        enableSystem={false}
+        forcedTheme="light"
         disableTransitionOnChange
         storageKey="clubpadel-theme"
       >

@@ -1,4 +1,4 @@
-import { Home, Settings, Calendar, Shield, Users, LayoutDashboard, Trophy } from "lucide-react";
+import { Home, Settings, Calendar, Shield, Users, LayoutDashboard } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -34,7 +34,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="sticky top-12 h-[calc(100vh-3rem)] z-40 bg-background/80 backdrop-blur-sm"
+      className="sticky top-12 h-[calc(100vh-3rem)] z-40 bg-sidebar backdrop-blur-sm"
     >
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
@@ -52,17 +52,20 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isActive("/events")}
-                  asChild
-                >
-                  <Link to="/events" onClick={handleMenuClick}>
-                    <Calendar className="w-4 h-4" />
-                    <span>{t('events')}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {/* Eventos disponibles - Solo visible para jugadores (no admin) */}
+              {!isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isActive("/events")}
+                    asChild
+                  >
+                    <Link to="/events" onClick={handleMenuClick}>
+                      <Calendar className="w-4 h-4" />
+                      <span>{t('events')}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {/* My Teams - Temporarily disabled for players */}
               {false && !isAdmin && (
                 <SidebarMenuItem>
@@ -86,7 +89,7 @@ export function AppSidebar() {
                       asChild
                     >
                       <Link to="/admin/events" onClick={handleMenuClick}>
-                        <Trophy className="w-4 h-4" />
+                        <Calendar className="w-4 h-4" />
                         <span>{t('eventManagement')}</span>
                       </Link>
                     </SidebarMenuButton>

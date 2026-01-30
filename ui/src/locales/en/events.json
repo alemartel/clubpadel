@@ -59,6 +59,7 @@
   "searchPartner": "Search partner",
   "searchPartnerPlaceholder": "Name or email (min. 3 characters)",
   "selectPartner": "Select your partner",
+  "selected": "Selected",
   "teamNameRequired": "Team name is required",
   "joinedEvent": "You have joined the event",
   "joinedEventAsTeam": "Team registered successfully",

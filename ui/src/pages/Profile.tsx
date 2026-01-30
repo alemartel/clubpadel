@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfilePictureModal } from "@/components/ProfilePictureModal";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ArrowLeft, Save, X, Upload, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { uploadWidgetConfig } from "@/lib/cloudinary";
@@ -699,6 +700,21 @@ export function Profile() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Language Card */}
+        <Card className="bg-white shadow-sm mt-6">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-900">
+              {t('language')}
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              {t('languageSubtitle')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageSwitcher />
           </CardContent>
         </Card>
 

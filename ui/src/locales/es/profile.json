@@ -62,5 +62,7 @@
   "currentPasswordIncorrect": "La contraseña actual es incorrecta",
   "currentPasswordRequired": "La contraseña actual es requerida",
   "passwordsMustMatch": "Las nuevas contraseñas deben coincidir",
-  "passwordTooShort": "La contraseña debe tener al menos 6 caracteres"
+  "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+  "language": "Idioma",
+  "languageSubtitle": "Elige el idioma de la aplicación"
 }

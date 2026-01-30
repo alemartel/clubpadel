@@ -62,5 +62,7 @@
   "currentPasswordIncorrect": "Current password is incorrect",
   "currentPasswordRequired": "Current password is required",
   "passwordsMustMatch": "New passwords must match",
-  "passwordTooShort": "Password must be at least 6 characters"
+  "passwordTooShort": "Password must be at least 6 characters",
+  "language": "Language",
+  "languageSubtitle": "Choose the language for the application"
 }
