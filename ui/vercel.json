@@ -1,15 +1,11 @@
 {
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "redirects": [
     {
-      "source": "/(.*)",
-      "has": [
-        { "type": "host", "value": "inplay.mypadelcenter.com" }
-      ],
+      "source": "/",
+      "has": [{ "type": "host", "value": "inplay.mypadelcenter.com" }],
       "destination": "https://www.mypadelcenter.com/inplay",
       "permanent": true
     }
-  ],
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
