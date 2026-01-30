@@ -88,8 +88,10 @@ export function Register() {
     
     setLoading(true)
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
-      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      // Wait for the ID token to be ready so the profile update request is authorized
+      await userCredential.user.getIdToken(true)
+
       // Map display gender values to backend values
       const genderMap: Record<string, string> = {
         "Masculine": "male",

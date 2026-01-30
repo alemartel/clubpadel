@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import {
-  getAllPlayers,
-  getPlayerTeams,
-  type PlayerTeamInfo,
-} from "@/lib/serverComm";
+import { getAllPlayers } from "@/lib/serverComm";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -12,11 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Search, Users, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -69,11 +64,6 @@ export function AdminPlayers() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // State for player teams
-  const [playerTeamsMap, setPlayerTeamsMap] = useState<Record<string, PlayerTeamInfo[]>>({});
-  const [expandedPlayers, setExpandedPlayers] = useState<Set<string>>(new Set());
-  const [teamsLoadingMap, setTeamsLoadingMap] = useState<Record<string, boolean>>({});
-  
   // Player detail modal state
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [showPictureModal, setShowPictureModal] = useState(false);
@@ -129,35 +119,6 @@ export function AdminPlayers() {
     if (player.first_name && player.last_name) return `${player.first_name} ${player.last_name}`;
     return t('unknownPlayer');
   };
-
-  const loadPlayerTeams = async (playerId: string) => {
-    // Prevent duplicate loads
-    if (playerTeamsMap[playerId] || teamsLoadingMap[playerId]) return;
-    
-    setTeamsLoadingMap(prev => ({ ...prev, [playerId]: true }));
-    try {
-      const response = await getPlayerTeams(playerId);
-      setPlayerTeamsMap(prev => ({ ...prev, [playerId]: response.teams || [] }));
-    } catch (error) {
-      console.error("Failed to load player teams:", error);
-      toast.error(tCommon('failedToLoadTeams') || "Failed to load teams");
-    } finally {
-      setTeamsLoadingMap(prev => ({ ...prev, [playerId]: false }));
-    }
-  };
-
-  const handleToggleTeams = (playerId: string) => {
-    const newExpanded = new Set(expandedPlayers);
-    if (newExpanded.has(playerId)) {
-      newExpanded.delete(playerId);
-    } else {
-      newExpanded.add(playerId);
-      // Load teams when expanding
-      loadPlayerTeams(playerId);
-    }
-    setExpandedPlayers(newExpanded);
-  };
-
 
   if (loading) {
     return (
@@ -226,13 +187,7 @@ export function AdminPlayers() {
             </div>
           ) : (
         <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPlayers.map((player) => {
-                const teams = playerTeamsMap[player.id] || [];
-                const isExpanded = expandedPlayers.has(player.id);
-                const isLoading = teamsLoadingMap[player.id];
-                const teamsCount = teams.length;
-
-                return (
+              {filteredPlayers.map((player) => (
                   <Card key={player.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pt-6 pb-0 px-4">
                       <CardTitle className="text-base truncate">
@@ -257,78 +212,9 @@ export function AdminPlayers() {
                         </div>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-2 px-4 pb-4">
-                      <div className="space-y-3">
-                        {/* Teams Collapsible Section */}
-                        <Collapsible
-                          open={isExpanded}
-                          onOpenChange={() => handleToggleTeams(player.id)}
-                        >
-                          <div className="border-t pt-3 mt-3">
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="w-full justify-between">
-                                <span className="flex items-center gap-2">
-                                  <Shield className="w-4 h-4" />
-                                  <span>
-                                    {tCommon('playerTeams')}
-                                    {isExpanded && teamsCount > 0 && (
-                                      <> ({teamsCount})</>
-                                    )}
-                                  </span>
-                                </span>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-2 mt-2">
-                              {isLoading ? (
-                                <div className="text-center py-4 text-sm text-muted-foreground">
-                                  {tCommon('loading')}
-                                </div>
-                              ) : teams.length === 0 ? (
-                                <div className="text-center py-4 text-sm text-muted-foreground">
-                                  {tCommon('noTeamsForPlayer')}
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {teams.map((teamInfo) => {
-                                    const displayName = teamInfo.league
-                                      ? tCommon('leagueTeamDisplay', {
-                                          leagueName: teamInfo.league.name,
-                                          teamName: teamInfo.team.name
-                                        })
-                                      : `${teamInfo.team.name} (${tCommon('noLeagueForTeam')})`;
-                                    
-                                    return (
-                                      <div 
-                                        key={teamInfo.team_member_id} 
-                                        className="p-2 border rounded-md"
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            <div className="min-w-0 flex-1">
-                                              <div className="text-sm font-medium truncate">
-                                                {displayName}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                        </div>
-                      )}
-                            </CollapsibleContent>
-                    </div>
-                        </Collapsible>
-                    </div>
-                    </CardContent>
+                    <CardContent className="pt-2 px-4 pb-4" />
                 </Card>
-                );
-              })}
+              ))}
         </div>
       )}
 

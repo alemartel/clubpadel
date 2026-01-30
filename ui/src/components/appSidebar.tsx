@@ -66,28 +66,17 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {/* Admin items - Only visible to admins */}
+              {/* Admin items - Only visible to admins. Order: Inicio, Eventos, Jugadores, Panel de control */}
               {isAdmin && (
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={isActive("/admin/leagues")}
+                      isActive={location.pathname.startsWith("/admin/events")}
                       asChild
                     >
-                      <Link to="/admin/leagues" onClick={handleMenuClick}>
-                        <Calendar className="w-4 h-4" />
-                        <span>{t('leagueManagement')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={isActive("/admin/teams")}
-                      asChild
-                    >
-                      <Link to="/admin/teams" onClick={handleMenuClick}>
-                        <Shield className="w-4 h-4" />
-                        <span>{t('teamManagement')}</span>
+                      <Link to="/admin/events" onClick={handleMenuClick}>
+                        <Trophy className="w-4 h-4" />
+                        <span>{t('eventManagement')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -104,17 +93,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={location.pathname.startsWith("/admin/events")}
-                      asChild
-                    >
-                      <Link to="/admin/events" onClick={handleMenuClick}>
-                        <Trophy className="w-4 h-4" />
-                        <span>{t('eventManagement')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
                       isActive={isActive("/admin/control-panel")}
                       asChild
                     >
@@ -124,17 +102,48 @@ export function AppSidebar() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={isActive("/settings")}
-                      asChild
-                    >
-                      <Link to="/settings" onClick={handleMenuClick}>
-                        <Settings className="w-4 h-4" />
-                        <span>{t('settings')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {/* Temporarily disabled: Ligas */}
+                  {false && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isActive("/admin/leagues")}
+                        asChild
+                      >
+                        <Link to="/admin/leagues" onClick={handleMenuClick}>
+                          <Calendar className="w-4 h-4" />
+                          <span>{t('leagueManagement')}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {/* Temporarily disabled: Equipos */}
+                  {false && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isActive("/admin/teams")}
+                        asChild
+                      >
+                        <Link to="/admin/teams" onClick={handleMenuClick}>
+                          <Shield className="w-4 h-4" />
+                          <span>{t('teamManagement')}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {/* Temporarily disabled: Configuración */}
+                  {false && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isActive("/settings")}
+                        asChild
+                      >
+                        <Link to="/settings" onClick={handleMenuClick}>
+                          <Settings className="w-4 h-4" />
+                          <span>{t('settings')}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </>
               )}
             </SidebarMenu>

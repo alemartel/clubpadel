@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/serverComm";
@@ -115,10 +115,10 @@ export function AdminEvents() {
 
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [addParticipantSearch, setAddParticipantSearch] = useState("");
-  const [addParticipantSelected, setAddParticipantSelected] = useState<string | null>(null);
   const [allPlayersForParticipant, setAllPlayersForParticipant] = useState<Player[]>([]);
   const [allPlayersLoading, setAllPlayersLoading] = useState(false);
-  const [addParticipantSubmitting, setAddParticipantSubmitting] = useState(false);
+  const [addingParticipantId, setAddingParticipantId] = useState<string | null>(null);
+  const fetchedForParticipantOpenRef = useRef(false);
 
   const [addTeamOpen, setAddTeamOpen] = useState(false);
   const [addTeamName, setAddTeamName] = useState("");
@@ -223,36 +223,44 @@ export function AdminEvents() {
   };
 
   const handleAddParticipantOpen = () => {
-    setAddParticipantSelected(null);
     setAddParticipantSearch("");
-    const loadAll = async () => {
-      setAllPlayersLoading(true);
-      try {
-        const res = await api.getAllPlayers();
-        setAllPlayersForParticipant(res.players || []);
-      } finally {
-        setAllPlayersLoading(false);
-      }
-    };
-    loadAll();
+    setAllPlayersForParticipant([]);
+    fetchedForParticipantOpenRef.current = false;
     setAddParticipantOpen(true);
   };
 
-  const handleAddParticipant = async () => {
-    if (!eventId || !addParticipantSelected) return;
-    setAddParticipantSubmitting(true);
+  // Load players when user has typed at least 3 characters (once per modal open)
+  useEffect(() => {
+    if (!addParticipantOpen || !eventId) return;
+    const q = addParticipantSearch.trim();
+    if (q.length < 3) return;
+    if (fetchedForParticipantOpenRef.current) return;
+    fetchedForParticipantOpenRef.current = true;
+    setAllPlayersLoading(true);
+    api
+      .getAllPlayers()
+      .then((res) => setAllPlayersForParticipant(res.players || []))
+      .finally(() => setAllPlayersLoading(false));
+  }, [addParticipantOpen, eventId, addParticipantSearch]);
+
+  const handleAddParticipantForPlayer = async (playerId: string) => {
+    if (!eventId) return;
+    setAddingParticipantId(playerId);
     try {
-      const res = await api.addEventParticipant(eventId, addParticipantSelected);
+      const res = await api.addEventParticipant(eventId, playerId);
       if (!res.error) {
-        setAddParticipantOpen(false);
+        toast.success(t("playerAddedToEvent"));
         loadEventDetail();
+        setAddParticipantSearch("");
+        setAllPlayersForParticipant([]);
+        fetchedForParticipantOpenRef.current = false;
       } else {
         toast.error(res.error);
       }
     } catch (e) {
       toast.error("Failed to add player");
     } finally {
-      setAddParticipantSubmitting(false);
+      setAddingParticipantId(null);
     }
   };
 
@@ -693,8 +701,12 @@ export function AdminEvents() {
                 className="mt-1"
               />
             </div>
-            {allPlayersLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+            {addParticipantSearch.trim().length < 3 ? (
+              <p className="text-sm text-muted-foreground py-4">{t("searchPlayerMinChars")}</p>
+            ) : allPlayersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
             ) : (
               <div className="max-h-48 overflow-y-auto border rounded-md">
                 {allPlayersForParticipant
@@ -702,19 +714,29 @@ export function AdminEvents() {
                     const name = [p.first_name, p.last_name].filter(Boolean).join(" ").toLowerCase();
                     const email = (p.email ?? "").toLowerCase();
                     const search = addParticipantSearch.trim().toLowerCase();
-                    if (!search) return true;
                     return name.includes(search) || email.includes(search);
                   })
                   .filter((p) => !eventDetail?.participants?.some((ep) => ep.user_id === p.id))
                   .map((p) => (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-muted ${addParticipantSelected === p.id ? "bg-muted" : ""}`}
-                      onClick={() => setAddParticipantSelected(addParticipantSelected === p.id ? null : p.id)}
+                      className="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-muted"
                     >
-                      {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email}
-                    </button>
+                      <span className="min-w-0 truncate">
+                        {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email}
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddParticipantForPlayer(p.id)}
+                        disabled={addingParticipantId !== null}
+                      >
+                        {addingParticipantId === p.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          tCommon("add")
+                        )}
+                      </Button>
+                    </div>
                   ))}
               </div>
             )}
@@ -722,13 +744,6 @@ export function AdminEvents() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddParticipantOpen(false)}>
               {tCommon("cancel")}
-            </Button>
-            <Button
-              onClick={handleAddParticipant}
-              disabled={addParticipantSubmitting || !addParticipantSelected}
-            >
-              {addParticipantSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {tCommon("add")}
             </Button>
           </DialogFooter>
         </DialogContent>
