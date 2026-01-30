@@ -249,8 +249,8 @@ export function Events() {
                     {ev.signup_open && (
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
+                        variant="outline"
+                        className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => setConfirmLeaveEventId(ev.id)}
                         disabled={leaveEventId !== null}
                       >

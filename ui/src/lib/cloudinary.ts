@@ -4,8 +4,6 @@ import { Cloudinary } from 'cloudinary-core';
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-console.log('Cloudinary config:', { cloudName, uploadPreset });
-
 if (!cloudName || !uploadPreset) {
   console.error('Cloudinary configuration missing!');
   console.error('Please set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET environment variables.');

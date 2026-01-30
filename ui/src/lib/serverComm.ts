@@ -9,7 +9,6 @@ export function getApiBaseUrl(): string {
   // Check for both existence and non-empty string
   const envApiUrl = import.meta.env.VITE_API_URL;
   if (envApiUrl && typeof envApiUrl === 'string' && envApiUrl.trim() !== '') {
-    console.log('🌐 Using API URL from VITE_API_URL:', envApiUrl);
     return envApiUrl;
   }
   // Only use localhost if VITE_API_URL is not set AND we're in dev mode
