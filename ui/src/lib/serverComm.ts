@@ -629,11 +629,15 @@ export async function getEvents() {
   return response.json();
 }
 
-export async function createEvent(name: string) {
+export async function createEvent(
+  name: string,
+  start_date: string,
+  description?: string
+) {
   const response = await fetchWithAuth("/api/v1/admin/events", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, start_date, description: description ?? undefined }),
   });
   return response.json();
 }
@@ -643,7 +647,10 @@ export async function getEvent(eventId: string) {
   return response.json();
 }
 
-export async function updateEvent(eventId: string, body: { name?: string }) {
+export async function updateEvent(
+  eventId: string,
+  body: { name?: string; start_date?: string; description?: string }
+) {
   const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -732,6 +739,42 @@ export async function getEventClassifications(eventId: string) {
   return response.json();
 }
 
+// Protected (player) events
+export async function getProtectedEvents() {
+  const response = await fetchWithAuth("/api/v1/protected/events");
+  return response.json();
+}
+
+export async function joinEvent(eventId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/protected/events/${eventId}/join`,
+    { method: "POST" }
+  );
+  return response.json();
+}
+
+export async function joinEventAsTeam(
+  eventId: string,
+  body: { partner_user_id: string; team_name: string }
+) {
+  const response = await fetchWithAuth(
+    `/api/v1/protected/events/${eventId}/join-as-team`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  return response.json();
+}
+
+export async function searchPlayersByName(q: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/protected/players/search-by-name?q=${encodeURIComponent(q)}`
+  );
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -783,4 +826,8 @@ export const api = {
   getEventMatches,
   updateEventMatchResult,
   getEventClassifications,
+  getProtectedEvents,
+  joinEvent,
+  joinEventAsTeam,
+  searchPlayersByName,
 };

@@ -11,6 +11,7 @@ import { AdminLeagues } from "@/pages/AdminLeagues";
 import { AdminTeams } from "@/pages/AdminTeams";
 import { AdminPlayers } from "@/pages/AdminPlayers";
 import { AdminEvents } from "@/pages/AdminEvents";
+import { Events } from "@/pages/Events";
 import { ControlPanel } from "@/pages/ControlPanel";
 import { LeagueCalendarClassifications } from "@/pages/LeagueCalendarClassifications";
 import { MyTeams } from "./pages/MyTeams";
@@ -227,6 +228,7 @@ function AppContent() {
                           </AdminRoute>
                         }
                       />
+                      <Route path="/events" element={<Events />} />
                       <Route path="/teams" element={<MyTeams />} />
                       <Route
                         path="/teams/create"

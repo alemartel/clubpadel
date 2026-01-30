@@ -3,6 +3,7 @@ import {
   pgTable,
   text,
   timestamp,
+  date,
   integer,
   unique,
 } from "drizzle-orm/pg-core";
@@ -16,6 +17,8 @@ export const events = appSchema.table("events", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   tipo_evento: eventTypeEnum("tipo_evento").default("americano").notNull(),
+  start_date: date("start_date").notNull(),
+  description: text("description"),
   created_by: text("created_by")
     .notNull()
     .references(() => users.id),

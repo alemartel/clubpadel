@@ -52,6 +52,17 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={isActive("/events")}
+                  asChild
+                >
+                  <Link to="/events" onClick={handleMenuClick}>
+                    <Trophy className="w-4 h-4" />
+                    <span>{t('events')}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {/* My Teams - Only visible to non-admin players */}
               {!isAdmin && (
                 <SidebarMenuItem>

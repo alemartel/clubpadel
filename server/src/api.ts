@@ -30,7 +30,7 @@ import {
   type NewTeamLeague,
   type NewLeaguePayment,
 } from "./schema/teams.js";
-import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
+import { eq, and, or, ne, sql, notInArray, desc, inArray, ilike } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator.js";
 import { createRoundRobinPairings } from "./lib/round-robin.js";
 import nodemailer from "nodemailer";
@@ -2527,6 +2527,245 @@ protectedRoutes.get("/players/search", async (c) => {
   }
 });
 
+// Player search by name/email (min 3 chars) for event partner search
+protectedRoutes.get("/players/search-by-name", async (c) => {
+  try {
+    const user = c.get("user");
+    const q = (c.req.query("q") ?? "").trim();
+    if (q.length < 3) {
+      return c.json({ error: "Query q must be at least 3 characters" }, 400);
+    }
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const pattern = `%${q}%`;
+    const list = await db
+      .select({
+        id: users.id,
+        first_name: users.first_name,
+        last_name: users.last_name,
+        email: users.email,
+      })
+      .from(users)
+      .where(
+        and(
+          ne(users.id, user.id),
+          eq(users.role, "player"),
+          or(
+            ilike(users.first_name, pattern),
+            ilike(users.last_name, pattern),
+            ilike(users.email, pattern)
+          )
+        )
+      )
+      .limit(20);
+    return c.json({ players: list });
+  } catch (error) {
+    console.error("Player search-by-name error:", error);
+    return c.json({ error: "Failed to search players" }, 500);
+  }
+});
+
+// List events for player (eventos disponibles) with current user status
+protectedRoutes.get("/events", async (c) => {
+  try {
+    const user = c.get("user");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const list = await db
+      .select({
+        id: events.id,
+        name: events.name,
+        tipo_evento: events.tipo_evento,
+        start_date: events.start_date,
+        description: events.description,
+        created_at: events.created_at,
+      })
+      .from(events)
+      .orderBy(events.start_date);
+    const withStatus = await Promise.all(
+      list.map(async (ev) => {
+        const [participant] = await db
+          .select()
+          .from(event_participants)
+          .where(and(eq(event_participants.event_id, ev.id), eq(event_participants.user_id, user.id)))
+          .limit(1);
+        if (!participant) {
+          return { ...ev, current_user_status: null as const, team_name: undefined };
+        }
+        const teamRows = await db
+          .select({ id: event_teams.id, name: event_teams.name })
+          .from(event_teams)
+          .where(eq(event_teams.event_id, ev.id));
+        const teamIds = teamRows.map((r) => r.id);
+        if (teamIds.length === 0) {
+          return { ...ev, current_user_status: "participant_without_team" as const, team_name: undefined };
+        }
+        const [memberRow] = await db
+          .select({ event_team_id: event_team_members.event_team_id })
+          .from(event_team_members)
+          .where(and(eq(event_team_members.user_id, user.id), inArray(event_team_members.event_team_id, teamIds)))
+          .limit(1);
+        if (!memberRow) {
+          return { ...ev, current_user_status: "participant_without_team" as const, team_name: undefined };
+        }
+        const team = teamRows.find((t) => t.id === memberRow.event_team_id);
+        return {
+          ...ev,
+          current_user_status: "participant_in_team" as const,
+          team_name: team?.name,
+        };
+      })
+    );
+    return c.json({ events: withStatus });
+  } catch (error) {
+    console.error("List protected events error:", error);
+    return c.json(createErrorResponse("Failed to list events", 500), 500);
+  }
+});
+
+// Join event as individual
+protectedRoutes.post("/events/:eventId/join", async (c) => {
+  try {
+    const user = c.get("user");
+    if (user.role === "admin") {
+      return c.json({ error: "Admins cannot join events as participants" }, 400);
+    }
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const [matchRow] = await db
+      .select({ id: event_matches.id })
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .limit(1);
+    if (matchRow) {
+      return c.json({ error: "Event sign-up is closed (matches already generated)" }, 400);
+    }
+    const [existing] = await db
+      .select()
+      .from(event_participants)
+      .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, user.id)))
+      .limit(1);
+    if (existing) {
+      return c.json({ error: "Already a participant" }, 400);
+    }
+    await db.insert(event_participants).values({
+      id: randomUUID(),
+      event_id: eventId,
+      user_id: user.id,
+    } as NewEventParticipant);
+    return c.json({ participant: { user_id: user.id } }, 201);
+  } catch (error) {
+    console.error("Join event error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Join event as team (current user + partner)
+protectedRoutes.post("/events/:eventId/join-as-team", async (c) => {
+  try {
+    const user = c.get("user");
+    if (user.role === "admin") {
+      return c.json({ error: "Admins cannot join events as participants" }, 400);
+    }
+    const eventId = c.req.param("eventId");
+    const body = await c.req.json<{ partner_user_id: string; team_name: string }>();
+    const partnerId = typeof body.partner_user_id === "string" ? body.partner_user_id.trim() : "";
+    const teamName = typeof body.team_name === "string" ? sanitizeText(body.team_name).trim() : "";
+    if (!partnerId || !teamName) {
+      return c.json({ error: "partner_user_id and team_name are required" }, 400);
+    }
+    if (partnerId === user.id) {
+      return c.json({ error: "Cannot form team with yourself" }, 400);
+    }
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const [matchRow] = await db
+      .select({ id: event_matches.id })
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .limit(1);
+    if (matchRow) {
+      return c.json({ error: "Event sign-up is closed (matches already generated)" }, 400);
+    }
+    const [partner] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, partnerId))
+      .limit(1);
+    if (!partner) {
+      return c.json({ error: "Partner not found" }, 404);
+    }
+    if (partner.role === "admin") {
+      return c.json({ error: "Partner cannot be an admin" }, 400);
+    }
+    const existingTeamName = await db
+      .select({ id: event_teams.id })
+      .from(event_teams)
+      .where(and(eq(event_teams.event_id, eventId), eq(event_teams.name, teamName)))
+      .limit(1);
+    if (existingTeamName.length > 0) {
+      return c.json({ error: "Team name already exists in this event" }, 400);
+    }
+    const teamIds = (await db.select({ id: event_teams.id }).from(event_teams).where(eq(event_teams.event_id, eventId))).map((r) => r.id);
+    const userIdsInTeams = teamIds.length
+      ? (await db.select({ user_id: event_team_members.user_id }).from(event_team_members).where(inArray(event_team_members.event_team_id, teamIds)))
+      : [];
+    const inTeamSet = new Set(userIdsInTeams.map((r) => r.user_id));
+    if (inTeamSet.has(user.id)) {
+      return c.json({ error: "You are already in a team in this event" }, 400);
+    }
+    if (inTeamSet.has(partnerId)) {
+      return c.json({ error: "Partner is already in a team in this event" }, 400);
+    }
+    for (const uid of [user.id, partnerId]) {
+      const [exists] = await db
+        .select()
+        .from(event_participants)
+        .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, uid)))
+        .limit(1);
+      if (!exists) {
+        await db.insert(event_participants).values({
+          id: randomUUID(),
+          event_id: eventId,
+          user_id: uid,
+        } as NewEventParticipant);
+      }
+    }
+    const teamId = `evt_${randomUUID()}`;
+    await db.insert(event_teams).values({
+      id: teamId,
+      event_id: eventId,
+      name: teamName,
+    } as NewEventTeam);
+    await db.insert(event_team_members).values({
+      id: randomUUID(),
+      event_team_id: teamId,
+      user_id: user.id,
+    } as NewEventTeamMember);
+    await db.insert(event_team_members).values({
+      id: randomUUID(),
+      event_team_id: teamId,
+      user_id: partnerId,
+    } as NewEventTeamMember);
+    const [team] = await db.select().from(event_teams).where(eq(event_teams.id, teamId)).limit(1);
+    return c.json({ team }, 201);
+  } catch (error) {
+    console.error("Join event as team error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
 // Calendar Generation Endpoints (Admin Only)
 adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
   try {
@@ -3141,11 +3380,20 @@ adminRoutes.get("/events", async (c) => {
 adminRoutes.post("/events", async (c) => {
   try {
     const adminUser = c.get("adminUser");
-    const body = await c.req.json<{ name: string }>();
+    const body = await c.req.json<{ name: string; start_date: string; description?: string }>();
     const name = typeof body.name === "string" ? sanitizeText(body.name) : "";
     if (!name) {
       return c.json({ error: "Name is required" }, 400);
     }
+    const startDateRaw = body.start_date;
+    if (typeof startDateRaw !== "string" || !startDateRaw.trim()) {
+      return c.json({ error: "start_date is required (ISO date string YYYY-MM-DD)" }, 400);
+    }
+    const startDate = new Date(startDateRaw.trim());
+    if (Number.isNaN(startDate.getTime())) {
+      return c.json({ error: "Invalid start_date" }, 400);
+    }
+    const description = typeof body.description === "string" ? body.description.trim() || null : null;
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
     const eventId = `event_${randomUUID()}`;
@@ -3153,6 +3401,8 @@ adminRoutes.post("/events", async (c) => {
       id: eventId,
       name,
       tipo_evento: "americano",
+      start_date: startDateRaw.trim().slice(0, 10) as any,
+      description,
       created_by: adminUser.id,
     };
     const [created] = await db.insert(events).values(newEvent).returning();
@@ -3234,7 +3484,7 @@ adminRoutes.get("/events/:eventId", async (c) => {
 adminRoutes.put("/events/:eventId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
-    const body = await c.req.json<{ name?: string }>();
+    const body = await c.req.json<{ name?: string; start_date?: string; description?: string }>();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
     const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
@@ -3244,6 +3494,15 @@ adminRoutes.put("/events/:eventId", async (c) => {
     const updates: Partial<NewEvent> = {};
     if (typeof body.name === "string" && body.name.trim()) {
       updates.name = sanitizeText(body.name);
+    }
+    if (typeof body.start_date === "string" && body.start_date.trim()) {
+      const d = new Date(body.start_date.trim());
+      if (!Number.isNaN(d.getTime())) {
+        updates.start_date = body.start_date.trim().slice(0, 10) as any;
+      }
+    }
+    if (body.description !== undefined) {
+      updates.description = typeof body.description === "string" ? body.description.trim() || null : null;
     }
     if (Object.keys(updates).length === 0) {
       return c.json({ event: ev });

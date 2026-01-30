@@ -47,6 +47,8 @@ interface EventListItem {
   id: string;
   name: string;
   tipo_evento: string;
+  start_date: string;
+  description?: string | null;
   created_at: string;
   team_count: number;
   match_count: number;
@@ -111,6 +113,10 @@ export function AdminEvents() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
+  const [createStartDate, setCreateStartDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [createDescription, setCreateDescription] = useState("");
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
@@ -204,13 +210,23 @@ export function AdminEvents() {
   const handleCreateEvent = async () => {
     const name = createName.trim();
     if (!name) return;
+    if (!createStartDate) {
+      toast.error(t("startDateRequired") || "Start date is required");
+      return;
+    }
     setCreateSubmitting(true);
     try {
-      const res = await api.createEvent(name);
+      const res = await api.createEvent(
+        name,
+        createStartDate,
+        createDescription.trim() || undefined
+      );
       if (res.event?.id) {
         toast.success(t("eventCreated"));
         setCreateOpen(false);
         setCreateName("");
+        setCreateStartDate(new Date().toISOString().slice(0, 10));
+        setCreateDescription("");
         navigate(`/admin/events/${res.event.id}`);
       } else {
         toast.error(res.error || "Failed to create event");
@@ -417,10 +433,20 @@ export function AdminEvents() {
                   <CardTitle className="text-lg">{ev.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {ev.start_date && (
+                    <div className="text-sm text-muted-foreground mb-2">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      {ev.start_date}
+                    </div>
+                  )}
+                  {ev.description && (
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                      {ev.description}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="w-4 h-4" />
                     <span>{ev.team_count} {t("teams")}</span>
-                    <Calendar className="w-4 h-4 ml-2" />
                     <span>{ev.match_count} {t("matches")}</span>
                   </div>
                 </CardContent>
@@ -434,19 +460,40 @@ export function AdminEvents() {
             <DialogHeader>
               <DialogTitle>{t("createEvent")}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("eventName")}</label>
-              <Input
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder={t("eventNamePlaceholder")}
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">{t("eventName")}</label>
+                <Input
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder={t("eventNamePlaceholder")}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">{t("startDate")}</label>
+                <Input
+                  type="date"
+                  value={createStartDate}
+                  onChange={(e) => setCreateStartDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">{t("description")}</label>
+                <Input
+                  value={createDescription}
+                  onChange={(e) => setCreateDescription(e.target.value)}
+                  placeholder={t("descriptionPlaceholder")}
+                  className="mt-1"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 {tCommon("cancel")}
               </Button>
-              <Button onClick={handleCreateEvent} disabled={createSubmitting || !createName.trim()}>
+              <Button onClick={handleCreateEvent} disabled={createSubmitting || !createName.trim() || !createStartDate}>
                 {createSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {tCommon("create")}
               </Button>
@@ -463,9 +510,26 @@ export function AdminEvents() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-2xl font-bold flex-1">
-          {detailLoading ? t("loadingEvents") : eventDetail?.event?.name ?? eventId}
-        </h1>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">
+            {detailLoading ? t("loadingEvents") : eventDetail?.event?.name ?? eventId}
+          </h1>
+          {eventDetail?.event && (
+            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+              {"start_date" in eventDetail.event && eventDetail.event.start_date != null && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {(eventDetail.event as { start_date: string }).start_date}
+                </span>
+              )}
+              {"description" in eventDetail.event && eventDetail.event.description != null && eventDetail.event.description !== "" && (
+                <span className="line-clamp-1">
+                  {(eventDetail.event as { description: string }).description}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
           <Trash2 className="w-4 h-4 mr-2" />
           {tCommon("delete")}

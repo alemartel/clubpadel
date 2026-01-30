@@ -58,6 +58,19 @@ try {
     }
   }
 
+  const eventsStartDateDescPath = join(migrationsFolder, '0026_add_events_start_date_description.sql');
+  try {
+    const eventsStartDateDescSql = readFileSync(eventsStartDateDescPath, 'utf8');
+    await sql.unsafe(eventsStartDateDescSql);
+    console.log('Events start_date/description migration (0026) completed.');
+  } catch (err) {
+    if (err.code === '42701' || err.message?.includes('already exists')) {
+      console.log('Events start_date/description migration already applied, skipping.');
+    } else {
+      throw err;
+    }
+  }
+
   console.log('All migrations completed.');
 } catch (err) {
   console.error('Migration failed:', err.message);
