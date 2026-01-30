@@ -77,9 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         try {
-          // Add a small delay to ensure the token is ready
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
+          // Wait for the ID token to be ready (needed right after login)
+          await user.getIdToken(true);
           // Fetch server user data to get role information
           const response = await api.getCurrentUser();
           setServerUser(response.user);

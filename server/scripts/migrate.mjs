@@ -45,6 +45,19 @@ try {
     }
   }
 
+  const participantsMigrationPath = join(migrationsFolder, '0025_add_event_participants.sql');
+  try {
+    const participantsSql = readFileSync(participantsMigrationPath, 'utf8');
+    await sql.unsafe(participantsSql);
+    console.log('Event participants migration (0025) completed.');
+  } catch (participantsErr) {
+    if (participantsErr.code === '42P07' || participantsErr.message?.includes('already exists')) {
+      console.log('Event participants migration already applied, skipping.');
+    } else {
+      throw participantsErr;
+    }
+  }
+
   console.log('All migrations completed.');
 } catch (err) {
   console.error('Migration failed:', err.message);

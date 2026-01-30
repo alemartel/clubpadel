@@ -23,6 +23,26 @@ export const events = appSchema.table("events", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const event_participants = appSchema.table(
+  "event_participants",
+  {
+    id: text("id").primaryKey(),
+    event_id: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    eventUserUnique: unique("event_participants_event_user_unique").on(
+      table.event_id,
+      table.user_id
+    ),
+  })
+);
+
 export const event_teams = appSchema.table(
   "event_teams",
   {
@@ -92,6 +112,8 @@ export const event_matches = appSchema.table(
 
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+export type EventParticipant = typeof event_participants.$inferSelect;
+export type NewEventParticipant = typeof event_participants.$inferInsert;
 export type EventTeam = typeof event_teams.$inferSelect;
 export type NewEventTeam = typeof event_teams.$inferInsert;
 export type EventTeamMember = typeof event_team_members.$inferSelect;

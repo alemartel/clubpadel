@@ -6,7 +6,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { api, type TeamWithDetails } from "@/lib/serverComm";
 
 export function Home() {
-  const { serverUser, isAdmin } = useAuth();
+  const { serverUser, isAdmin, loading } = useAuth();
   const { state } = useSidebar();
   const [userTeams, setUserTeams] = useState<TeamWithDetails[]>([]);
 
@@ -22,10 +22,10 @@ export function Home() {
       }
     };
 
-    if (!isAdmin) {
+    if (!loading && !isAdmin) {
       loadTeams();
     }
-  }, [isAdmin]);
+  }, [loading, isAdmin]);
 
   // Calculate positioning based on sidebar state
   // On mobile: center the content normally

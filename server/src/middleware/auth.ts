@@ -23,7 +23,12 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
 
     const token = authHeader.split("Bearer ")[1];
     const firebaseProjectId = getFirebaseProjectId();
-    const firebaseUser = await verifyFirebaseToken(token, firebaseProjectId);
+    let firebaseUser;
+    try {
+      firebaseUser = await verifyFirebaseToken(token, firebaseProjectId);
+    } catch {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);

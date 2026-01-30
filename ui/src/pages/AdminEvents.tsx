@@ -100,6 +100,8 @@ export function AdminEvents() {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventDetail, setEventDetail] = useState<{
     event: { id: string; name: string };
+    participants: { user_id: string; first_name?: string; last_name?: string; email?: string }[];
+    participantsWithoutTeam: { user_id: string; first_name?: string; last_name?: string; email?: string }[];
     teams: EventTeam[];
     matches: EventMatch[];
   } | null>(null);
@@ -111,12 +113,17 @@ export function AdminEvents() {
   const [createName, setCreateName] = useState("");
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
+  const [addParticipantOpen, setAddParticipantOpen] = useState(false);
+  const [addParticipantSearch, setAddParticipantSearch] = useState("");
+  const [addParticipantSelected, setAddParticipantSelected] = useState<string | null>(null);
+  const [allPlayersForParticipant, setAllPlayersForParticipant] = useState<Player[]>([]);
+  const [allPlayersLoading, setAllPlayersLoading] = useState(false);
+  const [addParticipantSubmitting, setAddParticipantSubmitting] = useState(false);
+
   const [addTeamOpen, setAddTeamOpen] = useState(false);
   const [addTeamName, setAddTeamName] = useState("");
   const [addTeamPlayer1, setAddTeamPlayer1] = useState<string | null>(null);
   const [addTeamPlayer2, setAddTeamPlayer2] = useState<string | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [playersLoading, setPlayersLoading] = useState(false);
   const [addTeamSubmitting, setAddTeamSubmitting] = useState(false);
 
   const [generateMatchesSubmitting, setGenerateMatchesSubmitting] = useState(false);
@@ -166,7 +173,13 @@ export function AdminEvents() {
     setDetailLoading(true);
     try {
       const res = await api.getEvent(eventId);
-      setEventDetail({ event: res.event, teams: res.teams || [], matches: res.matches || [] });
+      setEventDetail({
+        event: res.event,
+        participants: res.participants || [],
+        participantsWithoutTeam: res.participantsWithoutTeam || [],
+        teams: res.teams || [],
+        matches: res.matches || [],
+      });
     } catch (e) {
       toast.error("Failed to load event");
       setEventDetail(null);
@@ -185,18 +198,6 @@ export function AdminEvents() {
       setClassifications([]);
     } finally {
       setClassificationsLoading(false);
-    }
-  };
-
-  const loadPlayers = async () => {
-    setPlayersLoading(true);
-    try {
-      const res = await api.getAllPlayers();
-      setPlayers(res.players || []);
-    } catch (e) {
-      toast.error("Failed to load players");
-    } finally {
-      setPlayersLoading(false);
     }
   };
 
@@ -221,11 +222,55 @@ export function AdminEvents() {
     }
   };
 
+  const handleAddParticipantOpen = () => {
+    setAddParticipantSelected(null);
+    setAddParticipantSearch("");
+    const loadAll = async () => {
+      setAllPlayersLoading(true);
+      try {
+        const res = await api.getAllPlayers();
+        setAllPlayersForParticipant(res.players || []);
+      } finally {
+        setAllPlayersLoading(false);
+      }
+    };
+    loadAll();
+    setAddParticipantOpen(true);
+  };
+
+  const handleAddParticipant = async () => {
+    if (!eventId || !addParticipantSelected) return;
+    setAddParticipantSubmitting(true);
+    try {
+      const res = await api.addEventParticipant(eventId, addParticipantSelected);
+      if (!res.error) {
+        setAddParticipantOpen(false);
+        loadEventDetail();
+      } else {
+        toast.error(res.error);
+      }
+    } catch (e) {
+      toast.error("Failed to add player");
+    } finally {
+      setAddParticipantSubmitting(false);
+    }
+  };
+
+  const handleRemoveParticipant = async (userId: string) => {
+    if (!eventId) return;
+    try {
+      const res = await api.removeEventParticipant(eventId, userId);
+      if (!res.error) loadEventDetail();
+      else toast.error(res.error);
+    } catch (e) {
+      toast.error("Failed to remove player");
+    }
+  };
+
   const handleAddTeamOpen = () => {
     setAddTeamName("");
     setAddTeamPlayer1(null);
     setAddTeamPlayer2(null);
-    loadPlayers();
     setAddTeamOpen(true);
   };
 
@@ -427,6 +472,42 @@ export function AdminEvents() {
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{t("eventPlayers")} ({eventDetail?.participants?.length ?? 0})</CardTitle>
+              <Button onClick={handleAddParticipantOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t("addPlayer")}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!eventDetail?.participants?.length ? (
+                <p className="text-sm text-muted-foreground">{t("addPlayersFirst")}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {eventDetail.participants.map((p) => (
+                    <li
+                      key={p.user_id}
+                      className="flex items-center justify-between border rounded-md px-3 py-2"
+                    >
+                      <span>
+                        {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || p.user_id}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveParticipant(p.user_id)}
+                        disabled={(eventDetail?.matches?.length ?? 0) > 0}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>{t("teams")} ({teamCount})</CardTitle>
               <Button onClick={handleAddTeamOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -435,7 +516,7 @@ export function AdminEvents() {
             </CardHeader>
             <CardContent>
               {eventDetail?.teams?.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("selectTwoPlayers")}</p>
+                <p className="text-sm text-muted-foreground">{t("addTeamsFromPlayers")}</p>
               ) : (
                 <ul className="space-y-2">
                   {eventDetail?.teams?.map((team) => (
@@ -597,6 +678,62 @@ export function AdminEvents() {
         </>
       )}
 
+      <Dialog open={addParticipantOpen} onOpenChange={setAddParticipantOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("addPlayer")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">{t("searchPlayer")}</label>
+              <Input
+                value={addParticipantSearch}
+                onChange={(e) => setAddParticipantSearch(e.target.value)}
+                placeholder={t("searchPlayerPlaceholder")}
+                className="mt-1"
+              />
+            </div>
+            {allPlayersLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <div className="max-h-48 overflow-y-auto border rounded-md">
+                {allPlayersForParticipant
+                  .filter((p) => {
+                    const name = [p.first_name, p.last_name].filter(Boolean).join(" ").toLowerCase();
+                    const email = (p.email ?? "").toLowerCase();
+                    const search = addParticipantSearch.trim().toLowerCase();
+                    if (!search) return true;
+                    return name.includes(search) || email.includes(search);
+                  })
+                  .filter((p) => !eventDetail?.participants?.some((ep) => ep.user_id === p.id))
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 border-b last:border-b-0 hover:bg-muted ${addParticipantSelected === p.id ? "bg-muted" : ""}`}
+                      onClick={() => setAddParticipantSelected(addParticipantSelected === p.id ? null : p.id)}
+                    >
+                      {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddParticipantOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={handleAddParticipant}
+              disabled={addParticipantSubmitting || !addParticipantSelected}
+            >
+              {addParticipantSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {tCommon("add")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={addTeamOpen} onOpenChange={setAddTeamOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -614,8 +751,8 @@ export function AdminEvents() {
             </div>
             <div>
               <label className="text-sm font-medium">{t("selectTwoPlayers")}</label>
-              {playersLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin mt-2" />
+              {(eventDetail?.participantsWithoutTeam?.length ?? 0) < 2 ? (
+                <p className="text-sm text-muted-foreground mt-2">{t("needMorePlayersWithoutTeam")}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <select
@@ -624,10 +761,10 @@ export function AdminEvents() {
                     onChange={(e) => setAddTeamPlayer1(e.target.value || null)}
                   >
                     <option value="">—</option>
-                    {players
-                      .filter((p) => p.id !== addTeamPlayer2)
+                    {(eventDetail?.participantsWithoutTeam ?? [])
+                      .filter((p) => p.user_id !== addTeamPlayer2)
                       .map((p) => (
-                        <option key={p.id} value={p.id}>
+                        <option key={p.user_id} value={p.user_id}>
                           {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email}
                         </option>
                       ))}
@@ -638,10 +775,10 @@ export function AdminEvents() {
                     onChange={(e) => setAddTeamPlayer2(e.target.value || null)}
                   >
                     <option value="">—</option>
-                    {players
-                      .filter((p) => p.id !== addTeamPlayer1)
+                    {(eventDetail?.participantsWithoutTeam ?? [])
+                      .filter((p) => p.user_id !== addTeamPlayer1)
                       .map((p) => (
-                        <option key={p.id} value={p.id}>
+                        <option key={p.user_id} value={p.user_id}>
                           {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email}
                         </option>
                       ))}

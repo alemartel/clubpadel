@@ -659,6 +659,23 @@ export async function deleteEvent(eventId: string) {
   return response.json();
 }
 
+export async function addEventParticipant(eventId: string, userId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}/participants`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  return response.json();
+}
+
+export async function removeEventParticipant(eventId: string, userId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/admin/events/${eventId}/participants/${userId}`,
+    { method: "DELETE" }
+  );
+  return response.json();
+}
+
 export async function addEventTeam(
   eventId: string,
   body: { name: string; user_ids: [string, string] }
@@ -758,6 +775,8 @@ export const api = {
   getEvent,
   updateEvent,
   deleteEvent,
+  addEventParticipant,
+  removeEventParticipant,
   addEventTeam,
   removeEventTeam,
   generateEventMatches,

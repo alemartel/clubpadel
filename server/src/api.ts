@@ -36,10 +36,12 @@ import { createRoundRobinPairings } from "./lib/round-robin.js";
 import nodemailer from "nodemailer";
 import {
   events,
+  event_participants,
   event_teams,
   event_team_members,
   event_matches,
   type NewEvent,
+  type NewEventParticipant,
   type NewEventTeam,
   type NewEventTeamMember,
   type NewEventMatch,
@@ -3200,8 +3202,26 @@ adminRoutes.get("/events/:eventId", async (c) => {
         .filter((m) => m.event_team_id === t.id)
         .map((m) => ({ user_id: m.user_id, first_name: m.first_name, last_name: m.last_name, email: m.email })),
     }));
+    const participantsRows = await db
+      .select({
+        user_id: event_participants.user_id,
+        first_name: users.first_name,
+        last_name: users.last_name,
+        email: users.email,
+      })
+      .from(event_participants)
+      .innerJoin(users, eq(event_participants.user_id, users.id))
+      .where(eq(event_participants.event_id, eventId));
+    const userIdsInTeams = new Set(
+      membersByTeam.map((m) => m.user_id)
+    );
+    const participantsWithoutTeam = participantsRows
+      .filter((p) => !userIdsInTeams.has(p.user_id))
+      .map((p) => ({ user_id: p.user_id, first_name: p.first_name, last_name: p.last_name, email: p.email }));
     return c.json({
       event: ev,
+      participants: participantsRows.map((p) => ({ user_id: p.user_id, first_name: p.first_name, last_name: p.last_name, email: p.email })),
+      participantsWithoutTeam,
       teams: teamsWithMembers,
       matches: eventMatches,
     });
@@ -3257,11 +3277,82 @@ adminRoutes.delete("/events/:eventId", async (c) => {
       await db.delete(event_team_members).where(inArray(event_team_members.event_team_id, teamIds));
     }
     await db.delete(event_teams).where(eq(event_teams.event_id, eventId));
+    await db.delete(event_participants).where(eq(event_participants.event_id, eventId));
     await db.delete(events).where(eq(events.id, eventId));
     return c.json({ message: "Event deleted" });
   } catch (error) {
     console.error("Delete event error:", error);
     return c.json(createErrorResponse("Failed to delete event", 500), 500);
+  }
+});
+
+adminRoutes.post("/events/:eventId/participants", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const body = await c.req.json<{ user_id: string }>();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const userId = typeof body.user_id === "string" ? body.user_id : "";
+    if (!userId) {
+      return c.json({ error: "user_id is required" }, 400);
+    }
+    const [u] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!u) {
+      return c.json({ error: "User not found" }, 400);
+    }
+    if (u.role === "admin") {
+      return c.json({ error: "Admins cannot be added as event participants" }, 400);
+    }
+    await db.insert(event_participants).values({
+      id: randomUUID(),
+      event_id: eventId,
+      user_id: userId,
+    } as NewEventParticipant);
+    const [participant] = await db
+      .select({ user_id: event_participants.user_id })
+      .from(event_participants)
+      .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, userId)))
+      .limit(1);
+    return c.json({ participant: participant ?? { user_id: userId } }, 201);
+  } catch (error) {
+    console.error("Add event participant error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+adminRoutes.delete("/events/:eventId/participants/:userId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const userId = c.req.param("userId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const teamIds = (await db.select({ id: event_teams.id }).from(event_teams).where(eq(event_teams.event_id, eventId))).map((r) => r.id);
+    if (teamIds.length > 0) {
+      const [alreadyInTeam] = await db
+        .select()
+        .from(event_team_members)
+        .where(and(eq(event_team_members.user_id, userId), inArray(event_team_members.event_team_id, teamIds)))
+        .limit(1);
+      if (alreadyInTeam) {
+        return c.json({ error: "Cannot remove participant: already in a team" }, 400);
+      }
+    }
+    await db
+      .delete(event_participants)
+      .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, userId)));
+    return c.json({ message: "Participant removed" });
+  } catch (error) {
+    console.error("Remove event participant error:", error);
+    return c.json(createErrorResponse("Failed to remove participant", 500), 500);
   }
 });
 
@@ -3281,6 +3372,22 @@ adminRoutes.post("/events/:eventId/teams", async (c) => {
       return c.json({ error: "name and exactly 2 user_ids are required" }, 400);
     }
     const [u1, u2] = userIds as [string, string];
+    const participants = await db
+      .select({ user_id: event_participants.user_id })
+      .from(event_participants)
+      .where(eq(event_participants.event_id, eventId));
+    const participantIds = new Set(participants.map((p) => p.user_id));
+    if (!participantIds.has(u1) || !participantIds.has(u2)) {
+      return c.json({ error: "Both users must be added as event participants first" }, 400);
+    }
+    const teamIds = (await db.select({ id: event_teams.id }).from(event_teams).where(eq(event_teams.event_id, eventId))).map((r) => r.id);
+    const userIdsInTeams = teamIds.length
+      ? (await db.select({ user_id: event_team_members.user_id }).from(event_team_members).where(inArray(event_team_members.event_team_id, teamIds)))
+      : [];
+    const inTeamSet = new Set(userIdsInTeams.map((r) => r.user_id));
+    if (inTeamSet.has(u1) || inTeamSet.has(u2)) {
+      return c.json({ error: "Both users must not already be in a team" }, 400);
+    }
     const existingUsers = await db
       .select({ id: users.id, role: users.role })
       .from(users)
