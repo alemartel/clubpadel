@@ -463,8 +463,46 @@ export async function removeTeamFromLeague(leagueId: string, teamId: string) {
   return response.json();
 }
 
+export interface GetPlayersResponse {
+  players: Array<{
+    id: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
+    phone_number?: string;
+    profile_picture_url?: string;
+    dni?: string;
+    tshirt_size?: string;
+    gender?: string;
+    role: string;
+    created_at: string;
+    updated_at: string;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  message?: string;
+}
+
+export async function getAdminPlayersPaginated(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<GetPlayersResponse> {
+  const { page = 1, limit = 20, search = "" } = params;
+  const sp = new URLSearchParams();
+  sp.set("page", String(page));
+  sp.set("limit", String(limit));
+  if (search.trim()) sp.set("search", search.trim());
+  const response = await fetchWithAuth(`/api/v1/admin/players?${sp.toString()}`);
+  return response.json();
+}
+
+/** @deprecated Use getAdminPlayersPaginated for paginated list. Kept for backwards compatibility. */
 export async function getAllPlayers() {
-  const response = await fetchWithAuth(`/api/v1/admin/players`);
+  const response = await fetchWithAuth(`/api/v1/admin/players?limit=1000`);
   return response.json();
 }
 

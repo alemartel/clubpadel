@@ -20,5 +20,10 @@
   "unknownPlayer": "Unknown Player",
   "joinedOn": "Joined on",
   "failedToLoadPlayers": "Failed to load players",
-  "adminAccessRequired": "Admin access required"
+  "adminAccessRequired": "Admin access required",
+  "showingXtoYofZ": "Showing {{from}}–{{to}} of {{total}}",
+  "previous": "Previous",
+  "next": "Next",
+  "page": "Page",
+  "perPage": "Per page"
 }

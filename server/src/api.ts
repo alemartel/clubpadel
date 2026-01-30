@@ -960,8 +960,33 @@ adminRoutes.get("/players", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all players with their validation status
-    const allPlayers = await db
+    const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "20", 10)));
+    const search = (c.req.query("search") || "").trim();
+    const offset = (page - 1) * limit;
+
+    const baseCondition = eq(users.role, "player");
+    const whereClause = search
+      ? and(
+          baseCondition,
+          or(
+            ilike(users.email, `%${search}%`),
+            ilike(users.first_name, `%${search}%`),
+            ilike(users.last_name, `%${search}%`),
+            ilike(users.display_name, `%${search}%`)
+          )
+        )
+      : baseCondition;
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(whereClause);
+
+    const total = Number(countResult?.count) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const playersPage = await db
       .select({
         id: users.id,
         email: users.email,
@@ -978,11 +1003,17 @@ adminRoutes.get("/players", async (c) => {
         updated_at: users.updated_at,
       })
       .from(users)
-      .where(eq(users.role, "player"))
-      .orderBy(desc(users.updated_at));
+      .where(whereClause)
+      .orderBy(desc(users.updated_at))
+      .limit(limit)
+      .offset(offset);
 
     return c.json({
-      players: allPlayers,
+      players: playersPage,
+      total,
+      page,
+      limit,
+      totalPages,
       message: "Players retrieved successfully",
     });
   } catch (error) {
@@ -3659,13 +3690,12 @@ adminRoutes.delete("/events/:eventId/participants/:userId", async (c) => {
     }
     const teamIds = (await db.select({ id: event_teams.id }).from(event_teams).where(eq(event_teams.event_id, eventId))).map((r) => r.id);
     if (teamIds.length > 0) {
-      const [alreadyInTeam] = await db
-        .select()
+      const memberships = await db
+        .select({ event_team_id: event_team_members.event_team_id })
         .from(event_team_members)
-        .where(and(eq(event_team_members.user_id, userId), inArray(event_team_members.event_team_id, teamIds)))
-        .limit(1);
-      if (alreadyInTeam) {
-        return c.json({ error: "Cannot remove participant: already in a team" }, 400);
+        .where(and(eq(event_team_members.user_id, userId), inArray(event_team_members.event_team_id, teamIds)));
+      for (const m of memberships) {
+        await db.delete(event_teams).where(eq(event_teams.id, m.event_team_id));
       }
     }
     await db

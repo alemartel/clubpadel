@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { getAllPlayers } from "@/lib/serverComm";
+import { getAdminPlayersPaginated } from "@/lib/serverComm";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Search, Users } from "lucide-react";
+import { Search, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -57,12 +57,15 @@ export function AdminPlayers() {
   const { t: tTeams } = useTranslation('teams');
   const { t: tLeagues } = useTranslation('leagues');
 
-  // State for all players
+  const PAGE_SIZE = 20;
+
   const [players, setPlayers] = useState<Player[]>([]);
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Player detail modal state
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -75,44 +78,43 @@ export function AdminPlayers() {
     }
   }, [isAdmin, loading, navigate, t]);
 
-  // Load all players on mount
-  useEffect(() => {
-    if (isAdmin) {
-      loadAllPlayers();
-    }
-  }, [isAdmin]);
-
-  // Filter players based on search term
-  useEffect(() => {
-    let filtered = players;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (player) =>
-          player.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (player.first_name && player.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (player.last_name && player.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (player.display_name && player.display_name.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    setFilteredPlayers(filtered);
-  }, [players, searchTerm]);
-
-  const loadAllPlayers = async () => {
+  const loadPlayers = useCallback(async (pageNum: number, search: string) => {
+    if (!isAdmin) return;
     setLoadingPlayers(true);
     setError("");
-
     try {
-      const response = await getAllPlayers();
+      const response = await getAdminPlayersPaginated({
+        page: pageNum,
+        limit: PAGE_SIZE,
+        search: search.trim() || undefined,
+      });
       setPlayers(response.players);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
+      setPage(response.page);
     } catch (err: any) {
       setError(err.message || t('failedToLoadPlayers'));
     } finally {
       setLoadingPlayers(false);
     }
-  };
+  }, [isAdmin, t]);
+
+  // Debounced search term: update 300ms after user stops typing, then go to page 1
+  const [searchDebounced, setSearchDebounced] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchDebounced(searchTerm);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load players when page or debounced search changes
+  useEffect(() => {
+    if (isAdmin) {
+      loadPlayers(page, searchDebounced);
+    }
+  }, [isAdmin, page, searchDebounced, loadPlayers]);
 
   const getPlayerName = (player: Player) => {
     if (player.display_name) return player.display_name;
@@ -155,7 +157,7 @@ export function AdminPlayers() {
         </div>
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-muted-foreground" />
-          <p className="text-lg font-bold">{players.length}</p>
+          <p className="text-lg font-bold">{total}</p>
         </div>
       </div>
 
@@ -172,7 +174,7 @@ export function AdminPlayers() {
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
               <span className="ml-3 text-muted-foreground">{t('loadingPlayers')}</span>
             </div>
-          ) : filteredPlayers.length === 0 ? (
+          ) : players.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
@@ -187,7 +189,7 @@ export function AdminPlayers() {
             </div>
           ) : (
         <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPlayers.map((player) => (
+              {players.map((player) => (
                   <Card key={player.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pt-6 pb-0 px-4">
                       <CardTitle className="text-base truncate">
@@ -215,6 +217,42 @@ export function AdminPlayers() {
                     <CardContent className="pt-2 px-4 pb-4" />
                 </Card>
               ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loadingPlayers && total > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            {t('showingXtoYofZ', {
+              from: total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1,
+              to: Math.min(page * PAGE_SIZE, total),
+              total,
+            })}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              {t('previous')}
+            </Button>
+            <span className="text-sm text-muted-foreground px-2">
+              {t('page')} {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              {t('next')}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 

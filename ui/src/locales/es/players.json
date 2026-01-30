@@ -20,5 +20,10 @@
   "unknownPlayer": "Jugador Desconocido",
   "joinedOn": "Se unió el",
   "failedToLoadPlayers": "Error al cargar jugadores",
-  "adminAccessRequired": "Se requiere acceso de administrador"
+  "adminAccessRequired": "Se requiere acceso de administrador",
+  "showingXtoYofZ": "Mostrando {{from}}–{{to}} de {{total}}",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "page": "Página",
+  "perPage": "Por página"
 }

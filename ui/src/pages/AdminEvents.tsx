@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -18,6 +23,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -38,6 +44,7 @@ import {
   Loader2,
   Trash2,
   Calendar,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,6 +141,12 @@ export function AdminEvents() {
 
   const [generateMatchesSubmitting, setGenerateMatchesSubmitting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [removeParticipantConfirm, setRemoveParticipantConfirm] = useState<{
+    open: boolean;
+    player: { user_id: string; first_name?: string; last_name?: string; email?: string } | null;
+  }>({ open: false, player: null });
+  const [playersOpen, setPlayersOpen] = useState(true);
+  const [teamsOpen, setTeamsOpen] = useState(true);
   const [matchResultSaving, setMatchResultSaving] = useState<string | null>(null);
 
   useEffect(() => {
@@ -282,10 +295,15 @@ export function AdminEvents() {
 
   const handleRemoveParticipant = async (userId: string) => {
     if (!eventId) return;
+    setRemoveParticipantConfirm({ open: false, player: null });
     try {
       const res = await api.removeEventParticipant(eventId, userId);
-      if (!res.error) loadEventDetail();
-      else toast.error(res.error);
+      if (!res.error) {
+        await loadEventDetail();
+        toast.success(t("playerRemovedFromEvent"));
+      } else {
+        toast.error(res.error);
+      }
     } catch (e) {
       toast.error("Failed to remove player");
     }
@@ -506,13 +524,19 @@ export function AdminEvents() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
+      {detailLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">
-            {detailLoading ? t("loadingEvents") : eventDetail?.event?.name ?? eventId}
+            {eventDetail?.event?.name ?? eventId}
           </h1>
           {eventDetail?.event && (
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -535,101 +559,127 @@ export function AdminEvents() {
           {tCommon("delete")}
         </Button>
       </div>
-
-      {detailLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
         <>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t("eventPlayers")} ({eventDetail?.participants?.length ?? 0})</CardTitle>
-              <Button onClick={handleAddParticipantOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t("addPlayer")}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {!eventDetail?.participants?.length ? (
-                <p className="text-sm text-muted-foreground">{t("addPlayersFirst")}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {eventDetail.participants.map((p) => (
-                    <li
-                      key={p.user_id}
-                      className="flex items-center justify-between border rounded-md px-3 py-2"
-                    >
-                      <span>
-                        {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || p.user_id}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveParticipant(p.user_id)}
-                        disabled={(eventDetail?.matches?.length ?? 0) > 0}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
+            <Collapsible open={playersOpen} onOpenChange={setPlayersOpen}>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform ${!playersOpen ? "-rotate-90" : ""}`}
+                    />
+                    <CardTitle className="text-sm font-medium">
+                      {t("eventPlayers")} ({eventDetail?.participants?.length ?? 0})
+                    </CardTitle>
+                  </button>
+                </CollapsibleTrigger>
+                <Button onClick={handleAddParticipantOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("addPlayer")}
+                </Button>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  {!eventDetail?.participants?.length ? (
+                    <p className="text-sm text-muted-foreground">{t("addPlayersFirst")}</p>
+                  ) : (
+                    <ul className="space-y-2 text-sm">
+                      {eventDetail.participants.map((p) => (
+                        <li
+                          key={p.user_id}
+                          className="flex items-center justify-between border rounded-md px-3 py-2"
+                        >
+                          <span>
+                            {[p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || p.user_id}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRemoveParticipantConfirm({ open: true, player: p })}
+                            disabled={(eventDetail?.matches?.length ?? 0) > 0}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t("teams")} ({teamCount})</CardTitle>
-              <Button onClick={handleAddTeamOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t("addTeam")}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {eventDetail?.teams?.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("addTeamsFromPlayers")}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {eventDetail?.teams?.map((team) => (
-                    <li
-                      key={team.id}
-                      className="flex items-center justify-between border rounded-md px-3 py-2"
-                    >
-                      <div>
-                        <span className="font-medium">{team.name}</span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          {team.members
-                            ?.map((m) => [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email)
-                            .join(" / ")}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveTeam(team.id)}
-                        disabled={(eventDetail?.matches?.length ?? 0) > 0}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {canGenerateMatches && (
-                <div className="mt-4">
-                  <Button
-                    onClick={handleGenerateMatches}
-                    disabled={generateMatchesSubmitting}
+            <Collapsible open={teamsOpen} onOpenChange={setTeamsOpen}>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
                   >
-                    {generateMatchesSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : null}
-                    {t("generateMatches")}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform ${!teamsOpen ? "-rotate-90" : ""}`}
+                    />
+                    <CardTitle className="text-sm font-medium">
+                      {t("teams")} ({teamCount})
+                    </CardTitle>
+                  </button>
+                </CollapsibleTrigger>
+                <Button onClick={handleAddTeamOpen} disabled={(eventDetail?.matches?.length ?? 0) > 0}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("addTeam")}
+                </Button>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  {eventDetail?.teams?.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("addTeamsFromPlayers")}</p>
+                  ) : (
+                    <ul className="space-y-2 text-sm">
+                      {eventDetail?.teams?.map((team) => (
+                        <li
+                          key={team.id}
+                          className="flex items-center justify-between border rounded-md px-3 py-2"
+                        >
+                          <div>
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-muted-foreground ml-2">
+                              {team.members
+                                ?.map((m) => [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email)
+                                .join(" / ")}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveTeam(team.id)}
+                            disabled={(eventDetail?.matches?.length ?? 0) > 0}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {canGenerateMatches && (
+                    <div className="mt-4">
+                      <Button
+                        onClick={handleGenerateMatches}
+                        disabled={generateMatchesSubmitting}
+                      >
+                        {generateMatchesSubmitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : null}
+                        {t("generateMatches")}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
 
           {(eventDetail?.matches?.length ?? 0) > 0 && (
@@ -748,6 +798,7 @@ export function AdminEvents() {
             </>
           )}
         </>
+      </>
       )}
 
       <Dialog open={addParticipantOpen} onOpenChange={setAddParticipantOpen}>
@@ -895,6 +946,38 @@ export function AdminEvents() {
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground">
+              {tCommon("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={removeParticipantConfirm.open}
+        onOpenChange={(open) => setRemoveParticipantConfirm((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirmRemovePlayer")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("confirmRemovePlayerMessage")}
+              {removeParticipantConfirm.player && (
+                <span className="block mt-2 font-medium">
+                  {[removeParticipantConfirm.player.first_name, removeParticipantConfirm.player.last_name]
+                    .filter(Boolean)
+                    .join(" ") || removeParticipantConfirm.player.email || removeParticipantConfirm.player.user_id}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                removeParticipantConfirm.player && handleRemoveParticipant(removeParticipantConfirm.player.user_id)
+              }
+              className="bg-destructive text-destructive-foreground"
+            >
               {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
