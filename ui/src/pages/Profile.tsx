@@ -390,7 +390,7 @@ export function Profile() {
                       setIsUploading(true);
                     }}
                     disabled={pictureLoading || isUploading}
-                    className="flex-1"
+                    className="flex-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-90 text-white border-0"
                   >
                     {isUploading ? (
                       <>
@@ -575,7 +575,7 @@ export function Profile() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
+                  className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-90 text-white flex-1 sm:flex-none border-0"
                 >
                   {loading ? (
                     <>
@@ -684,7 +684,7 @@ export function Profile() {
                 <Button
                   type="submit"
                   disabled={passwordLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
+                  className="bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-90 text-white flex-1 sm:flex-none border-0"
                 >
                   {passwordLoading ? (
                     <>
