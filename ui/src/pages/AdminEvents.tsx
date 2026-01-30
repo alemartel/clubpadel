@@ -802,7 +802,7 @@ export function AdminEvents() {
       )}
 
       <Dialog open={addParticipantOpen} onOpenChange={setAddParticipantOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
           <DialogHeader>
             <DialogTitle>{t("addPlayer")}</DialogTitle>
           </DialogHeader>
@@ -865,7 +865,7 @@ export function AdminEvents() {
       </Dialog>
 
       <Dialog open={addTeamOpen} onOpenChange={setAddTeamOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
           <DialogHeader>
             <DialogTitle>{t("addTeam")}</DialogTitle>
           </DialogHeader>
@@ -884,9 +884,9 @@ export function AdminEvents() {
               {(eventDetail?.participantsWithoutTeam?.length ?? 0) < 2 ? (
                 <p className="text-sm text-muted-foreground mt-2">{t("needMorePlayersWithoutTeam")}</p>
               ) : (
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="flex flex-col gap-2 mt-2">
                   <select
-                    className="border rounded-md px-3 py-2 text-sm"
+                    className="border rounded-md px-3 py-2 text-sm w-full"
                     value={addTeamPlayer1 ?? ""}
                     onChange={(e) => setAddTeamPlayer1(e.target.value || null)}
                   >
@@ -900,7 +900,7 @@ export function AdminEvents() {
                       ))}
                   </select>
                   <select
-                    className="border rounded-md px-3 py-2 text-sm"
+                    className="border rounded-md px-3 py-2 text-sm w-full"
                     value={addTeamPlayer2 ?? ""}
                     onChange={(e) => setAddTeamPlayer2(e.target.value || null)}
                   >

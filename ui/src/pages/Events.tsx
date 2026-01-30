@@ -321,7 +321,7 @@ export function Events() {
       </Dialog>
 
       <Dialog open={!!teamModalEventId} onOpenChange={(open) => !open && setTeamModalEventId(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[min(42rem,calc(100%-2rem))] p-4">
           <DialogHeader>
             <DialogTitle>{t("joinAsTeam")}</DialogTitle>
           </DialogHeader>
