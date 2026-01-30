@@ -2584,13 +2584,19 @@ protectedRoutes.get("/events", async (c) => {
       .orderBy(events.start_date);
     const withStatus = await Promise.all(
       list.map(async (ev) => {
+        const [matchRow] = await db
+          .select({ id: event_matches.id })
+          .from(event_matches)
+          .where(eq(event_matches.event_id, ev.id))
+          .limit(1);
+        const signup_open = !matchRow;
         const [participant] = await db
           .select()
           .from(event_participants)
           .where(and(eq(event_participants.event_id, ev.id), eq(event_participants.user_id, user.id)))
           .limit(1);
         if (!participant) {
-          return { ...ev, current_user_status: null, team_name: undefined };
+          return { ...ev, signup_open, current_user_status: null, team_name: undefined };
         }
         const teamRows = await db
           .select({ id: event_teams.id, name: event_teams.name })
@@ -2598,7 +2604,7 @@ protectedRoutes.get("/events", async (c) => {
           .where(eq(event_teams.event_id, ev.id));
         const teamIds = teamRows.map((r) => r.id);
         if (teamIds.length === 0) {
-          return { ...ev, current_user_status: "participant_without_team" as const, team_name: undefined };
+          return { ...ev, signup_open, current_user_status: "participant_without_team" as const, team_name: undefined };
         }
         const [memberRow] = await db
           .select({ event_team_id: event_team_members.event_team_id })
@@ -2606,11 +2612,12 @@ protectedRoutes.get("/events", async (c) => {
           .where(and(eq(event_team_members.user_id, user.id), inArray(event_team_members.event_team_id, teamIds)))
           .limit(1);
         if (!memberRow) {
-          return { ...ev, current_user_status: "participant_without_team" as const, team_name: undefined };
+          return { ...ev, signup_open, current_user_status: "participant_without_team" as const, team_name: undefined };
         }
         const team = teamRows.find((t) => t.id === memberRow.event_team_id);
         return {
           ...ev,
+          signup_open,
           current_user_status: "participant_in_team" as const,
           team_name: team?.name,
         };
@@ -2761,6 +2768,62 @@ protectedRoutes.post("/events/:eventId/join-as-team", async (c) => {
     return c.json({ team }, 201);
   } catch (error) {
     console.error("Join event as team error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Leave event (cancel registration) - only for future events (no matches generated)
+protectedRoutes.delete("/events/:eventId/leave", async (c) => {
+  try {
+    const user = c.get("user");
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const [matchRow] = await db
+      .select({ id: event_matches.id })
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .limit(1);
+    if (matchRow) {
+      return c.json({ error: "Cannot leave: event sign-up is closed (matches already generated)" }, 400);
+    }
+    const [participant] = await db
+      .select()
+      .from(event_participants)
+      .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, user.id)))
+      .limit(1);
+    if (!participant) {
+      return c.json({ error: "You are not a participant of this event" }, 400);
+    }
+    const teamRows = await db
+      .select({ id: event_teams.id })
+      .from(event_teams)
+      .where(eq(event_teams.event_id, eventId));
+    const teamIds = teamRows.map((r) => r.id);
+    if (teamIds.length > 0) {
+      const [memberRow] = await db
+        .select({ event_team_id: event_team_members.event_team_id })
+        .from(event_team_members)
+        .where(and(eq(event_team_members.user_id, user.id), inArray(event_team_members.event_team_id, teamIds)))
+        .limit(1);
+      if (memberRow) {
+        await db
+          .delete(event_team_members)
+          .where(and(eq(event_team_members.event_team_id, memberRow.event_team_id), eq(event_team_members.user_id, user.id)));
+        await db.delete(event_teams).where(eq(event_teams.id, memberRow.event_team_id));
+      }
+    }
+    await db
+      .delete(event_participants)
+      .where(and(eq(event_participants.event_id, eventId), eq(event_participants.user_id, user.id)));
+    return c.json({ message: "Left event" });
+  } catch (error) {
+    console.error("Leave event error:", error);
     const { message, status } = handleDatabaseError(error);
     return c.json({ error: message }, status as any);
   }

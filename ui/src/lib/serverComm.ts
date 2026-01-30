@@ -768,6 +768,14 @@ export async function joinEventAsTeam(
   return response.json();
 }
 
+export async function leaveEvent(eventId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/protected/events/${eventId}/leave`,
+    { method: "DELETE" }
+  );
+  return response.json();
+}
+
 export async function searchPlayersByName(q: string) {
   const response = await fetchWithAuth(
     `/api/v1/protected/players/search-by-name?q=${encodeURIComponent(q)}`
@@ -829,5 +837,6 @@ export const api = {
   getProtectedEvents,
   joinEvent,
   joinEventAsTeam,
+  leaveEvent,
   searchPlayersByName,
 };

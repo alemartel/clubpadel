@@ -24,6 +24,7 @@ interface ProtectedEvent {
   start_date: string;
   description?: string | null;
   created_at: string;
+  signup_open?: boolean;
   current_user_status: EventStatus;
   team_name?: string;
 }
@@ -43,6 +44,7 @@ export function Events() {
   const [events, setEvents] = useState<ProtectedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [joinIndividualEventId, setJoinIndividualEventId] = useState<string | null>(null);
+  const [confirmJoinIndividualEventId, setConfirmJoinIndividualEventId] = useState<string | null>(null);
   const [teamModalEventId, setTeamModalEventId] = useState<string | null>(null);
   const [partnerSearch, setPartnerSearch] = useState("");
   const [partnerResults, setPartnerResults] = useState<PlayerOption[]>([]);
@@ -50,6 +52,8 @@ export function Events() {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState("");
   const [joinTeamSubmitting, setJoinTeamSubmitting] = useState(false);
+  const [confirmLeaveEventId, setConfirmLeaveEventId] = useState<string | null>(null);
+  const [leaveEventId, setLeaveEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -97,12 +101,32 @@ export function Events() {
         toast.error(res.error);
       } else {
         toast.success(t("joinedEvent"));
+        setConfirmJoinIndividualEventId(null);
         loadEvents();
       }
     } catch (e) {
       toast.error(tCommon("error") || "Error");
     } finally {
       setJoinIndividualEventId(null);
+      setConfirmJoinIndividualEventId(null);
+    }
+  };
+
+  const handleLeaveEvent = async (eventId: string) => {
+    setConfirmLeaveEventId(null);
+    setLeaveEventId(eventId);
+    try {
+      const res = await api.leaveEvent(eventId);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success(t("registrationCancelled"));
+        loadEvents();
+      }
+    } catch (e) {
+      toast.error(tCommon("error") || "Error");
+    } finally {
+      setLeaveEventId(null);
     }
   };
 
@@ -192,11 +216,11 @@ export function Events() {
                 {ev.current_user_status === null && (
                   <div className="flex flex-wrap gap-2 mt-auto pt-2">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleJoinIndividual(ev.id)}
-                      disabled={joinIndividualEventId !== null}
-                    >
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmJoinIndividualEventId(ev.id)}
+                        disabled={joinIndividualEventId !== null}
+                      >
                       {joinIndividualEventId === ev.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -211,22 +235,90 @@ export function Events() {
                     </Button>
                   </div>
                 )}
-                {ev.current_user_status === "participant_without_team" && (
-                  <p className="text-sm text-muted-foreground mt-auto pt-2">
-                    {t("waitingForTeam")}
-                  </p>
-                )}
-                {ev.current_user_status === "participant_in_team" && ev.team_name && (
-                  <p className="text-sm text-muted-foreground mt-auto pt-2 flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {t("enrolledInTeam")} {ev.team_name}
-                  </p>
+                {(ev.current_user_status === "participant_without_team" || ev.current_user_status === "participant_in_team") && (
+                  <div className="mt-auto pt-2 flex flex-col gap-2">
+                    {ev.current_user_status === "participant_without_team" && (
+                      <p className="text-sm text-muted-foreground">{t("waitingForTeam")}</p>
+                    )}
+                    {ev.current_user_status === "participant_in_team" && ev.team_name && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {t("enrolledInTeam")} {ev.team_name}
+                      </p>
+                    )}
+                    {ev.signup_open && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setConfirmLeaveEventId(ev.id)}
+                        disabled={leaveEventId !== null}
+                      >
+                        {leaveEventId === ev.id ? <Loader2 className="w-4 h-4 animate-spin" /> : t("cancelRegistration")}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog
+        open={!!confirmJoinIndividualEventId}
+        onOpenChange={(open) => !open && setConfirmJoinIndividualEventId(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("confirmJoinWithoutTeam")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("confirmJoinWithoutTeamMessage")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmJoinIndividualEventId(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={() => confirmJoinIndividualEventId && handleJoinIndividual(confirmJoinIndividualEventId)}
+              disabled={joinIndividualEventId !== null}
+            >
+              {joinIndividualEventId === confirmJoinIndividualEventId ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("joinIndividual")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!confirmLeaveEventId}
+        onOpenChange={(open) => !open && setConfirmLeaveEventId(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("cancelRegistration")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("confirmCancelRegistration")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmLeaveEventId(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmLeaveEventId && handleLeaveEvent(confirmLeaveEventId)}
+              disabled={leaveEventId !== null}
+            >
+              {leaveEventId === confirmLeaveEventId ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("cancelRegistration")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!teamModalEventId} onOpenChange={(open) => !open && setTeamModalEventId(null)}>
         <DialogContent className="max-w-md">

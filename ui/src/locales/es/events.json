@@ -50,8 +50,10 @@
   "eventCreated": "Evento creado",
   "matchesGenerated": "Partidos generados",
   "availableEvents": "Eventos disponibles",
-  "joinIndividual": "Apuntarse individual",
-  "joinAsTeam": "Apuntarse por equipos",
+  "joinIndividual": "Apuntarme sin equipo",
+  "joinAsTeam": "Apuntarme con mi compi",
+  "confirmJoinWithoutTeam": "Apuntarte sin equipo",
+  "confirmJoinWithoutTeamMessage": "¿Quieres apuntarte sin equipo a este evento? Quedarás a la espera de formar parte de un equipo.",
   "waitingForTeam": "Ya estás apuntado. A la espera de formar parte de un equipo.",
   "enrolledInTeam": "Inscrito en equipo",
   "searchPartner": "Buscar pareja",
@@ -61,5 +63,8 @@
   "joinedEvent": "Te has apuntado al evento",
   "joinedEventAsTeam": "Equipo inscrito correctamente",
   "signUpClosed": "Inscripciones cerradas",
-  "noMatchingPlayers": "No se encontraron jugadores"
+  "noMatchingPlayers": "No se encontraron jugadores",
+  "cancelRegistration": "Cancelar inscripción",
+  "confirmCancelRegistration": "¿Quieres cancelar tu inscripción en este evento?",
+  "registrationCancelled": "Inscripción cancelada"
 }

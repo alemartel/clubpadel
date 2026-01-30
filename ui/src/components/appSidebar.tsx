@@ -63,8 +63,8 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {/* My Teams - Only visible to non-admin players */}
-              {!isAdmin && (
+              {/* My Teams - Temporarily disabled for players */}
+              {false && !isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isActive("/teams")}

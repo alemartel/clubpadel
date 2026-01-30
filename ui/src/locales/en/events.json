@@ -50,8 +50,10 @@
   "eventCreated": "Event created",
   "matchesGenerated": "Matches generated",
   "availableEvents": "Available events",
-  "joinIndividual": "Join individually",
-  "joinAsTeam": "Join as team",
+  "joinIndividual": "Sign me up (no team yet)",
+  "joinAsTeam": "Sign me up with my partner",
+  "confirmJoinWithoutTeam": "Sign up without a team",
+  "confirmJoinWithoutTeamMessage": "Do you want to sign up without a team? You will be waiting to be part of a team.",
   "waitingForTeam": "You are signed up. Waiting to be part of a team.",
   "enrolledInTeam": "Enrolled in team",
   "searchPartner": "Search partner",
@@ -61,5 +63,8 @@
   "joinedEvent": "You have joined the event",
   "joinedEventAsTeam": "Team registered successfully",
   "signUpClosed": "Sign-up is closed",
-  "noMatchingPlayers": "No matching players found"
+  "noMatchingPlayers": "No matching players found",
+  "cancelRegistration": "Cancel registration",
+  "confirmCancelRegistration": "Do you want to cancel your registration for this event?",
+  "registrationCancelled": "Registration cancelled"
 }
