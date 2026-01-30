@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trophy, Calendar, Users, Loader2 } from "lucide-react";
+import { Calendar, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type EventStatus = null | "participant_without_team" | "participant_in_team";
@@ -168,7 +168,7 @@ export function Events() {
       ) : events.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>{t("noEventsFound")}</p>
           </CardContent>
         </Card>

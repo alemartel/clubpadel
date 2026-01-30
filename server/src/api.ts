@@ -2590,7 +2590,7 @@ protectedRoutes.get("/events", async (c) => {
           .where(and(eq(event_participants.event_id, ev.id), eq(event_participants.user_id, user.id)))
           .limit(1);
         if (!participant) {
-          return { ...ev, current_user_status: null as const, team_name: undefined };
+          return { ...ev, current_user_status: null, team_name: undefined };
         }
         const teamRows = await db
           .select({ id: event_teams.id, name: event_teams.name })

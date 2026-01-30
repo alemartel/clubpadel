@@ -58,7 +58,7 @@ export function AppSidebar() {
                   asChild
                 >
                   <Link to="/events" onClick={handleMenuClick}>
-                    <Trophy className="w-4 h-4" />
+                    <Calendar className="w-4 h-4" />
                     <span>{t('events')}</span>
                   </Link>
                 </SidebarMenuButton>
