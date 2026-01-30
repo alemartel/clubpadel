@@ -11,6 +11,7 @@ import enNavigation from '../locales/en/navigation.json';
 import enTeams from '../locales/en/teams.json';
 import enLeagues from '../locales/en/leagues.json';
 import enPlayers from '../locales/en/players.json';
+import enEvents from '../locales/en/events.json';
 
 import esCommon from '../locales/es/common.json';
 import esAuth from '../locales/es/auth.json';
@@ -20,6 +21,7 @@ import esNavigation from '../locales/es/navigation.json';
 import esTeams from '../locales/es/teams.json';
 import esLeagues from '../locales/es/leagues.json';
 import esPlayers from '../locales/es/players.json';
+import esEvents from '../locales/es/events.json';
 
 const resources = {
   en: {
@@ -31,6 +33,7 @@ const resources = {
     teams: enTeams,
     leagues: enLeagues,
     players: enPlayers,
+    events: enEvents,
   },
   es: {
     common: esCommon,
@@ -41,6 +44,7 @@ const resources = {
     teams: esTeams,
     leagues: esLeagues,
     players: esPlayers,
+    events: esEvents,
   },
 };
 
@@ -60,7 +64,7 @@ i18n
 
     // Namespace configuration
     defaultNS: 'common',
-    ns: ['common', 'auth', 'profile', 'admin', 'navigation', 'teams', 'leagues', 'players'],
+    ns: ['common', 'auth', 'profile', 'admin', 'navigation', 'teams', 'leagues', 'players', 'events'],
 
     interpolation: {
       escapeValue: false, // React already does escaping

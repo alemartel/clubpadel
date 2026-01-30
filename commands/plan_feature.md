@@ -1,4 +1,4 @@
-The user will provide a feature description. Your job is to:
+The user will provide a feature description in spanish. Your job is to:
 
 1. Create a technical plan that concisely describes the feature the user wants to build.
 2. Research the files and functions that need to be changed to implement the feature

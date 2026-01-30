@@ -1,4 +1,4 @@
-import { Home, Settings, Calendar, Shield, Users, LayoutDashboard } from "lucide-react";
+import { Home, Settings, Calendar, Shield, Users, LayoutDashboard, Trophy } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -99,6 +99,17 @@ export function AppSidebar() {
                       <Link to="/admin/players" onClick={handleMenuClick}>
                         <Users className="w-4 h-4" />
                         <span>{t('playerManagement')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname.startsWith("/admin/events")}
+                      asChild
+                    >
+                      <Link to="/admin/events" onClick={handleMenuClick}>
+                        <Trophy className="w-4 h-4" />
+                        <span>{t('eventManagement')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

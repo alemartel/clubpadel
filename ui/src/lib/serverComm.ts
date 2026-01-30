@@ -623,6 +623,98 @@ export async function markNotificationAsRead(notificationId: string) {
   return response.json();
 }
 
+// Event (Americano) management
+export async function getEvents() {
+  const response = await fetchWithAuth("/api/v1/admin/events");
+  return response.json();
+}
+
+export async function createEvent(name: string) {
+  const response = await fetchWithAuth("/api/v1/admin/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return response.json();
+}
+
+export async function getEvent(eventId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}`);
+  return response.json();
+}
+
+export async function updateEvent(eventId: string, body: { name?: string }) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+export async function deleteEvent(eventId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}`, {
+    method: "DELETE",
+  });
+  return response.json();
+}
+
+export async function addEventTeam(
+  eventId: string,
+  body: { name: string; user_ids: [string, string] }
+) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}/teams`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+export async function removeEventTeam(eventId: string, teamId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/admin/events/${eventId}/teams/${teamId}`,
+    { method: "DELETE" }
+  );
+  return response.json();
+}
+
+export async function generateEventMatches(eventId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/admin/events/${eventId}/generate-matches`,
+    { method: "POST" }
+  );
+  return response.json();
+}
+
+export async function getEventMatches(eventId: string) {
+  const response = await fetchWithAuth(`/api/v1/admin/events/${eventId}/matches`);
+  return response.json();
+}
+
+export async function updateEventMatchResult(
+  eventId: string,
+  matchId: string,
+  body: { resultado_local?: number | null; resultado_visitante?: number | null }
+) {
+  const response = await fetchWithAuth(
+    `/api/v1/admin/events/${eventId}/matches/${matchId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  return response.json();
+}
+
+export async function getEventClassifications(eventId: string) {
+  const response = await fetchWithAuth(
+    `/api/v1/admin/events/${eventId}/classifications`
+  );
+  return response.json();
+}
+
 export const api = {
   getCurrentUser,
   updateUserProfile,
@@ -660,4 +752,16 @@ export const api = {
   joinTeam,
   getTeamChangeNotifications,
   markNotificationAsRead,
+  // Events (Americanos)
+  getEvents,
+  createEvent,
+  getEvent,
+  updateEvent,
+  deleteEvent,
+  addEventTeam,
+  removeEventTeam,
+  generateEventMatches,
+  getEventMatches,
+  updateEventMatchResult,
+  getEventClassifications,
 };

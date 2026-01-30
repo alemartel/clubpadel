@@ -14,5 +14,6 @@
   "admin": "Administrador",
   "checkingAdminAccess": "Verificando acceso de administrador...",
   "adminAccessRequired": "Se requiere acceso de administrador",
-  "controlPanel": "Panel de control"
+  "controlPanel": "Panel de control",
+  "eventManagement": "Eventos"
 }

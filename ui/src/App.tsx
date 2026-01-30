@@ -10,6 +10,7 @@ import { Profile } from "@/pages/Profile";
 import { AdminLeagues } from "@/pages/AdminLeagues";
 import { AdminTeams } from "@/pages/AdminTeams";
 import { AdminPlayers } from "@/pages/AdminPlayers";
+import { AdminEvents } from "@/pages/AdminEvents";
 import { ControlPanel } from "@/pages/ControlPanel";
 import { LeagueCalendarClassifications } from "@/pages/LeagueCalendarClassifications";
 import { MyTeams } from "./pages/MyTeams";
@@ -199,6 +200,22 @@ function AppContent() {
                         element={
                           <AdminRoute>
                             <AdminPlayers />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/events"
+                        element={
+                          <AdminRoute>
+                            <AdminEvents />
+                          </AdminRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/events/:eventId"
+                        element={
+                          <AdminRoute>
+                            <AdminEvents />
                           </AdminRoute>
                         }
                       />

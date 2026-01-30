@@ -32,7 +32,18 @@ import {
 } from "./schema/teams.js";
 import { eq, and, or, ne, sql, notInArray, desc, inArray } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator.js";
+import { createRoundRobinPairings } from "./lib/round-robin.js";
 import nodemailer from "nodemailer";
+import {
+  events,
+  event_teams,
+  event_team_members,
+  event_matches,
+  type NewEvent,
+  type NewEventTeam,
+  type NewEventTeamMember,
+  type NewEventMatch,
+} from "./schema/events.js";
 
 type Env = {
   RUNTIME?: string;
@@ -3090,6 +3101,430 @@ adminRoutes.delete("/leagues/:leagueId/calendar", async (c) => {
   } catch (error) {
     console.error("Calendar clear error:", error);
     return c.json(createErrorResponse("Failed to clear calendar", 500), 500);
+  }
+});
+
+// Admin Event (Americano) Management
+const VALID_EVENT_TEAM_COUNTS = [6, 8, 10, 12, 14];
+
+adminRoutes.get("/events", async (c) => {
+  try {
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const list = await db.select().from(events).orderBy(desc(events.created_at));
+    const withCounts = await Promise.all(
+      list.map(async (ev) => {
+        const [teamCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(event_teams)
+          .where(eq(event_teams.event_id, ev.id));
+        const [matchCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(event_matches)
+          .where(eq(event_matches.event_id, ev.id));
+        return {
+          ...ev,
+          team_count: teamCount?.count ?? 0,
+          match_count: matchCount?.count ?? 0,
+        };
+      })
+    );
+    return c.json({ events: withCounts });
+  } catch (error) {
+    console.error("List events error:", error);
+    return c.json(createErrorResponse("Failed to list events", 500), 500);
+  }
+});
+
+adminRoutes.post("/events", async (c) => {
+  try {
+    const adminUser = c.get("adminUser");
+    const body = await c.req.json<{ name: string }>();
+    const name = typeof body.name === "string" ? sanitizeText(body.name) : "";
+    if (!name) {
+      return c.json({ error: "Name is required" }, 400);
+    }
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const eventId = `event_${randomUUID()}`;
+    const newEvent: NewEvent = {
+      id: eventId,
+      name,
+      tipo_evento: "americano",
+      created_by: adminUser.id,
+    };
+    const [created] = await db.insert(events).values(newEvent).returning();
+    return c.json({ event: created }, 201);
+  } catch (error) {
+    console.error("Create event error:", error);
+    return c.json(createErrorResponse("Failed to create event", 500), 500);
+  }
+});
+
+adminRoutes.get("/events/:eventId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const eventTeams = await db
+      .select()
+      .from(event_teams)
+      .where(eq(event_teams.event_id, eventId))
+      .orderBy(event_teams.name);
+    const teamIds = eventTeams.map((t) => t.id);
+    const membersByTeam = teamIds.length
+      ? await db
+          .select({
+            event_team_id: event_team_members.event_team_id,
+            user_id: event_team_members.user_id,
+            first_name: users.first_name,
+            last_name: users.last_name,
+            email: users.email,
+          })
+          .from(event_team_members)
+          .innerJoin(users, eq(event_team_members.user_id, users.id))
+          .where(inArray(event_team_members.event_team_id, teamIds))
+      : [];
+    const eventMatches = await db
+      .select()
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .orderBy(event_matches.round_number, event_matches.id);
+    const teamsWithMembers = eventTeams.map((t) => ({
+      ...t,
+      members: membersByTeam
+        .filter((m) => m.event_team_id === t.id)
+        .map((m) => ({ user_id: m.user_id, first_name: m.first_name, last_name: m.last_name, email: m.email })),
+    }));
+    return c.json({
+      event: ev,
+      teams: teamsWithMembers,
+      matches: eventMatches,
+    });
+  } catch (error) {
+    console.error("Get event error:", error);
+    return c.json(createErrorResponse("Failed to get event", 500), 500);
+  }
+});
+
+adminRoutes.put("/events/:eventId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const body = await c.req.json<{ name?: string }>();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const updates: Partial<NewEvent> = {};
+    if (typeof body.name === "string" && body.name.trim()) {
+      updates.name = sanitizeText(body.name);
+    }
+    if (Object.keys(updates).length === 0) {
+      return c.json({ event: ev });
+    }
+    updates.updated_at = new Date();
+    const [updated] = await db
+      .update(events)
+      .set(updates)
+      .where(eq(events.id, eventId))
+      .returning();
+    return c.json({ event: updated });
+  } catch (error) {
+    console.error("Update event error:", error);
+    return c.json(createErrorResponse("Failed to update event", 500), 500);
+  }
+});
+
+adminRoutes.delete("/events/:eventId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    await db.delete(event_matches).where(eq(event_matches.event_id, eventId));
+    const teamRows = await db.select({ id: event_teams.id }).from(event_teams).where(eq(event_teams.event_id, eventId));
+    const teamIds = teamRows.map((r) => r.id);
+    if (teamIds.length > 0) {
+      await db.delete(event_team_members).where(inArray(event_team_members.event_team_id, teamIds));
+    }
+    await db.delete(event_teams).where(eq(event_teams.event_id, eventId));
+    await db.delete(events).where(eq(events.id, eventId));
+    return c.json({ message: "Event deleted" });
+  } catch (error) {
+    console.error("Delete event error:", error);
+    return c.json(createErrorResponse("Failed to delete event", 500), 500);
+  }
+});
+
+adminRoutes.post("/events/:eventId/teams", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const body = await c.req.json<{ name: string; user_ids: [string, string] }>();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const name = typeof body.name === "string" ? sanitizeText(body.name) : "";
+    const userIds = Array.isArray(body.user_ids) ? body.user_ids : [];
+    if (!name || userIds.length !== 2) {
+      return c.json({ error: "name and exactly 2 user_ids are required" }, 400);
+    }
+    const [u1, u2] = userIds as [string, string];
+    const existingUsers = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(inArray(users.id, [u1, u2]));
+    if (existingUsers.length !== 2) {
+      return c.json({ error: "Both users must exist" }, 400);
+    }
+    if (existingUsers.some((u) => u.role === "admin")) {
+      return c.json({ error: "Admins cannot be added as event team members" }, 400);
+    }
+    const teamId = `evt_${randomUUID()}`;
+    await db.insert(event_teams).values({
+      id: teamId,
+      event_id: eventId,
+      name,
+    } as NewEventTeam);
+    for (const uid of [u1, u2]) {
+      await db.insert(event_team_members).values({
+        id: randomUUID(),
+        event_team_id: teamId,
+        user_id: uid,
+      } as NewEventTeamMember);
+    }
+    const [team] = await db.select().from(event_teams).where(eq(event_teams.id, teamId)).limit(1);
+    return c.json({ team }, 201);
+  } catch (error) {
+    console.error("Add event team error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+adminRoutes.delete("/events/:eventId/teams/:teamId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const teamId = c.req.param("teamId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const [team] = await db
+      .select()
+      .from(event_teams)
+      .where(and(eq(event_teams.event_id, eventId), eq(event_teams.id, teamId)))
+      .limit(1);
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
+    const [existingMatches] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId));
+    if ((existingMatches?.count ?? 0) > 0) {
+      return c.json({ error: "Cannot remove team: event already has generated matches" }, 400);
+    }
+    await db.delete(event_team_members).where(eq(event_team_members.event_team_id, teamId));
+    await db.delete(event_teams).where(eq(event_teams.id, teamId));
+    return c.json({ message: "Team removed" });
+  } catch (error) {
+    console.error("Remove event team error:", error);
+    return c.json(createErrorResponse("Failed to remove team", 500), 500);
+  }
+});
+
+adminRoutes.post("/events/:eventId/generate-matches", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const existing = await db.select().from(event_matches).where(eq(event_matches.event_id, eventId));
+    if (existing.length > 0) {
+      return c.json({ error: "Matches already generated for this event" }, 400);
+    }
+    const eventTeamsList = await db
+      .select({ id: event_teams.id })
+      .from(event_teams)
+      .where(eq(event_teams.event_id, eventId));
+    const teamIds = eventTeamsList.map((t) => t.id);
+    if (!VALID_EVENT_TEAM_COUNTS.includes(teamIds.length)) {
+      return c.json(
+        { error: "Team count must be 6, 8, 10, 12 or 14" },
+        400
+      );
+    }
+    const pairings = createRoundRobinPairings(teamIds);
+    for (const p of pairings) {
+      await db.insert(event_matches).values({
+        id: randomUUID(),
+        event_id: eventId,
+        round_number: p.round_number,
+        home_team_id: p.home_team_id,
+        away_team_id: p.away_team_id,
+      } as NewEventMatch);
+    }
+    const matchesList = await db
+      .select()
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .orderBy(event_matches.round_number, event_matches.id);
+    return c.json({ matches: matchesList }, 201);
+  } catch (error) {
+    console.error("Generate event matches error:", error);
+    return c.json(createErrorResponse("Failed to generate matches", 500), 500);
+  }
+});
+
+adminRoutes.get("/events/:eventId/matches", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const matchesList = await db
+      .select()
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId))
+      .orderBy(event_matches.round_number, event_matches.id);
+    return c.json({ matches: matchesList });
+  } catch (error) {
+    console.error("Get event matches error:", error);
+    return c.json(createErrorResponse("Failed to get matches", 500), 500);
+  }
+});
+
+adminRoutes.put("/events/:eventId/matches/:matchId", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const matchId = c.req.param("matchId");
+    const body = await c.req.json<{ resultado_local?: number | null; resultado_visitante?: number | null }>();
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [match] = await db
+      .select()
+      .from(event_matches)
+      .where(and(eq(event_matches.event_id, eventId), eq(event_matches.id, matchId)))
+      .limit(1);
+    if (!match) {
+      return c.json({ error: "Match not found" }, 404);
+    }
+    let resultado_local: number | null = undefined as any;
+    let resultado_visitante: number | null = undefined as any;
+    if (body.resultado_local !== undefined) {
+      resultado_local = body.resultado_local == null ? null : Number(body.resultado_local);
+      if (resultado_local !== null && (resultado_local < 0 || !Number.isInteger(resultado_local))) {
+        return c.json({ error: "resultado_local must be a non-negative integer or null" }, 400);
+      }
+    }
+    if (body.resultado_visitante !== undefined) {
+      resultado_visitante = body.resultado_visitante == null ? null : Number(body.resultado_visitante);
+      if (resultado_visitante !== null && (resultado_visitante < 0 || !Number.isInteger(resultado_visitante))) {
+        return c.json({ error: "resultado_visitante must be a non-negative integer or null" }, 400);
+      }
+    }
+    const updates: Record<string, unknown> = { updated_at: new Date() };
+    if (resultado_local !== undefined) updates.resultado_local = resultado_local;
+    if (resultado_visitante !== undefined) updates.resultado_visitante = resultado_visitante;
+    const [updated] = await db
+      .update(event_matches)
+      .set(updates as any)
+      .where(eq(event_matches.id, matchId))
+      .returning();
+    return c.json({ match: updated });
+  } catch (error) {
+    console.error("Update match result error:", error);
+    return c.json(createErrorResponse("Failed to update match", 500), 500);
+  }
+});
+
+adminRoutes.get("/events/:eventId/classifications", async (c) => {
+  try {
+    const eventId = c.req.param("eventId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!ev) {
+      return c.json({ error: "Event not found" }, 404);
+    }
+    const eventTeamsList = await db
+      .select({ id: event_teams.id, name: event_teams.name })
+      .from(event_teams)
+      .where(eq(event_teams.event_id, eventId));
+    const eventMatchesList = await db
+      .select()
+      .from(event_matches)
+      .where(eq(event_matches.event_id, eventId));
+    const stats: Record<
+      string,
+      { team_id: string; team_name: string; PJ: number; PG: number; PP: number; PF: number; PC: number; DIF: number; PTS: number }
+    > = {};
+    for (const t of eventTeamsList) {
+      stats[t.id] = {
+        team_id: t.id,
+        team_name: t.name,
+        PJ: 0,
+        PG: 0,
+        PP: 0,
+        PF: 0,
+        PC: 0,
+        DIF: 0,
+        PTS: 0,
+      };
+    }
+    for (const m of eventMatchesList) {
+      const hl = m.resultado_local;
+      const av = m.resultado_visitante;
+      if (hl == null || av == null) continue;
+      const homeId = m.home_team_id;
+      const awayId = m.away_team_id;
+      if (stats[homeId]) {
+        stats[homeId].PJ += 1;
+        stats[homeId].PF += hl;
+        stats[homeId].PC += av;
+        if (hl > av) stats[homeId].PG += 1;
+        else if (av > hl) stats[homeId].PP += 1;
+      }
+      if (stats[awayId]) {
+        stats[awayId].PJ += 1;
+        stats[awayId].PF += av;
+        stats[awayId].PC += hl;
+        if (av > hl) stats[awayId].PG += 1;
+        else if (hl > av) stats[awayId].PP += 1;
+      }
+    }
+    for (const id of Object.keys(stats)) {
+      stats[id].DIF = stats[id].PF - stats[id].PC;
+      stats[id].PTS = stats[id].PG;
+    }
+    const sorted = Object.values(stats).sort((a, b) => {
+      if (b.PTS !== a.PTS) return b.PTS - a.PTS;
+      return a.team_name.localeCompare(b.team_name);
+    });
+    return c.json({ classifications: sorted });
+  } catch (error) {
+    console.error("Get classifications error:", error);
+    return c.json(createErrorResponse("Failed to get classifications", 500), 500);
   }
 });
 

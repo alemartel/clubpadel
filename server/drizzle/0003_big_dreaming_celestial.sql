@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS "app"."teams" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "claimed_level" "level";--> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "level_validation_status" "level_validation_status" DEFAULT 'none' NOT NULL;--> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "level_validated_at" timestamp;--> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "level_validated_by" text;--> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "level_validation_notes" text;
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "claimed_level" "level";--> statement-breakpoint
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "level_validation_status" "level_validation_status" DEFAULT 'none' NOT NULL;--> statement-breakpoint
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "level_validated_at" timestamp;--> statement-breakpoint
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "level_validated_by" text;--> statement-breakpoint
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "level_validation_notes" text;

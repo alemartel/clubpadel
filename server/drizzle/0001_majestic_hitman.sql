@@ -4,4 +4,4 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-ALTER TABLE "app"."users" ADD COLUMN "role" "user_role" DEFAULT 'player' NOT NULL;
+ALTER TABLE "app"."users" ADD COLUMN IF NOT EXISTS "role" "user_role" DEFAULT 'player' NOT NULL;
