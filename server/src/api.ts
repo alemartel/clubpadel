@@ -3012,6 +3012,7 @@ protectedRoutes.post("/events/:eventId/join-as-team", async (c) => {
 protectedRoutes.delete("/events/:eventId/leave", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const eventId = c.req.param("eventId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
@@ -3727,6 +3728,7 @@ adminRoutes.get("/events", async (c) => {
 adminRoutes.post("/events", async (c) => {
   try {
     const adminUser = c.get("adminUser");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json<{ name: string; start_date: string; description?: string }>();
     const name = typeof body.name === "string" ? sanitizeText(body.name) : "";
     if (!name) {
@@ -3747,6 +3749,7 @@ adminRoutes.post("/events", async (c) => {
     const newEvent: NewEvent = {
       id: eventId,
       name,
+      tenant_id: tenantId,
       tipo_evento: "americano",
       start_date: startDateRaw.trim().slice(0, 10) as any,
       description,
@@ -3832,6 +3835,7 @@ adminRoutes.get("/events/:eventId", async (c) => {
 adminRoutes.put("/events/:eventId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json<{ name?: string; start_date?: string; description?: string }>();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
@@ -3871,6 +3875,7 @@ adminRoutes.put("/events/:eventId", async (c) => {
 adminRoutes.delete("/events/:eventId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
     const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
@@ -4067,6 +4072,7 @@ adminRoutes.delete("/events/:eventId/teams/:teamId", async (c) => {
 adminRoutes.post("/events/:eventId/generate-matches", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
     const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
