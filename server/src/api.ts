@@ -32,7 +32,7 @@ import {
 import { eq, and, or, ne, sql, notInArray, desc, inArray, ilike } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator.js";
 import { createRoundRobinPairings } from "./lib/round-robin.js";
-import { resolveTenantIdFromHost } from "./lib/tenant.js";
+import { getTenantHostFromRequest, resolveTenantIdFromHost } from "./lib/tenant.js";
 import nodemailer from "nodemailer";
 import {
   events,
@@ -940,7 +940,7 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
 // Public League Endpoints (No Authentication Required)
 api.get("/leagues", async (c) => {
   try {
-    const host = c.req.header("Host");
+    const host = getTenantHostFromRequest(c.req.raw);
     const tenantId = await resolveTenantIdFromHost(host);
     if (!tenantId) {
       return c.json({ error: "Unknown host" }, 403);
@@ -966,7 +966,7 @@ api.get("/leagues", async (c) => {
 api.get("/leagues/:id", async (c) => {
   try {
     const leagueId = c.req.param("id");
-    const host = c.req.header("Host");
+    const host = getTenantHostFromRequest(c.req.raw) ?? undefined;
     const tenantId = await resolveTenantIdFromHost(host);
     if (!tenantId) {
       return c.json({ error: "Unknown host" }, 403);

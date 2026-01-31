@@ -1,7 +1,7 @@
 import { MiddlewareHandler } from "hono";
 import { verifyFirebaseToken } from "../lib/firebase-auth.js";
 import { getDatabase } from "../lib/db.js";
-import { resolveTenantIdFromHost } from "../lib/tenant.js";
+import { getTenantHostFromRequest, resolveTenantIdFromHost } from "../lib/tenant.js";
 import { eq, and } from "drizzle-orm";
 import { User, users } from "../schema/users.js";
 import { team_members, team_change_notifications } from "../schema/teams.js";
@@ -18,7 +18,7 @@ declare module "hono" {
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   try {
-    const host = c.req.header("Host");
+    const host = getTenantHostFromRequest(c.req.raw) ?? undefined;
     const tenantId = await resolveTenantIdFromHost(host);
     if (!tenantId) {
       return c.json({ error: "Tenant not found for this host" }, 403);
