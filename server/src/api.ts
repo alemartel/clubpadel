@@ -7,7 +7,6 @@ import { authMiddleware } from "./middleware/auth.js";
 import { adminMiddleware } from "./middleware/admin.js";
 import { getDatabase, testDatabaseConnection } from "./lib/db.js";
 import { setEnvContext, clearEnvContext, getDatabaseUrl, getEnv } from "./lib/env.js";
-import * as schema from "./schema/users.js";
 import { users, levelEnum } from "./schema/users.js";
 import {
   leagues,
@@ -33,6 +32,7 @@ import {
 import { eq, and, or, ne, sql, notInArray, desc, inArray, ilike } from "drizzle-orm";
 import { CalendarGenerator } from "./lib/calendar-generator.js";
 import { createRoundRobinPairings } from "./lib/round-robin.js";
+import { resolveTenantIdFromHost } from "./lib/tenant.js";
 import nodemailer from "nodemailer";
 import {
   events,
@@ -93,8 +93,8 @@ function generatePasscode(): string {
   return passcode;
 }
 
-// Helper function to generate a unique passcode (checks database for collisions)
-async function generateUniquePasscode(db: any): Promise<string> {
+// Helper function to generate a unique passcode (checks database for collisions within tenant)
+async function generateUniquePasscode(db: any, tenantId: string): Promise<string> {
   let passcode: string;
   let attempts = 0;
   const maxAttempts = 100;
@@ -104,7 +104,7 @@ async function generateUniquePasscode(db: any): Promise<string> {
     const [existing] = await db
       .select()
       .from(teams)
-      .where(eq(teams.passcode, passcode));
+      .where(and(eq(teams.passcode, passcode), eq(teams.tenant_id, tenantId)));
     
     if (!existing) {
       return passcode;
@@ -127,9 +127,21 @@ function handleDatabaseError(error: any): { message: string; status: number } {
         status: 409,
       };
     }
-    if (error.constraint === "teams_name_unique") {
+    if (error.constraint === "teams_name_unique" || error.constraint === "teams_tenant_name_unique") {
       return {
         message: "Team name must be unique",
+        status: 409,
+      };
+    }
+    if (error.constraint === "leagues_tenant_name_unique") {
+      return {
+        message: "League name must be unique",
+        status: 409,
+      };
+    }
+    if (error.constraint === "events_tenant_name_unique") {
+      return {
+        message: "Event name must be unique",
         status: 409,
       };
     }
@@ -306,13 +318,8 @@ api.get("/db-test", async (c) => {
       );
     }
 
-    console.log("[db-test] Querying users table...");
-    const result = await db.select().from(schema.users).limit(5);
-    console.log(`[db-test] Query successful, found ${result.length} users`);
-
     return c.json({
       message: "Database connection successful!",
-      users: result,
       connectionHealthy: isHealthy,
       usingLocalDatabase: !getDatabaseUrl(),
       timestamp: new Date().toISOString(),
@@ -497,6 +504,7 @@ adminRoutes.use("*", adminMiddleware);
 adminRoutes.post("/leagues", async (c) => {
   try {
     const adminUser = c.get("adminUser");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
 
     const { name, start_date, end_date, level, gender } = body;
@@ -535,6 +543,7 @@ adminRoutes.post("/leagues", async (c) => {
 
     const newLeague: NewLeague = {
       id: leagueId,
+      tenant_id: tenantId,
       name: sanitizedName,
       level: level as any,
       gender: gender as any,
@@ -566,10 +575,14 @@ adminRoutes.post("/leagues", async (c) => {
 
 adminRoutes.get("/leagues", async (c) => {
   try {
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    const allLeagues = await db.select().from(leagues);
+    const allLeagues = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.tenant_id, tenantId));
 
     return c.json({
       leagues: allLeagues,
@@ -584,13 +597,14 @@ adminRoutes.get("/leagues", async (c) => {
 adminRoutes.get("/leagues/:id", async (c) => {
   try {
     const leagueId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
@@ -640,13 +654,14 @@ adminRoutes.put("/leagues/:id", async (c) => {
     if (level !== undefined) updateData.level = level as any;
     if (gender !== undefined) updateData.gender = gender as any;
 
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
     const [updatedLeague] = await db
       .update(leagues)
       .set(updateData)
-      .where(eq(leagues.id, leagueId))
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)))
       .returning();
 
     if (!updatedLeague) {
@@ -666,14 +681,15 @@ adminRoutes.put("/leagues/:id", async (c) => {
 adminRoutes.delete("/leagues/:id", async (c) => {
   try {
     const leagueId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if league exists
+    // Check if league exists and belongs to tenant
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
@@ -698,11 +714,10 @@ adminRoutes.delete("/leagues/:id", async (c) => {
       })
       .where(eq(teams.league_id, leagueId));
 
-    // Delete the league
-    const [deletedLeague] = await db
+    // Delete the league (scoped by tenant)
+    await db
       .delete(leagues)
-      .where(eq(leagues.id, leagueId))
-      .returning();
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     return c.json({
       message: "League deleted successfully",
@@ -714,15 +729,16 @@ adminRoutes.delete("/leagues/:id", async (c) => {
   }
 });
 
-// Admin: List all teams with members, filters by gender/level
+// Admin: List all teams with members, filters by gender/level (tenant-scoped)
 adminRoutes.get("/teams", async (c) => {
   try {
     const { gender, level } = c.req.query();
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Build base team conditions
-    const teamConditions: any[] = [];
+    // Build base team conditions (always filter by tenant)
+    const teamConditions: any[] = [eq(teams.tenant_id, tenantId)];
     if (gender) {
       teamConditions.push(eq(teams.gender, gender as any));
     }
@@ -734,7 +750,7 @@ adminRoutes.get("/teams", async (c) => {
     const teamRows = await db
       .select()
       .from(teams)
-      .where(teamConditions.length ? and(...teamConditions) : undefined);
+      .where(and(...teamConditions));
 
     if (teamRows.length === 0) {
       return c.json({ teams: [], total: 0 });
@@ -809,11 +825,12 @@ adminRoutes.get("/teams", async (c) => {
   }
 });
 
-// Admin: Update member paid status/date/amount (per league)
+// Admin: Update member paid status/date/amount (per league) (team must belong to tenant)
 adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
   try {
     const teamId = c.req.param("teamId");
     const userId = c.req.param("userId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { paid, paid_at, paid_amount, league_id } = body as { paid: boolean; paid_at?: string; paid_amount?: number; league_id?: string };
 
@@ -827,6 +844,15 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Verify team belongs to tenant
+    const [team] = await db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
+    if (!team) {
+      return c.json({ error: "Team not found" }, 404);
+    }
 
     // Verify membership exists
     const [membership] = await db
@@ -914,10 +940,18 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
 // Public League Endpoints (No Authentication Required)
 api.get("/leagues", async (c) => {
   try {
+    const host = c.req.header("Host");
+    const tenantId = await resolveTenantIdFromHost(host);
+    if (!tenantId) {
+      return c.json({ error: "Unknown host" }, 403);
+    }
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    const allLeagues = await db.select().from(leagues);
+    const allLeagues = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.tenant_id, tenantId));
 
     return c.json({
       leagues: allLeagues,
@@ -932,13 +966,18 @@ api.get("/leagues", async (c) => {
 api.get("/leagues/:id", async (c) => {
   try {
     const leagueId = c.req.param("id");
+    const host = c.req.header("Host");
+    const tenantId = await resolveTenantIdFromHost(host);
+    if (!tenantId) {
+      return c.json({ error: "Unknown host" }, 403);
+    }
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
@@ -954,9 +993,10 @@ api.get("/leagues/:id", async (c) => {
   }
 });
 
-// Admin Player Management Endpoints
+// Admin Player Management Endpoints (tenant-scoped)
 adminRoutes.get("/players", async (c) => {
   try {
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
@@ -965,7 +1005,7 @@ adminRoutes.get("/players", async (c) => {
     const search = (c.req.query("search") || "").trim();
     const offset = (page - 1) * limit;
 
-    const baseCondition = eq(users.role, "player");
+    const baseCondition = and(eq(users.role, "player"), eq(users.tenant_id, tenantId));
     const whereClause = search
       ? and(
           baseCondition,
@@ -1023,12 +1063,22 @@ adminRoutes.get("/players", async (c) => {
   }
 });
 
-// Admin: Get all teams and leagues for a specific player
+// Admin: Get all teams and leagues for a specific player (player must belong to tenant)
 adminRoutes.get("/players/:playerId/teams", async (c) => {
   try {
     const playerId = c.req.param("playerId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Verify player belongs to tenant
+    const [player] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, playerId), eq(users.tenant_id, tenantId)));
+    if (!player) {
+      return c.json({ error: "Player not found" }, 404);
+    }
 
     // Get all team memberships for this player with team and league information
     // Use team_leagues to get all leagues for each team
@@ -1125,10 +1175,11 @@ adminRoutes.get("/players/:playerId/teams", async (c) => {
 adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get all teams in this league using team_leagues junction table
+    // Get all teams in this league using team_leagues junction table (league must belong to tenant)
     const leagueTeams = await db
       .select({
         team: teams,
@@ -1151,7 +1202,7 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
       .innerJoin(teams, eq(team_leagues.team_id, teams.id))
       .innerJoin(leagues, eq(team_leagues.league_id, leagues.id))
       .innerJoin(users, eq(teams.created_by, users.id))
-      .where(eq(team_leagues.league_id, leagueId));
+      .where(and(eq(team_leagues.league_id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (leagueTeams.length === 0) {
       return c.json({
@@ -1235,6 +1286,7 @@ adminRoutes.get("/leagues/:leagueId/teams", async (c) => {
 adminRoutes.post("/leagues/:leagueId/teams", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { team_id } = body;
 
@@ -1245,21 +1297,21 @@ adminRoutes.post("/leagues/:leagueId/teams", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check league exists
+    // Check league exists and belongs to tenant
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
     }
 
-    // Check team exists
+    // Check team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, team_id));
+      .where(and(eq(teams.id, team_id), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1368,25 +1420,26 @@ adminRoutes.delete("/leagues/:leagueId/teams/:teamId", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
     const teamId = c.req.param("teamId");
+    const tenantId = c.get("tenantId");
 
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check league exists
+    // Check league exists and belongs to tenant
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
     }
 
-    // Check team exists
+    // Check team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1492,25 +1545,28 @@ protectedRoutes.post("/teams", async (c) => {
       }
     }
 
-    // Check if team name is unique (globally since teams no longer require leagues)
+    const tenantId = c.get("tenantId");
+
+    // Check if team name is unique within tenant
     const [existingTeam] = await db
       .select()
       .from(teams)
-      .where(eq(teams.name, sanitizedName));
+      .where(and(eq(teams.tenant_id, tenantId), eq(teams.name, sanitizedName)));
 
     if (existingTeam) {
       return c.json({ error: "Team name must be unique" }, 409);
     }
 
-    // Generate unique passcode
-    const teamPasscode = await generateUniquePasscode(db);
+    // Generate unique passcode (scoped to tenant)
+    const teamPasscode = await generateUniquePasscode(db, tenantId);
 
-    // Create team without league_id
+    // Create team without league_id (with tenant_id)
     const teamId = randomUUID();
     const [newTeam] = await db
       .insert(teams)
       .values({
         id: teamId,
+        tenant_id: tenantId,
         name: sanitizedName,
         level: level as "2" | "3" | "4",
         gender: gender as "male" | "female" | "mixed",
@@ -1556,10 +1612,11 @@ protectedRoutes.post("/teams", async (c) => {
 protectedRoutes.get("/teams", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get teams where user is a member (using leftJoin for nullable league)
+    // Get teams where user is a member, scoped to current tenant
     const userTeams = await db
       .select({
         team: teams,
@@ -1579,11 +1636,14 @@ protectedRoutes.get("/teams", async (c) => {
       .from(teams)
       .leftJoin(leagues, eq(teams.league_id, leagues.id))
       .where(
-        sql`${teams.id} IN (
-          SELECT tm.team_id 
-          FROM ${team_members} tm 
-          WHERE tm.user_id = ${user.id}
-        )`
+        and(
+          eq(teams.tenant_id, tenantId),
+          sql`${teams.id} IN (
+            SELECT tm.team_id 
+            FROM ${team_members} tm 
+            WHERE tm.user_id = ${user.id}
+          )`
+        )
       );
 
     // Get payment status for the current user for each team's primary league
@@ -1638,11 +1698,12 @@ protectedRoutes.get("/teams", async (c) => {
   }
 });
 
-// Lookup team by passcode (for confirmation before joining)
+// Lookup team by passcode (for confirmation before joining) (scoped to tenant)
 // IMPORTANT: This must be registered BEFORE /teams/:id to avoid route conflicts
 protectedRoutes.get("/teams/lookup", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const passcode = c.req.query("passcode");
 
     if (!passcode) {
@@ -1652,13 +1713,13 @@ protectedRoutes.get("/teams/lookup", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Find team by passcode (case-insensitive, trimmed)
+    // Find team by passcode and tenant (case-insensitive, trimmed)
     const normalizedPasscode = passcode.trim().toUpperCase();
     
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.passcode, normalizedPasscode));
+      .where(and(eq(teams.passcode, normalizedPasscode), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Invalid passcode" }, 404);
@@ -1689,10 +1750,11 @@ protectedRoutes.get("/teams/:id", async (c) => {
   try {
     const user = c.get("user");
     const teamId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get team details with optional league (using leftJoin for nullable foreign keys)
+    // Get team details with optional league (scoped to tenant)
     const [teamData] = await db
       .select({
         team: teams,
@@ -1705,7 +1767,7 @@ protectedRoutes.get("/teams/:id", async (c) => {
       })
       .from(teams)
       .leftJoin(leagues, eq(teams.league_id, leagues.id))
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!teamData || !teamData.team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1789,14 +1851,15 @@ protectedRoutes.put("/teams/:id", async (c) => {
       return c.json({ error: "At least one field (name or level) must be provided" }, 400);
     }
 
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1840,7 +1903,7 @@ protectedRoutes.put("/teams/:id", async (c) => {
         const [existingTeam] = await db
           .select()
           .from(teams)
-          .where(and(eq(teams.name, sanitizedName), ne(teams.id, teamId)));
+          .where(and(eq(teams.tenant_id, tenantId), eq(teams.name, sanitizedName), ne(teams.id, teamId)));
 
         if (existingTeam) {
           return c.json({ error: "Team name must be unique" }, 409);
@@ -1871,11 +1934,11 @@ protectedRoutes.put("/teams/:id", async (c) => {
       updateData.level = level;
     }
 
-    // Update team
+    // Update team (scoped by tenant)
     const [updatedTeam] = await db
       .update(teams)
       .set(updateData)
-      .where(eq(teams.id, teamId))
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)))
       .returning();
 
     return c.json({
@@ -1893,14 +1956,15 @@ protectedRoutes.delete("/teams/:id", async (c) => {
   try {
     const user = c.get("user");
     const teamId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1911,10 +1975,10 @@ protectedRoutes.delete("/teams/:id", async (c) => {
       return c.json({ error: "Only admins can delete teams" }, 403);
     }
 
-    // Delete team (cascade will handle team_members)
+    // Delete team (scoped by tenant; cascade will handle team_members)
     await db
       .delete(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     return c.json({
       message: "Team deleted successfully",
@@ -1929,6 +1993,7 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
   try {
     const user = c.get("user");
     const teamId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { user_id } = body;
 
@@ -1939,11 +2004,11 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -1964,11 +2029,11 @@ protectedRoutes.post("/teams/:id/members", async (c) => {
       return c.json({ error: "Maximum number of players (4) reached" }, 400);
     }
 
-    // Check if target user exists
+    // Check if target user exists and belongs to tenant
     const [targetUser] = await db
       .select()
       .from(users)
-      .where(eq(users.id, user_id));
+      .where(and(eq(users.id, user_id), eq(users.tenant_id, tenantId)));
 
     if (!targetUser) {
       return c.json({ error: "User not found" }, 404);
@@ -2077,14 +2142,15 @@ protectedRoutes.delete("/teams/:id/members/:userId", async (c) => {
     const user = c.get("user");
     const teamId = c.req.param("id");
     const userId = c.req.param("userId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -2145,14 +2211,15 @@ protectedRoutes.get("/teams/:id/availability", async (c) => {
   try {
     const user = c.get("user");
     const teamId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -2190,15 +2257,16 @@ protectedRoutes.put("/teams/:id/availability", async (c) => {
   try {
     const user = c.get("user");
     const teamId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const { availability } = await c.req.json();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if team exists
+    // Check if team exists and belongs to tenant
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.id, teamId));
+      .where(and(eq(teams.id, teamId), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Team not found" }, 404);
@@ -2365,6 +2433,7 @@ async function validateTeamJoin(db: any, user: any, team: any): Promise<{ valid:
 protectedRoutes.post("/teams/join", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { passcode } = body;
 
@@ -2375,13 +2444,13 @@ protectedRoutes.post("/teams/join", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Find team by passcode (case-insensitive, trimmed)
+    // Find team by passcode and tenant (case-insensitive, trimmed)
     const normalizedPasscode = passcode.trim().toUpperCase();
     
     const [team] = await db
       .select()
       .from(teams)
-      .where(eq(teams.passcode, normalizedPasscode));
+      .where(and(eq(teams.passcode, normalizedPasscode), eq(teams.tenant_id, tenantId)));
 
     if (!team) {
       return c.json({ error: "Invalid passcode" }, 404);
@@ -2432,6 +2501,7 @@ protectedRoutes.post("/teams/join", async (c) => {
 protectedRoutes.get("/players/search", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const { level, gender, league_id } = c.req.query();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
@@ -2440,11 +2510,11 @@ protectedRoutes.get("/players/search", async (c) => {
     let excludedUserIds: string[] = [];
 
     if (league_id) {
-      // Verify the league exists
+      // Verify the league exists and belongs to tenant
       const [league] = await db
         .select()
         .from(leagues)
-        .where(eq(leagues.id, league_id));
+        .where(and(eq(leagues.id, league_id), eq(leagues.tenant_id, tenantId)));
 
       if (!league) {
         return c.json({ error: "League not found" }, 404);
@@ -2480,26 +2550,30 @@ protectedRoutes.get("/players/search", async (c) => {
 
           excludedUserIds = conflictingTeamMembers.map(m => m.user_id);
         } else {
-          // Invalid level or gender, fall back to excluding all team members
+          // Invalid level or gender, fall back to excluding all team members (tenant-scoped)
           const allTeamMembers = await db
             .select({ user_id: team_members.user_id })
-            .from(team_members);
+            .from(team_members)
+            .innerJoin(teams, eq(team_members.team_id, teams.id))
+            .where(eq(teams.tenant_id, tenantId));
 
           excludedUserIds = allTeamMembers.map(m => m.user_id);
         }
       } else {
-        // If level or gender not provided, fall back to excluding all team members
-        // (for backwards compatibility or edge cases)
+        // If level or gender not provided, fall back to excluding all team members (tenant-scoped)
         const allTeamMembers = await db
           .select({ user_id: team_members.user_id })
-          .from(team_members);
+          .from(team_members)
+          .innerJoin(teams, eq(team_members.team_id, teams.id))
+          .where(eq(teams.tenant_id, tenantId));
 
         excludedUserIds = allTeamMembers.map(m => m.user_id);
       }
     }
 
-    // Build base query conditions
+    // Build base query conditions (scope by tenant)
     const conditions = [
+      eq(users.tenant_id, tenantId),
       ne(users.id, user.id), // Exclude current user
       eq(users.role, "player"), // Exclude admins
       excludedUserIds.length > 0 ? notInArray(users.id, excludedUserIds) : undefined
@@ -2536,12 +2610,12 @@ protectedRoutes.get("/players/search", async (c) => {
       totalAvailable: availablePlayers.length,
     };
 
-    // Only include league info if league_id was provided and league exists
+    // Only include league info if league_id was provided and league exists (tenant-scoped)
     if (league_id) {
       const [league] = await db
         .select()
         .from(leagues)
-        .where(eq(leagues.id, league_id));
+        .where(and(eq(leagues.id, league_id), eq(leagues.tenant_id, tenantId)));
       
       if (league) {
         responseData.league = {
@@ -2558,10 +2632,11 @@ protectedRoutes.get("/players/search", async (c) => {
   }
 });
 
-// Player search by name/email (min 3 chars) for event partner search
+// Player search by name/email (min 3 chars) for event partner search (tenant-scoped)
 protectedRoutes.get("/players/search-by-name", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const q = (c.req.query("q") ?? "").trim();
     if (q.length < 3) {
       return c.json({ error: "Query q must be at least 3 characters" }, 400);
@@ -2579,6 +2654,7 @@ protectedRoutes.get("/players/search-by-name", async (c) => {
       .from(users)
       .where(
         and(
+          eq(users.tenant_id, tenantId),
           ne(users.id, user.id),
           eq(users.role, "player"),
           or(
@@ -2596,10 +2672,11 @@ protectedRoutes.get("/players/search-by-name", async (c) => {
   }
 });
 
-// List events for player (eventos disponibles) with current user status
+// List events for player (eventos disponibles) with current user status (tenant-scoped)
 protectedRoutes.get("/events", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
     const list = await db
@@ -2612,6 +2689,7 @@ protectedRoutes.get("/events", async (c) => {
         created_at: events.created_at,
       })
       .from(events)
+      .where(eq(events.tenant_id, tenantId))
       .orderBy(events.start_date);
     const withStatus = await Promise.all(
       list.map(async (ev) => {
@@ -2665,13 +2743,14 @@ protectedRoutes.get("/events", async (c) => {
 protectedRoutes.post("/events/:eventId/join", async (c) => {
   try {
     const user = c.get("user");
+    const tenantId = c.get("tenantId");
     if (user.role === "admin") {
       return c.json({ error: "Admins cannot join events as participants" }, 400);
     }
     const eventId = c.req.param("eventId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -2721,9 +2800,10 @@ protectedRoutes.post("/events/:eventId/join-as-team", async (c) => {
     if (partnerId === user.id) {
       return c.json({ error: "Cannot form team with yourself" }, 400);
     }
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -2811,7 +2891,7 @@ protectedRoutes.delete("/events/:eventId/leave", async (c) => {
     const eventId = c.req.param("eventId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -2864,6 +2944,7 @@ protectedRoutes.delete("/events/:eventId/leave", async (c) => {
 adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { start_date } = body;
 
@@ -2879,12 +2960,12 @@ adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Get league info
+    // Get league info (must belong to tenant)
     console.log(`Getting league info for leagueId: ${leagueId}`);
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       console.log(`League not found for leagueId: ${leagueId}`);
@@ -2927,10 +3008,20 @@ adminRoutes.post("/leagues/:leagueId/generate-calendar", async (c) => {
 adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     console.log(`Retrieving calendar for league: ${leagueId}`);
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Verify league belongs to tenant
+    const [league] = await db
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
 
     // Placeholder date for matches needing manual assignment
     const placeholderDate = new Date('2099-12-31');
@@ -3045,10 +3136,20 @@ adminRoutes.get("/leagues/:leagueId/calendar", async (c) => {
 adminRoutes.get("/leagues/:leagueId/classifications", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     console.log(`Retrieving classifications for league: ${leagueId}`);
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Verify league belongs to tenant
+    const [leagueRow] = await db
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
+    if (!leagueRow) {
+      return c.json({ error: "League not found" }, 404);
+    }
 
     // Get all teams in the league
     const leagueTeams = await db
@@ -3162,11 +3263,12 @@ adminRoutes.put("/leagues/:leagueId/matches/:matchId/date", async (c) => {
       return c.json({ error: "Match already has an assigned date. Please use the edit functionality to change it." }, 400);
     }
 
-    // Get league dates for validation
+    // Get league dates for validation (must belong to tenant)
+    const tenantId = c.get("tenantId");
     const [league] = await db
       .select()
       .from(leagues)
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
 
     if (!league) {
       return c.json({ error: "League not found" }, 404);
@@ -3263,6 +3365,7 @@ adminRoutes.put("/leagues/:leagueId/matches/:matchId/date", async (c) => {
 adminRoutes.put("/leagues/:id/dates", async (c) => {
   try {
     const leagueId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json();
     const { start_date, end_date } = body;
 
@@ -3280,14 +3383,18 @@ adminRoutes.put("/leagues/:id/dates", async (c) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    await db
+    const [updated] = await db
       .update(leagues)
       .set({
         start_date: startDate,
         end_date: endDate,
         updated_at: new Date(),
       })
-      .where(eq(leagues.id, leagueId));
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)))
+      .returning();
+    if (!updated) {
+      return c.json({ error: "League not found" }, 404);
+    }
 
     return c.json({
       message: "League dates updated successfully",
@@ -3302,10 +3409,11 @@ adminRoutes.put("/leagues/:id/dates", async (c) => {
 adminRoutes.get("/team-change-notifications", async (c) => {
   try {
     const filter = c.req.query("filter") || "unread";
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Build base query with joins
+    // Build base query with joins (scope by tenant via teams.tenant_id)
     const baseQuery = db
       .select({
         id: team_change_notifications.id,
@@ -3324,13 +3432,14 @@ adminRoutes.get("/team-change-notifications", async (c) => {
       .innerJoin(users, eq(team_change_notifications.user_id, users.id))
       .innerJoin(teams, eq(team_change_notifications.team_id, teams.id));
 
+    const tenantCond = eq(teams.tenant_id, tenantId);
     // Apply filter; use a single expression so the filtered query has a consistent type
     const filteredQuery =
       filter === "read"
-        ? baseQuery.where(eq(team_change_notifications.read, true))
+        ? baseQuery.where(and(tenantCond, eq(team_change_notifications.read, true)))
         : filter === "unread"
-          ? baseQuery.where(eq(team_change_notifications.read, false))
-          : baseQuery.where(sql`1 = 1`);
+          ? baseQuery.where(and(tenantCond, eq(team_change_notifications.read, false)))
+          : baseQuery.where(tenantCond);
 
     // Order by date descending (newest first)
     const notifications = await filteredQuery.orderBy(desc(team_change_notifications.created_at));
@@ -3359,18 +3468,23 @@ adminRoutes.get("/team-change-notifications", async (c) => {
   }
 });
 
-// Admin: Mark notification as read
+// Admin: Mark notification as read (only if notification's team belongs to tenant)
 adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
   try {
     const notificationId = c.req.param("id");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // Check if notification exists
+    // Check if notification exists and its team belongs to tenant
     const [notification] = await db
-      .select()
+      .select({
+        notification: team_change_notifications,
+        team_id: teams.id,
+      })
       .from(team_change_notifications)
-      .where(eq(team_change_notifications.id, notificationId));
+      .innerJoin(teams, eq(team_change_notifications.team_id, teams.id))
+      .where(and(eq(team_change_notifications.id, notificationId), eq(teams.tenant_id, tenantId)));
 
     if (!notification) {
       return c.json({ error: "Notification not found" }, 404);
@@ -3387,11 +3501,11 @@ adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
       .returning();
 
     return c.json({
-      notification: {
+      notification: updated ? {
         id: updated.id,
         read: updated.read,
         read_at: updated.read_at ? updated.read_at.toISOString() : null,
-      },
+      } : { id: notificationId, read: true, read_at: new Date().toISOString() },
       message: "Notification marked as read",
     });
   } catch (error) {
@@ -3405,10 +3519,20 @@ adminRoutes.post("/team-change-notifications/:id/read", async (c) => {
 adminRoutes.delete("/leagues/:leagueId/calendar", async (c) => {
   try {
     const leagueId = c.req.param("leagueId");
+    const tenantId = c.get("tenantId");
     console.log(`Clearing calendar for league: ${leagueId}`);
     
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
+
+    // Verify league belongs to tenant
+    const [league] = await db
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(and(eq(leagues.id, leagueId), eq(leagues.tenant_id, tenantId)));
+    if (!league) {
+      return c.json({ error: "League not found" }, 404);
+    }
 
     // Delete all bye weeks for this league (if table exists)
     try {
@@ -3444,9 +3568,14 @@ const VALID_EVENT_TEAM_COUNTS = [6, 8, 10, 12, 14];
 
 adminRoutes.get("/events", async (c) => {
   try {
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const list = await db.select().from(events).orderBy(desc(events.created_at));
+    const list = await db
+      .select()
+      .from(events)
+      .where(eq(events.tenant_id, tenantId))
+      .orderBy(desc(events.created_at));
     const withCounts = await Promise.all(
       list.map(async (ev) => {
         const [teamCount] = await db
@@ -3510,9 +3639,10 @@ adminRoutes.post("/events", async (c) => {
 adminRoutes.get("/events/:eventId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3581,7 +3711,7 @@ adminRoutes.put("/events/:eventId", async (c) => {
     const body = await c.req.json<{ name?: string; start_date?: string; description?: string }>();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3605,7 +3735,7 @@ adminRoutes.put("/events/:eventId", async (c) => {
     const [updated] = await db
       .update(events)
       .set(updates)
-      .where(eq(events.id, eventId))
+      .where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId)))
       .returning();
     return c.json({ event: updated });
   } catch (error) {
@@ -3619,7 +3749,7 @@ adminRoutes.delete("/events/:eventId", async (c) => {
     const eventId = c.req.param("eventId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3642,10 +3772,11 @@ adminRoutes.delete("/events/:eventId", async (c) => {
 adminRoutes.post("/events/:eventId/participants", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json<{ user_id: string }>();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3653,7 +3784,7 @@ adminRoutes.post("/events/:eventId/participants", async (c) => {
     if (!userId) {
       return c.json({ error: "user_id is required" }, 400);
     }
-    const [u] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    const [u] = await db.select({ id: users.id, role: users.role }).from(users).where(and(eq(users.id, userId), eq(users.tenant_id, tenantId))).limit(1);
     if (!u) {
       return c.json({ error: "User not found" }, 400);
     }
@@ -3682,9 +3813,10 @@ adminRoutes.delete("/events/:eventId/participants/:userId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
     const userId = c.req.param("userId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3711,10 +3843,11 @@ adminRoutes.delete("/events/:eventId/participants/:userId", async (c) => {
 adminRoutes.post("/events/:eventId/teams", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const body = await c.req.json<{ name: string; user_ids: [string, string] }>();
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3776,9 +3909,10 @@ adminRoutes.delete("/events/:eventId/teams/:teamId", async (c) => {
   try {
     const eventId = c.req.param("eventId");
     const teamId = c.req.param("teamId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3811,7 +3945,7 @@ adminRoutes.post("/events/:eventId/generate-matches", async (c) => {
     const eventId = c.req.param("eventId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3855,9 +3989,10 @@ adminRoutes.post("/events/:eventId/generate-matches", async (c) => {
 adminRoutes.get("/events/:eventId/matches", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }
@@ -3920,9 +4055,10 @@ adminRoutes.put("/events/:eventId/matches/:matchId", async (c) => {
 adminRoutes.get("/events/:eventId/classifications", async (c) => {
   try {
     const eventId = c.req.param("eventId");
+    const tenantId = c.get("tenantId");
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
-    const [ev] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    const [ev] = await db.select().from(events).where(and(eq(events.id, eventId), eq(events.tenant_id, tenantId))).limit(1);
     if (!ev) {
       return c.json({ error: "Event not found" }, 404);
     }

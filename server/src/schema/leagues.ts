@@ -10,9 +10,13 @@ import {
 import { appSchema } from "./users.js";
 import { genderEnum, levelEnum } from "./enums.js";
 import { teams } from "./teams.js";
+import { tenants } from "./tenants.js";
 
 export const leagues = appSchema.table("leagues", {
   id: text("id").primaryKey(),
+  tenant_id: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "restrict" }),
   name: text("name").notNull(),
   level: levelEnum("level").notNull(), // League level (2, 3, 4)
   gender: genderEnum("gender").notNull(), // League gender (male, female, mixed)
@@ -21,7 +25,9 @@ export const leagues = appSchema.table("leagues", {
   created_by: text("created_by").notNull(), // Foreign key to users.id
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantNameUnique: unique("leagues_tenant_name_unique").on(table.tenant_id, table.name),
+}));
 
 export const matches = appSchema.table("matches", {
   id: text("id").primaryKey(),

@@ -151,7 +151,7 @@ export function AdminEvents() {
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
-      navigate("/inplay", { state: { error: tNav("adminAccessRequired") } });
+      navigate("/inicio", { state: { error: tNav("adminAccessRequired") } });
     }
   }, [authLoading, isAdmin, navigate, tNav]);
 

@@ -10,11 +10,15 @@ import {
 import { pgEnum } from "drizzle-orm/pg-core";
 import { appSchema } from "./users.js";
 import { users } from "./users.js";
+import { tenants } from "./tenants.js";
 
 export const eventTypeEnum = pgEnum("event_type", ["americano"]);
 
 export const events = appSchema.table("events", {
   id: text("id").primaryKey(),
+  tenant_id: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "restrict" }),
   name: text("name").notNull(),
   tipo_evento: eventTypeEnum("tipo_evento").default("americano").notNull(),
   start_date: date("start_date").notNull(),
@@ -24,7 +28,9 @@ export const events = appSchema.table("events", {
     .references(() => users.id),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantNameUnique: unique("events_tenant_name_unique").on(table.tenant_id, table.name),
+}));
 
 export const event_participants = appSchema.table(
   "event_participants",

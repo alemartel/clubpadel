@@ -10,9 +10,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { appSchema, users } from "./users.js";
 import { leagues, levelEnum, genderEnum } from "./leagues.js";
+import { tenants } from "./tenants.js";
 
 export const teams = appSchema.table("teams", {
   id: text("id").primaryKey(),
+  tenant_id: text("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "restrict" }),
   name: text("name").notNull(),
   level: levelEnum("level").notNull(), // Team level (2, 3, 4)
   gender: genderEnum("gender").notNull(), // Team gender (male, female, mixed)
@@ -22,12 +26,8 @@ export const teams = appSchema.table("teams", {
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  // Unique constraint on team name within league (only applies when league_id is not null)
-  // Note: This constraint will be NULL for teams without leagues, allowing global team name uniqueness
   leagueNameUnique: unique("teams_league_name_unique").on(table.league_id, table.name),
-  // Global unique constraint on team name regardless of league
-  nameUnique: unique("teams_name_unique").on(table.name),
-  // Unique constraint on passcode
+  tenantNameUnique: unique("teams_tenant_name_unique").on(table.tenant_id, table.name),
   passcodeUnique: unique("teams_passcode_unique").on(table.passcode),
 }));
 

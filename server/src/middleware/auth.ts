@@ -1,7 +1,8 @@
 import { MiddlewareHandler } from "hono";
 import { verifyFirebaseToken } from "../lib/firebase-auth.js";
 import { getDatabase } from "../lib/db.js";
-import { eq } from "drizzle-orm";
+import { resolveTenantIdFromHost } from "../lib/tenant.js";
+import { eq, and } from "drizzle-orm";
 import { User, users } from "../schema/users.js";
 import { team_members, team_change_notifications } from "../schema/teams.js";
 import { teams } from "../schema/teams.js";
@@ -11,11 +12,18 @@ import { getFirebaseProjectId, getDatabaseUrl } from "../lib/env.js";
 declare module "hono" {
   interface ContextVariableMap {
     user: User;
+    tenantId: string;
   }
 }
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   try {
+    const host = c.req.header("Host");
+    const tenantId = await resolveTenantIdFromHost(host);
+    if (!tenantId) {
+      return c.json({ error: "Tenant not found for this host" }, 403);
+    }
+
     const authHeader = c.req.header("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -33,57 +41,57 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const databaseUrl = getDatabaseUrl();
     const db = await getDatabase(databaseUrl);
 
-    // First, try to find user by Firebase ID
+    // First, try to find user by Firebase ID and tenant
     let user: User | null =
       (await db
         .select()
         .from(users)
-        .where(eq(users.id, firebaseUser.id))
+        .where(and(eq(users.id, firebaseUser.id), eq(users.tenant_id, tenantId)))
         .limit(1))[0] ?? null;
-    
-    // If user doesn't exist by ID, try to find by email
+
+    // If user doesn't exist by ID, try to find by email within this tenant
     if (!user && firebaseUser.email) {
       const [userByEmail] = await db
         .select()
         .from(users)
-        .where(eq(users.email, firebaseUser.email))
+        .where(and(eq(users.email, firebaseUser.email), eq(users.tenant_id, tenantId)))
         .limit(1);
-      
+
       if (userByEmail) {
         // User exists with different ID - we'll migrate it below
         user = null; // Set to null so we go through migration logic
       } else {
-        // User doesn't exist at all - create new user
-        // Check if this is the admin email
+        // User doesn't exist at all - create new user in this tenant
         const adminEmails = ["admin@mypadelcenter.com"];
         const isAdmin = firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase());
-        
+
         await db
           .insert(users)
           .values({
             id: firebaseUser.id,
+            tenant_id: tenantId,
             email: firebaseUser.email,
             display_name: null,
             photo_url: null,
-            role: isAdmin ? "admin" : "player", // Assign admin role for specific emails
+            role: isAdmin ? "admin" : "player",
           })
           .onConflictDoNothing();
-        
+
         // Get the newly created user
         [user] = await db
           .select()
           .from(users)
-          .where(eq(users.id, firebaseUser.id))
+          .where(and(eq(users.id, firebaseUser.id), eq(users.tenant_id, tenantId)))
           .limit(1);
       }
     }
 
     if (!user) {
-      // Try to find user by email as fallback (migration case)
+      // Try to find user by email within this tenant (migration case)
       const [userByEmail] = await db
         .select()
         .from(users)
-        .where(eq(users.email, firebaseUser.email!))
+        .where(and(eq(users.email, firebaseUser.email!), eq(users.tenant_id, tenantId)))
         .limit(1);
       
       if (userByEmail) {
@@ -112,6 +120,7 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
               .insert(users)
               .values({
                 id: newUserId,
+                tenant_id: userByEmail.tenant_id,
                 email: firebaseUser.email!,
                 display_name: userByEmail.display_name,
                 photo_url: userByEmail.photo_url,
@@ -200,15 +209,23 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
           .limit(1);
         
         if (updatedUser) {
+          if (updatedUser.tenant_id !== tenantId) {
+            return c.json({ error: "User does not belong to this tenant" }, 403);
+          }
+          c.set("tenantId", tenantId);
           c.set("user", updatedUser);
           await next();
           return;
         }
       }
-      
+
       throw new Error("Failed to create or retrieve user");
     }
 
+    if (user.tenant_id !== tenantId) {
+      return c.json({ error: "User does not belong to this tenant" }, 403);
+    }
+    c.set("tenantId", tenantId);
     c.set("user", user);
     await next();
   } catch (error) {

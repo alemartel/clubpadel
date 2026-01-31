@@ -3,13 +3,13 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "inplay.mypadelcenter.com" }],
-      "destination": "/inplay",
+      "destination": "/inicio",
       "permanent": false
     },
     {
       "source": "/",
       "has": [{ "type": "host", "value": "www.inplay.mypadelcenter.com" }],
-      "destination": "/inplay",
+      "destination": "/inicio",
       "permanent": false
     }
   ],

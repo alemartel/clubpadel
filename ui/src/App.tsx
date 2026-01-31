@@ -44,7 +44,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return (
-      <Navigate to="/inplay" replace state={{ error: "Admin access required" }} />
+      <Navigate to="/inicio" replace state={{ error: "Admin access required" }} />
     );
   }
 
@@ -65,7 +65,7 @@ function TeamCreationRoute({ children }: { children: React.ReactNode }) {
 
   if (!canCreateTeams) {
     return (
-      <Navigate to="/inplay" replace state={{ error: "You need a validated level to create teams" }} />
+      <Navigate to="/inicio" replace state={{ error: "You need a validated level to create teams" }} />
     );
   }
 
@@ -84,13 +84,13 @@ function AuthRedirectHandler() {
     // 2. Not loading
     // 3. Not on themirrorclub page
     // 4. This is a fresh login (not a page refresh)
-    if (!loading && user && location.pathname !== "/inplay" && location.pathname !== "/") {
+    if (!loading && user && location.pathname !== "/inicio" && location.pathname !== "/") {
       // Check if this is a fresh login by looking at sessionStorage
       const hasRedirectedThisSession = sessionStorage.getItem('hasRedirectedThisSession');
       
       if (!hasRedirectedThisSession) {
         // This is a fresh login, redirect to themirrorclub
-        navigate("/inplay", { replace: true });
+        navigate("/inicio", { replace: true });
         sessionStorage.setItem('hasRedirectedThisSession', 'true');
       }
     }
@@ -161,8 +161,8 @@ function AppContent() {
                 <SidebarInset className="flex-1">
                   <main className="flex-1">
                     <Routes>
-                      <Route path="/inplay" element={<Home />} />
-                      <Route path="/register" element={<Navigate to="/inplay" replace />} />
+                      <Route path="/inicio" element={<Home />} />
+                      <Route path="/register" element={<Navigate to="/inicio" replace />} />
                       <Route
                         path="/settings"
                         element={

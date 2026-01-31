@@ -3,28 +3,39 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import { userRoleEnum, levelEnum, genderEnum } from "./enums.js";
+import { tenants } from "./tenants.js";
 
 // Create private schema for application tables
 export const appSchema = pgSchema("app");
 
-export const users = appSchema.table("users", {
-  id: text("id").primaryKey(),
-  email: text("email").unique().notNull(),
-  display_name: text("display_name"),
-  photo_url: text("photo_url"),
-  first_name: text("first_name"),
-  last_name: text("last_name"),
-  phone_number: text("phone_number"),
-  dni: text("dni"),
-  tshirt_size: text("tshirt_size"),
-  gender: genderEnum("gender"), // Nullable to support existing users
-  role: userRoleEnum("role").default("player").notNull(),
-  profile_picture_url: text("profile_picture_url"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
+export const users = appSchema.table(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    tenant_id: text("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    email: text("email").notNull(),
+    display_name: text("display_name"),
+    photo_url: text("photo_url"),
+    first_name: text("first_name"),
+    last_name: text("last_name"),
+    phone_number: text("phone_number"),
+    dni: text("dni"),
+    tshirt_size: text("tshirt_size"),
+    gender: genderEnum("gender"), // Nullable to support existing users
+    role: userRoleEnum("role").default("player").notNull(),
+    profile_picture_url: text("profile_picture_url"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantEmailUnique: unique("users_tenant_email_unique").on(table.tenant_id, table.email),
+  })
+);
 
 // Re-export enums for convenience
 export { userRoleEnum, levelEnum };

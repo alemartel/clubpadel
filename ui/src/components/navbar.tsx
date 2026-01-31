@@ -26,7 +26,7 @@ export function Navbar() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      navigate("/inplay");
+      navigate("/inicio");
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -36,7 +36,7 @@ export function Navbar() {
     if (isTeamDetailPage) {
       navigate("/teams");
     } else if (isProfilePage) {
-      navigate("/inplay");
+      navigate("/inicio");
     } else if (isLeagueCalendarPage) {
       navigate("/admin/leagues");
     } else {

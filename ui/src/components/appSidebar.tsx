@@ -43,10 +43,10 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={isActive("/inplay")}
+                  isActive={isActive("/inicio")}
                   asChild
                 >
-                  <Link to="/inplay" onClick={handleMenuClick}>
+                  <Link to="/inicio" onClick={handleMenuClick}>
                     <Home className="w-4 h-4" />
                     <span>{t('home')}</span>
                   </Link>
