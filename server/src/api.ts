@@ -940,7 +940,7 @@ adminRoutes.post("/teams/:teamId/members/:userId/paid", async (c) => {
 // Public League Endpoints (No Authentication Required)
 api.get("/leagues", async (c) => {
   try {
-    const host = getTenantHostFromRequest(c.req.raw);
+    const host = getTenantHostFromRequest(c.req.raw) ?? undefined;
     const tenantId = await resolveTenantIdFromHost(host);
     if (!tenantId) {
       return c.json({ error: "Unknown host" }, 403);
