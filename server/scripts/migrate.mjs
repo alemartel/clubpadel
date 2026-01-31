@@ -71,6 +71,41 @@ try {
     }
   }
 
+  // Strip Drizzle "--> statement-breakpoint" lines (not valid in raw postgres)
+  function stripBreakpoints(content) {
+    return content.replace(/--> statement-breakpoint\n?/g, '\n').trim();
+  }
+
+  // 0027: Multi-tenant (tenants table + tenant_id on users, teams, leagues, events)
+  const multiTenantPath = join(migrationsFolder, '0027_multi_tenant.sql');
+  try {
+    const multiTenantSql = stripBreakpoints(readFileSync(multiTenantPath, 'utf8'));
+    await sql.unsafe(multiTenantSql);
+    console.log('Multi-tenant migration (0027) completed.');
+  } catch (err) {
+    if (err.code === '42P07' || err.message?.includes('already exists')) {
+      console.log('Multi-tenant migration already applied, skipping.');
+    } else {
+      console.error('0027 error:', err.message);
+      throw err;
+    }
+  }
+
+  // 0028: Migrate default tenant to inplay (for DBs that had tenant_id = 'default')
+  const defaultTenantToInplayPath = join(migrationsFolder, '0028_default_tenant_to_inplay.sql');
+  try {
+    const defaultTenantSql = stripBreakpoints(readFileSync(defaultTenantToInplayPath, 'utf8'));
+    await sql.unsafe(defaultTenantSql);
+    console.log('Default tenant to inplay migration (0028) completed.');
+  } catch (err) {
+    if (err.code === '42P01' || err.message?.includes('does not exist')) {
+      console.log('0028 skipped (table or row not present).');
+    } else {
+      console.error('0028 error:', err.message);
+      throw err;
+    }
+  }
+
   console.log('All migrations completed.');
 } catch (err) {
   console.error('Migration failed:', err.message);

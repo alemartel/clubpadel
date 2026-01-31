@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS "app"."tenants" (
 );
 
 --> statement-breakpoint
-INSERT INTO "app"."tenants" ("id", "host", "name") VALUES ('default', 'www.mypadelcenter.com', 'MyPadelCenter')
+INSERT INTO "app"."tenants" ("id", "host", "name") VALUES ('inplay', 'inplay.mypadelcenter.com', 'Inplay')
 ON CONFLICT (id) DO NOTHING;
 
 --> statement-breakpoint
@@ -24,16 +24,16 @@ ALTER TABLE "app"."leagues" ADD COLUMN IF NOT EXISTS "tenant_id" text;
 ALTER TABLE "app"."events" ADD COLUMN IF NOT EXISTS "tenant_id" text;
 
 --> statement-breakpoint
-UPDATE "app"."users" SET tenant_id = 'default' WHERE tenant_id IS NULL;
+UPDATE "app"."users" SET tenant_id = 'inplay' WHERE tenant_id IS NULL;
 
 --> statement-breakpoint
-UPDATE "app"."teams" SET tenant_id = 'default' WHERE tenant_id IS NULL;
+UPDATE "app"."teams" SET tenant_id = 'inplay' WHERE tenant_id IS NULL;
 
 --> statement-breakpoint
-UPDATE "app"."leagues" SET tenant_id = 'default' WHERE tenant_id IS NULL;
+UPDATE "app"."leagues" SET tenant_id = 'inplay' WHERE tenant_id IS NULL;
 
 --> statement-breakpoint
-UPDATE "app"."events" SET tenant_id = 'default' WHERE tenant_id IS NULL;
+UPDATE "app"."events" SET tenant_id = 'inplay' WHERE tenant_id IS NULL;
 
 --> statement-breakpoint
 ALTER TABLE "app"."users" DROP CONSTRAINT IF EXISTS "users_email_unique";

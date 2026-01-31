@@ -993,6 +993,130 @@ api.get("/leagues/:id", async (c) => {
   }
 });
 
+// Admin: List all users in the tenant (including admins) for role management
+adminRoutes.get("/users", async (c) => {
+  try {
+    const tenantId = c.get("tenantId");
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "20", 10)));
+    const search = (c.req.query("search") || "").trim();
+    const offset = (page - 1) * limit;
+
+    const baseCondition = eq(users.tenant_id, tenantId);
+    const whereClause = search
+      ? and(
+          baseCondition,
+          or(
+            ilike(users.email, `%${search}%`),
+            ilike(users.first_name, `%${search}%`),
+            ilike(users.last_name, `%${search}%`),
+            ilike(users.display_name, `%${search}%`)
+          )
+        )
+      : baseCondition;
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(whereClause);
+
+    const total = Number(countResult?.count) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const usersPage = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        first_name: users.first_name,
+        last_name: users.last_name,
+        display_name: users.display_name,
+        role: users.role,
+        created_at: users.created_at,
+        updated_at: users.updated_at,
+      })
+      .from(users)
+      .where(whereClause)
+      .orderBy(desc(users.updated_at))
+      .limit(limit)
+      .offset(offset);
+
+    return c.json({
+      users: usersPage,
+      total,
+      page,
+      limit,
+      totalPages,
+      message: "Users retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Admin users retrieval error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
+// Admin: Set user role (admin or player) within the tenant
+adminRoutes.put("/users/:userId/role", async (c) => {
+  try {
+    const adminUser = c.get("adminUser");
+    const userId = c.req.param("userId");
+    const tenantId = c.get("tenantId");
+    const body = await c.req.json<{ role: "admin" | "player" }>();
+
+    const role = body?.role;
+    if (!role || (role !== "admin" && role !== "player")) {
+      return c.json({ error: "role must be 'admin' or 'player'" }, 400);
+    }
+
+    // Prevent demoting yourself (ensure at least one admin remains)
+    if (userId === adminUser.id && role === "player") {
+      return c.json({ error: "You cannot demote yourself; another admin must change your role" }, 400);
+    }
+
+    const databaseUrl = getDatabaseUrl();
+    const db = await getDatabase(databaseUrl);
+
+    const [targetUser] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.tenant_id, tenantId)))
+      .limit(1);
+
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Prevent removing the last admin in the tenant
+    if (targetUser.role === "admin" && role === "player") {
+      const [adminCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(and(eq(users.tenant_id, tenantId), eq(users.role, "admin")));
+      if ((adminCount?.count ?? 0) <= 1) {
+        return c.json({ error: "Cannot demote the last admin in the tenant" }, 400);
+      }
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ role, updated_at: new Date() })
+      .where(and(eq(users.id, userId), eq(users.tenant_id, tenantId)))
+      .returning();
+
+    return c.json({
+      user: updated,
+      message: `User role set to ${role} successfully`,
+    });
+  } catch (error) {
+    console.error("Admin set user role error:", error);
+    const { message, status } = handleDatabaseError(error);
+    return c.json({ error: message }, status as any);
+  }
+});
+
 // Admin Player Management Endpoints (tenant-scoped)
 adminRoutes.get("/players", async (c) => {
   try {
